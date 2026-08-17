@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savannah Cinemas</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- ============================================================
+    NAVIGATION
+    ============================================================ -->
+    <nav class="nav">
+        <a href="home.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+        
+        <!-- Desktop Navigation -->
+        <ul class="nav-links" id="navLinks">
+            <li><a href="showtimes.html" class="active">Now Showing</a></li>
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+        </ul>
+        
+        <div class="nav-right">
+            <!-- Mobile Menu Toggle -->
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <div class="profile-wrapper" id="profileWrapper">
+                <div class="avatar">DA</div>
+                <div class="profile-menu">
+                    <div class="who">
+                        <div class="name">Daniel Asamoah</div>
+                        <div class="stat">142 films watched</div>
+                    </div>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Account settings</a>
+                    <a href="logout.html">Sign out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================================
+    MOBILE MENU (Slide-in from right)
+    ============================================================ -->
+    <div class="mobile-menu-overlay" id="mobileOverlay"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <div class="mobile-menu-brand">Savannah <span>Cinemas</span></div>
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="mobile-menu-links">
+            <li><a href="index.html" class="active">Now Showing</a></li>
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+            <li class="mobile-divider"></li>
+            <li><a href="bookings.html"><i class="fas fa-ticket-alt"></i> My bookings</a></li>
+            <li><a href="history.html"><i class="fas fa-history"></i> Watch history</a></li>
+            <li><a href="settings.html"><i class="fas fa-cog"></i> Settings</a></li>
+            <li class="mobile-divider"></li>
+            <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+        </ul>
+        <div class="mobile-menu-footer">
+            <p>© 2026 Savannah Cinemas</p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    HERO CAROUSEL
+    ============================================================ -->
+    <section class="hero-carousel-container" id="heroCarousel">
+        <div class="hero-carousel-slides" id="heroSlides">
+            <!-- Slides populated by JavaScript -->
+        </div>
+
+        <!-- Controls -->
+        <div class="hero-carousel-controls">
+            <div class="hero-carousel-dots" id="heroDots"></div>
+            <div class="hero-carousel-arrows">
+                <button class="hero-arrow" id="heroPrev" aria-label="Previous slide">‹</button>
+                <button class="hero-arrow" id="heroNext" aria-label="Next slide">›</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+    POPULAR MOVIES CAROUSEL
+    ============================================================ -->
+    <section class="section">
+        <div class="carousel-head">
+            <div>
+                <p class="eyebrow">Trending</p>
+                <h2 class="section-title">Popular Movies</h2>
+            </div>
+            <div class="carousel-arrows">
+                <button class="carousel-arrow" id="carouselPrev" aria-label="Previous">&#8592;</button>
+                <button class="carousel-arrow" id="carouselNext" aria-label="Next">&#8594;</button>
+            </div>
+        </div>
+
+        <div class="carousel-track" id="carouselTrack">
+            <!-- Movies populated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="nav-brand">SAVA<span>NNAH</span></div>
+                <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4>Browse</h4>
+                      <a href="index.html" class="active">Now Showing</a>
+                      <a href="coming-soon.html">Coming soon</a>
+                      <a href="events.html">Events</a>
+                      <a href="discovery.html">Discovery</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Settings</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="help.html">Help centre</a>
+                    <a href="refunds.html">Refunds</a>
+                    <a href="contact.html">Contact us</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-tear"></div>
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/javascript/index.js"></script>
+</body>
+</html>
