@@ -520,19 +520,57 @@
     border-radius:4px;
   }
 
+  /* ---------- BACK BUTTON ---------- */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--paper-dim);
+    text-decoration: none;
+    font-size: clamp(12px, 1vw, 14px);
+    font-family: var(--font-mono);
+    margin-bottom: 16px;
+    transition: 0.3s ease;
+  }
+  
+  .back-link:hover {
+    color: var(--gold);
+  }
+  
+  .back-link i {
+    font-size: 14px;
+  }
+
+  /* ---------- FILM BADGE ---------- */
+  .film-badge {
+    display: inline-block;
+    background: var(--ink-line);
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: clamp(10px, 0.8vw, 12px);
+    color: var(--paper-dim);
+    margin-right: 8px;
+  }
+
 </style>
+<!-- Font Awesome for back icon -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
 
   <div class="nav">
-    <div class="wordmark">Savannah <span>Cinemas</span></div>
-    <div class="avatar">JT</div>
+    <a href="index.html" class="wordmark">Savannah <span>Cinemas</span></a>
+    <div class="avatar">DA</div>
   </div>
 
   <div class="booking-header">
+    <a href="index.html" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to movies
+    </a>
     <p class="eyebrow">Select seats</p>
-    <h1>The Long Horizon</h1>
-    <p class="sub">Savannah Mall · Screen 1 · Today, 7:45 PM</p>
+    <h1 id="filmTitle">The Long Horizon</h1>
+    <p class="sub" id="filmDetails">Savannah Mall · Screen 1 · Today, 7:45 PM</p>
   </div>
 
   <div class="booking-layout">
@@ -611,8 +649,8 @@
     <!-- SIDEBAR SUMMARY -->
     <div class="booking-sidebar">
       <div class="panel">
-        <p class="summary-film">The Long Horizon</p>
-        <p class="summary-sub">Savannah Mall · Screen 1 · 7:45 PM</p>
+        <p class="summary-film" id="sidebarFilm">The Long Horizon</p>
+        <p class="summary-sub" id="sidebarDetails">Savannah Mall · Screen 1 · 7:45 PM</p>
 
         <ul class="summary-list" id="seatSummaryList">
           <li class="summary-empty">No seats selected yet</li>
@@ -631,8 +669,63 @@
   </div>
 
   <script>
-    var SEAT_PRICE_STANDARD = 9.00;
-    var SEAT_PRICE_PREMIUM  = 13.50;
+    // ============================================================
+    // GET FILM DATA FROM URL
+    // ============================================================
+    
+    function getFilmFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const filmParam = urlParams.get('film');
+      
+      if (filmParam) {
+        try {
+          return JSON.parse(decodeURIComponent(filmParam));
+        } catch (e) {
+          console.error('Error parsing film data:', e);
+          return null;
+        }
+      }
+      return null;
+    }
+
+    // ============================================================
+    // LOAD FILM DATA
+    // ============================================================
+    
+    const filmData = getFilmFromURL();
+    
+    // Default film data if none passed from URL
+    const defaultFilm = {
+      filmTitle: 'The Long Horizon',
+      filmYear: '2024',
+      filmRating: 'PG-13',
+      filmDuration: '2h 18m',
+      cinema: 'Savannah Mall',
+      screen: 'Screen 1',
+      showtime: 'Today, 7:45 PM',
+      priceStandard: 9.00,
+      pricePremium: 13.50
+    };
+    
+    const currentFilm = filmData || defaultFilm;
+    
+    // Update UI with film data
+    document.getElementById('filmTitle').textContent = currentFilm.filmTitle;
+    document.getElementById('filmDetails').textContent = 
+      `${currentFilm.cinema} · ${currentFilm.screen} · ${currentFilm.showtime}`;
+    document.getElementById('sidebarFilm').textContent = currentFilm.filmTitle;
+    document.getElementById('sidebarDetails').textContent = 
+      `${currentFilm.cinema} · ${currentFilm.screen} · ${currentFilm.showtime}`;
+    
+    // Update page title
+    document.title = `Savannah Cinemas — ${currentFilm.filmTitle}`;
+
+    // ============================================================
+    // SEAT CONFIGURATION
+    // ============================================================
+    
+    var SEAT_PRICE_STANDARD = currentFilm.priceStandard || 9.00;
+    var SEAT_PRICE_PREMIUM = currentFilm.pricePremium || 13.50;
 
     var rows = ['A','B','C','D','E','F','G','H'];
     var takenSeats = ['A4','A5','C7','C8','D2','F10','G6','G7','H1'];
@@ -640,6 +733,10 @@
     var seatMap = document.getElementById('seatMap');
     var selectedSeats = {};
 
+    // ============================================================
+    // BUILD SEAT MAP
+    // ============================================================
+    
     rows.forEach(function(rowLetter){
       var rowEl = document.createElement('div');
       rowEl.className = 'seat-row';
@@ -685,6 +782,10 @@
       seatMap.appendChild(rowEl);
     });
 
+    // ============================================================
+    // SNACK QUANTITY HANDLERS
+    // ============================================================
+    
     var snackQuantities = {};
 
     document.querySelectorAll('.snack-card').forEach(function(card){
@@ -709,6 +810,10 @@
       });
     });
 
+    // ============================================================
+    // UPDATE SUMMARY
+    // ============================================================
+    
     function updateSummary(){
       var seatList = document.getElementById('seatSummaryList');
       var seatIds = Object.keys(selectedSeats);
@@ -753,9 +858,15 @@
       }
     }
 
+    // ============================================================
+    // PAYMENT BUTTON
+    // ============================================================
+    
     document.getElementById('payBtn').addEventListener('click', function(){
       if (this.disabled) return;
-      alert('Proceeding to payment with ' + Object.keys(selectedSeats).length + ' seat(s) and total ' + document.getElementById('grandTotal').textContent);
+      alert('Proceeding to payment for "' + currentFilm.filmTitle + '" with ' + 
+            Object.keys(selectedSeats).length + ' seat(s) and total ' + 
+            document.getElementById('grandTotal').textContent);
     });
   </script>
 
