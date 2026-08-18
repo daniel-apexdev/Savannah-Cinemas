@@ -234,7 +234,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: column;
   }
 
   .mobile-menu-links li {
@@ -1104,7 +1104,7 @@
     }
 
     .panel {
-      padding: 16px;
+      padding: 9px;
     }
 
     .panel h2 {
@@ -1359,9 +1359,7 @@
             <div class="name">Daniel Asamoah</div>
             <div class="stat">142 films watched</div>
           </div>
-          <a href="bookings.html">My bookings</a>
-          <a href="history.html">Watch history</a>
-          <a href="settings.html">Account settings</a>
+          <a href="profile.html">My Profile</a>
           <a href="logout.html">Sign out</a>
         </div>
       </div>
@@ -1384,10 +1382,7 @@
       <li><a href="coming-soon.html">Coming soon</a></li>
       <li><a href="events.html">Events</a></li>
       <li><a href="discovery.html">Discovery</a></li>
-      <li class="mobile-divider"></li>
-      <li><a href="bookings.html"><i class="fas fa-ticket-alt"></i> My bookings</a></li>
-      <li><a href="history.html"><i class="fas fa-history"></i> Watch history</a></li>
-      <li><a href="settings.html"><i class="fas fa-cog"></i> Settings</a></li>
+      <li><a href="extras.html">Extras</a></li>
       <li class="mobile-divider"></li>
       <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
     </ul>
@@ -2049,7 +2044,7 @@
         btnText = 'Select a showtime first';
         isReady = false;
       } else if (selectedSeats.length === ticketQuantity && ticketQuantity > 0) {
-        btnText = 'Proceed to payment · ' + grandTotalFormatted;
+        btnText = 'Proceed to checkout = ' + grandTotalFormatted;
         isReady = true;
       } else if (selectedSeats.length > 0 && selectedSeats.length < ticketQuantity) {
         btnText = 'Select ' + (ticketQuantity - selectedSeats.length) + ' more seat(s)';

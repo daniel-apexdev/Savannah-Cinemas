@@ -20,12 +20,14 @@
             --gold-dim: #7A5C22;
             --rust: #B33951;
             --rust-hover: #c94661;
+            --success: #4C9A6A;
             --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
             --font-body: 'Inter', 'Public Sans', -apple-system, sans-serif;
             --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
             --radius-sm: 8px;
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
+            --touch-target: clamp(44px, 5vw, 56px);
         }
 
         * {
@@ -92,16 +94,26 @@
             background: none;
             border: none;
             cursor: pointer;
-            padding: 4px;
+            padding: 10px 8px;
             z-index: 1001;
             position: relative;
             flex-shrink: 0;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            justify-content: center;
+            align-items: center;
+            border-radius: var(--radius-sm);
+            touch-action: manipulation;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255,255,255,0.05);
         }
 
         .menu-toggle span {
             display: block;
             width: 28px;
-            height: 2px;
+            height: 2.5px;
             background: var(--paper);
             transition: 0.3s ease;
             border-radius: 2px;
@@ -191,14 +203,22 @@
             color: var(--paper);
             font-size: 24px;
             cursor: pointer;
-            padding: 8px;
+            padding: 12px;
             transition: 0.3s ease;
             line-height: 1;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            touch-action: manipulation;
         }
 
         .mobile-menu-close:hover {
             color: var(--gold);
             transform: rotate(90deg);
+            background: rgba(255,255,255,0.05);
         }
 
         .mobile-menu-links {
@@ -208,7 +228,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: column;
+            justify-content: center;
         }
 
         .mobile-menu-links li {
@@ -229,6 +249,8 @@
             border-radius: 10px;
             width: 100%;
             letter-spacing: 0.02em;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
         }
 
         .mobile-menu-links a i {
@@ -299,8 +321,8 @@
         }
 
         .avatar {
-            width: 38px;
-            height: 38px;
+            width: var(--touch-target);
+            height: var(--touch-target);
             border-radius: 50%;
             background: var(--gold);
             color: var(--ink);
@@ -370,6 +392,8 @@
             text-decoration: none;
             border-bottom: 1px solid var(--ink-line);
             transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
         }
 
         .profile-menu a:last-child {
@@ -397,6 +421,9 @@
             font-weight: 400;
             margin-bottom: 20px;
             transition: 0.3s ease;
+            padding: 8px 0;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
         }
 
         .back-link:hover {
@@ -576,6 +603,7 @@
             display: flex;
             gap: 14px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .btn {
@@ -591,6 +619,8 @@
             cursor: pointer;
             transition: 0.3s ease;
             text-decoration: none;
+            touch-action: manipulation;
+            min-height: var(--touch-target);
         }
 
         .btn-primary {
@@ -614,6 +644,49 @@
             border-color: var(--paper-dim);
             background: rgba(255, 255, 255, 0.05);
             transform: translateY(-2px);
+        }
+
+        /* ---------- WATCHLIST BUTTON ---------- */
+        .btn-watchlist {
+            background: transparent;
+            color: var(--paper-dim);
+            border: 1px solid var(--ink-line);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: clamp(10px, 1vw, 14px) clamp(16px, 1.5vw, 24px);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-weight: 400;
+            font-size: clamp(13px, 1vw, 15px);
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            touch-action: manipulation;
+            min-height: var(--touch-target);
+        }
+
+        .btn-watchlist:hover {
+            border-color: var(--gold-dim);
+            color: var(--paper);
+        }
+
+        .btn-watchlist.in-watchlist {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .btn-watchlist.in-watchlist:hover {
+            border-color: var(--rust);
+            color: var(--rust);
+        }
+
+        .btn-watchlist i {
+            font-size: 16px;
+        }
+
+        .btn-watchlist.in-watchlist i {
+            color: var(--rust);
         }
 
         /* ---------- DETAILS LAYOUT ---------- */
@@ -699,7 +772,7 @@
         }
 
         .showtime-item .btn-sm {
-            padding: 6px 18px;
+            padding: 8px 18px;
             background: var(--rust);
             color: var(--paper);
             border: none;
@@ -709,10 +782,16 @@
             font-weight: 400;
             cursor: pointer;
             transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
         }
 
         .showtime-item .btn-sm:hover {
             background: var(--rust-hover);
+        }
+
+        .showtime-item .btn-sm:active {
+            transform: scale(0.96);
         }
 
         .no-showtimes {
@@ -720,6 +799,34 @@
             font-size: clamp(14px, 1vw, 16px);
             font-weight: 300;
             padding: 16px 0;
+        }
+
+        .coming-soon-message {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            text-align: center;
+            color: var(--paper-dim);
+        }
+
+        .coming-soon-message i {
+            color: var(--gold);
+            font-size: 28px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .coming-soon-message p {
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 300;
+            margin-bottom: 4px;
+        }
+
+        .coming-soon-message .release-date {
+            color: var(--gold);
+            font-family: var(--font-mono);
+            font-size: clamp(12px, 0.8vw, 14px);
         }
 
         /* ---------- CAST LIST ---------- */
@@ -933,6 +1040,24 @@
             .menu-toggle {
                 display: flex;
             }
+
+            .showtime-item {
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .btn-row {
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+            }
+
+            .btn, .btn-watchlist {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         @media (max-width: 480px) {
@@ -944,13 +1069,6 @@
             .movie-poster {
                 flex: 0 0 140px;
                 max-width: 140px;
-            }
-
-            .showtime-item {
-                flex-wrap: wrap;
-                gap: 8px;
-                justify-content: center;
-                text-align: center;
             }
 
             .cast-grid {
@@ -1031,9 +1149,7 @@
                         <div class="name">Daniel Asamoah</div>
                         <div class="stat">142 films watched</div>
                     </div>
-                    <a href="bookings.html">My bookings</a>
-                    <a href="history.html">Watch history</a>
-                    <a href="settings.html">Account settings</a>
+                    <a href="profile.html">My profile</a>
                     <a href="logout.html">Sign out</a>
                 </div>
             </div>
@@ -1056,6 +1172,7 @@
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
             <li><a href="discovery.html">Discovery</a></li>
+            <li><a href="extras.html">Extras</a></li>
             <li class="mobile-divider"></li>
             <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
         </ul>
@@ -1128,6 +1245,9 @@
                         <div class="btn-row">
                             <a href="#" class="btn btn-primary" id="bookBtn"><i class="fas fa-ticket-alt"></i> Get Tickets</a>
                             <button class="btn btn-ghost" id="trailerBtn"><i class="fas fa-play"></i> Watch Trailer</button>
+                            <button class="btn-watchlist" id="watchlistBtn">
+                                <i class="far fa-heart"></i> <span id="watchlistLabel">Add to Watchlist</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1206,6 +1326,8 @@
                 castContainer: document.getElementById('castContainer'),
                 bookBtn: document.getElementById('bookBtn'),
                 trailerBtn: document.getElementById('trailerBtn'),
+                watchlistBtn: document.getElementById('watchlistBtn'),
+                watchlistLabel: document.getElementById('watchlistLabel'),
                 profileWrapper: document.getElementById('profileWrapper'),
                 avatarBtn: document.getElementById('avatarBtn'),
                 profileMenu: document.getElementById('profileMenu'),
@@ -1222,6 +1344,13 @@
             };
 
             // ============================================================
+            // WATCHLIST STATE
+            // ============================================================
+
+            let currentMovie = null;
+            let isInWatchlist = false;
+
+            // ============================================================
             // PROFILE DROPDOWN
             // ============================================================
 
@@ -1230,7 +1359,6 @@
             function setupProfile() {
                 if (!DOM.profileWrapper) return;
 
-                // Hover for desktop
                 DOM.profileWrapper.addEventListener('mouseenter', function() {
                     clearTimeout(closeTimer);
                     this.classList.add('is-open');
@@ -1242,20 +1370,17 @@
                     }, 150);
                 });
 
-                // Click/touch for mobile
                 DOM.avatarBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     DOM.profileWrapper.classList.toggle('is-open');
                 });
 
-                // Close when clicking outside
                 document.addEventListener('click', function(e) {
                     if (!DOM.profileWrapper.contains(e.target)) {
                         DOM.profileWrapper.classList.remove('is-open');
                     }
                 });
 
-                // Close on Escape key
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape' && DOM.profileWrapper.classList.contains('is-open')) {
                         DOM.profileWrapper.classList.remove('is-open');
@@ -1268,7 +1393,6 @@
             // ============================================================
 
             function setupMobileMenu() {
-                // Open menu
                 DOM.menuToggle.addEventListener('click', function(e) {
                     e.stopPropagation();
                     DOM.mobileMenu.classList.toggle('open');
@@ -1277,18 +1401,13 @@
                     document.body.style.overflow = DOM.mobileMenu.classList.contains('open') ? 'hidden' : '';
                 });
 
-                // Close button
                 DOM.mobileMenuClose.addEventListener('click', closeMobileMenu);
-
-                // Overlay click
                 DOM.mobileOverlay.addEventListener('click', closeMobileMenu);
 
-                // Close on link click
                 DOM.mobileMenu.querySelectorAll('a').forEach(function(link) {
                     link.addEventListener('click', closeMobileMenu);
                 });
 
-                // Close on Escape key
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape' && DOM.mobileMenu.classList.contains('open')) {
                         closeMobileMenu();
@@ -1304,23 +1423,49 @@
             }
 
             // ============================================================
+            // WATCHLIST FUNCTIONS
+            // ============================================================
+
+            function toggleWatchlist() {
+                if (!currentMovie) return;
+
+                isInWatchlist = !isInWatchlist;
+                updateWatchlistUI();
+
+                // Show feedback
+                const message = isInWatchlist 
+                    ? `"${currentMovie.title}" added to your watchlist ❤️` 
+                    : `"${currentMovie.title}" removed from your watchlist`;
+                alert(message);
+            }
+
+            function updateWatchlistUI() {
+                if (isInWatchlist) {
+                    DOM.watchlistBtn.classList.add('in-watchlist');
+                    DOM.watchlistBtn.querySelector('i').className = 'fas fa-heart';
+                    DOM.watchlistLabel.textContent = 'In Watchlist';
+                } else {
+                    DOM.watchlistBtn.classList.remove('in-watchlist');
+                    DOM.watchlistBtn.querySelector('i').className = 'far fa-heart';
+                    DOM.watchlistLabel.textContent = 'Add to Watchlist';
+                }
+            }
+
+            // ============================================================
             // TRAILER MODAL
             // ============================================================
 
             let currentMovieId = null;
 
             function setupTrailerModal() {
-                // Close button
                 DOM.trailerModalClose.addEventListener('click', closeTrailerModal);
 
-                // Click outside to close
                 DOM.trailerModal.addEventListener('click', function(e) {
                     if (e.target === this) {
                         closeTrailerModal();
                     }
                 });
 
-                // Escape key
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape' && DOM.trailerModal.classList.contains('active')) {
                         closeTrailerModal();
@@ -1333,20 +1478,17 @@
                 DOM.trailerModal.classList.add('active');
                 document.body.style.overflow = 'hidden';
                 
-                // Reset modal state
                 DOM.trailerLoading.style.display = 'block';
                 DOM.trailerIframe.classList.remove('active');
                 DOM.trailerIframe.src = '';
                 DOM.noTrailer.style.display = 'none';
 
-                // Fetch trailer
                 fetchTrailer(movieId);
             }
 
             function closeTrailerModal() {
                 DOM.trailerModal.classList.remove('active');
                 document.body.style.overflow = '';
-                // Stop video when closing
                 DOM.trailerIframe.src = '';
                 DOM.trailerIframe.classList.remove('active');
             }
@@ -1363,7 +1505,6 @@
 
                     const data = await response.json();
                     
-                    // Find a trailer (prefer YouTube, then Vimeo, then any)
                     const trailers = data.results.filter(v => 
                         v.site === 'YouTube' && v.type === 'Trailer'
                     );
@@ -1373,15 +1514,12 @@
                     DOM.trailerLoading.style.display = 'none';
 
                     if (trailer && trailer.site === 'YouTube') {
-                        // Show the trailer
                         DOM.trailerIframe.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0`;
                         DOM.trailerIframe.classList.add('active');
                     } else if (trailer) {
-                        // Try to show other video platforms (Vimeo, etc.)
                         DOM.trailerIframe.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0`;
                         DOM.trailerIframe.classList.add('active');
                     } else {
-                        // No trailer found
                         DOM.noTrailer.style.display = 'block';
                     }
                 } catch (error) {
@@ -1453,6 +1591,7 @@
                 }
 
                 const { movie, credits } = data;
+                currentMovie = movie;
                 
                 DOM.loadingState.style.display = 'none';
                 DOM.movieContent.style.display = 'block';
@@ -1526,7 +1665,14 @@
                 // Overview
                 DOM.movieOverview.textContent = movie.overview || 'No overview available.';
 
-                // Showtimes
+                // ---------- SHOWTIMES - CONDITIONAL BASED ON RELEASE DATE ----------
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const releaseDate = movie.release_date ? new Date(movie.release_date) : null;
+                const isReleased = releaseDate && releaseDate <= today;
+                const isUpcoming = releaseDate && releaseDate > today;
+
                 const sampleShowtimes = [
                     { time: '10:30 AM', screen: 'Screen 1', format: '2D' },
                     { time: '1:45 PM', screen: 'Screen 2', format: '2D' },
@@ -1535,10 +1681,8 @@
                     { time: '9:45 PM', screen: 'Screen 1', format: '2D' }
                 ];
 
-                const nowPlaying = movie.status === 'Released' || 
-                                  (movie.release_date && new Date(movie.release_date) <= new Date());
-
-                if (nowPlaying && sampleShowtimes.length > 0) {
+                // Only show showtimes if the film is released (release date <= today)
+                if (isReleased && sampleShowtimes.length > 0) {
                     DOM.showtimesContainer.innerHTML = '';
                     sampleShowtimes.forEach(st => {
                         const item = document.createElement('div');
@@ -1555,7 +1699,25 @@
                         `;
                         DOM.showtimesContainer.appendChild(item);
                     });
+                } else if (isUpcoming) {
+                    // Coming soon - show release date
+                    const formattedDate = new Date(movie.release_date).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    DOM.showtimesContainer.innerHTML = `
+                        <div class="coming-soon-message">
+                            <i class="fas fa-calendar-star"></i>
+                            <p>Coming Soon!</p>
+                            <div class="release-date">Releasing ${formattedDate}</div>
+                            <p style="margin-top:8px;font-size:clamp(12px,0.8vw,14px);color:var(--paper-dim);">
+                                Check back closer to the release date for showtimes.
+                            </p>
+                        </div>
+                    `;
                 } else {
+                    // No release date or not showing
                     DOM.showtimesContainer.innerHTML = `
                         <p class="no-showtimes">
                             <i class="fas fa-clock" style="margin-right:8px;"></i>
@@ -1564,7 +1726,7 @@
                     `;
                 }
 
-                // Cast
+                // ---------- CAST ----------
                 DOM.castContainer.innerHTML = '';
                 if (credits.cast && credits.cast.length > 0) {
                     const castList = credits.cast.slice(0, 12);
@@ -1610,19 +1772,28 @@
                 // Update page title
                 document.title = `${movie.title} — Savannah Cinemas`;
 
-                // Book button
-                DOM.bookBtn.href = `booking.html?film=${encodeURIComponent(JSON.stringify({
-                    filmTitle: movie.title,
-                    filmYear: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
-                    cinema: 'Savannah Mall',
-                    screen: 'Screen 1',
-                    showtime: 'Today, 7:45 PM',
-                    priceStandard: 9.00,
-                    pricePremium: 13.50,
-                    id: movie.id
-                }))}`;
+                // ---------- BOOK BUTTON ----------
+                // Only enable booking if film is released
+                if (isReleased) {
+                    DOM.bookBtn.href = `booking.html?film=${encodeURIComponent(JSON.stringify({
+                        filmTitle: movie.title,
+                        filmYear: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
+                        cinema: 'Savannah Mall',
+                        screen: 'Screen 1',
+                        showtime: 'Today, 7:45 PM',
+                        priceStandard: 9.00,
+                        pricePremium: 13.50,
+                        id: movie.id
+                    }))}`;
+                    DOM.bookBtn.style.display = 'inline-flex';
+                } else {
+                    DOM.bookBtn.style.display = 'none';
+                }
 
-                // Trailer button - opens modal with actual trailer
+                // ---------- WATCHLIST BUTTON ----------
+                DOM.watchlistBtn.addEventListener('click', toggleWatchlist);
+
+                // ---------- TRAILER BUTTON ----------
                 DOM.trailerBtn.addEventListener('click', function() {
                     openTrailerModal(movie.id);
                 });
@@ -1651,7 +1822,6 @@
                     return;
                 }
 
-                // Setup all features
                 setupProfile();
                 setupMobileMenu();
                 setupTrailerModal();
