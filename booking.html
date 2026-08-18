@@ -234,7 +234,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: column;
+    justify-content: center;
   }
 
   .mobile-menu-links li {
@@ -1104,7 +1104,7 @@
     }
 
     .panel {
-      padding: 9px;
+      padding: 16px;
     }
 
     .panel h2 {
@@ -1254,7 +1254,7 @@
     }
 
     .panel {
-      padding: 8px;
+      padding: 12px;
     }
     
     .row-label{
@@ -1293,6 +1293,152 @@
       width: 28px;
       height: 28px;
       font-size: 11px;
+    }
+
+    .booking-main {
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .seat-map {
+      gap: 5px;
+      padding: 4px 2px;
+    }
+
+    .seat-row {
+      gap: 3px;
+    }
+
+    .seat {
+      width: 20px;
+      height: 20px;
+      font-size: 6px;
+      min-width: 20px;
+      min-height: 20px;
+      border-radius: 3px 3px 2px 2px;
+    }
+
+    .seat.aisle-gap {
+      width: 5px;
+      min-width: 5px;
+    }
+
+    .row-label {
+      width: 10px;
+      font-size: 8px;
+    }
+
+    .qty-stepper button {
+      width: 28px;
+      height: 28px;
+      font-size: 14px;
+      min-width: 28px;
+      min-height: 28px;
+    }
+
+    .snack-options select {
+      padding: 8px 10px;
+      font-size: 12px;
+      min-height: 36px;
+    }
+
+    .screen {
+      width: 80%;
+      height: 4px;
+    }
+
+    .ticket-quantity .qty-control button {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      font-size: 14px;
+    }
+
+    .ticket-quantity .qty-control .qty-display {
+      font-size: 20px;
+      min-width: 28px;
+    }
+
+    .btn-pay {
+      font-size: 14px;
+      padding: 12px 0;
+      min-height: 44px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .seat {
+      width: 18px;
+      height: 18px;
+      font-size: 5px;
+      min-width: 18px;
+      min-height: 18px;
+      border-radius: 2px 2px 1px 1px;
+    }
+
+    .seat.aisle-gap {
+      width: 4px;
+      min-width: 4px;
+    }
+
+    .row-label {
+      width: 8px;
+      font-size: 7px;
+    }
+
+    .seat-row {
+      gap: 2px;
+    }
+
+    .panel {
+      padding: 10px;
+    }
+
+    .screen-selection .screen-option {
+      padding: 8px;
+      min-height: 40px;
+    }
+
+    .screen-selection .screen-option .screen-name {
+      font-size: 12px;
+    }
+
+    .screen-selection .screen-option .screen-time {
+      font-size: 10px;
+    }
+
+    .snack-card {
+      padding: 10px;
+    }
+
+    .snack-thumb {
+      height: 40px;
+      font-size: 24px;
+    }
+
+    .snack-name {
+      font-size: 12px;
+    }
+
+    .snack-price {
+      font-size: 11px;
+    }
+
+    .booking-header h1 {
+      font-size: 18px;
+    }
+
+    .booking-header .sub {
+      font-size: 11px;
+    }
+
+    .summary-film {
+      font-size: 16px;
+    }
+
+    .summary-total {
+      font-size: 18px;
     }
   }
 
