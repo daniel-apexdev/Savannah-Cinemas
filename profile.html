@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile — Savannah Cinemas</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --ink: #14141C;
+            --ink-raised: #1D1D28;
+            --ink-line: #2C2C3A;
+            --paper: #F2EFE9;
+            --paper-dim: #B9B6AC;
+            --gold: #E8B34C;
+            --gold-dim: #7A5C22;
+            --rust: #B33951;
+            --rust-hover: #c94661;
+            --success: #4C9A6A;
+            --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
+            --font-body: 'Inter', 'Public Sans', -apple-system, sans-serif;
+            --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --container-padding: clamp(16px, 4vw, 60px);
+            --touch-target: clamp(44px, 5vw, 56px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---------- NAV ---------- */
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px var(--container-padding);
+            border-bottom: 1px solid var(--ink-line);
+            background: rgba(20, 20, 28, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            gap: 12px;
+        }
+
+        .nav-brand {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 3vw, 28px);
+            font-weight: 500;
+            color: var(--paper);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+
+        .nav-brand span {
+            color: var(--gold);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 1001;
+            position: relative;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 15px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.3s ease;
+            user-select: none;
+        }
+
+        .avatar:hover {
+            border-color: var(--gold-dim);
+        }
+
+        .profile-wrapper {
+            position: relative;
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            width: 220px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .profile-wrapper.is-open .profile-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-menu .who {
+            padding: 16px;
+            border-bottom: 1px solid var(--ink-line);
+        }
+
+        .profile-menu .who .name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .profile-menu .who .stat {
+            color: var(--gold);
+            font-size: 12px;
+            font-family: var(--font-mono);
+            margin-top: 4px;
+        }
+
+        .profile-menu a {
+            display: block;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--paper-dim);
+            text-decoration: none;
+            border-bottom: 1px solid var(--ink-line);
+            transition: 0.3s ease;
+        }
+
+        .profile-menu a:last-child {
+            border-bottom: none;
+            color: #d95b5b;
+        }
+
+        .profile-menu a:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--paper);
+        }
+
+        .profile-menu a:last-child:hover {
+            color: #ff6b6b;
+        }
+
+        /* ---------- PROFILE HEADER ---------- */
+        .profile-header {
+            padding: 32px var(--container-padding) 16px;
+            max-width: var(--container-max-width);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .profile-header .profile-avatar-large {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .profile-header .profile-info {
+            flex: 1;
+        }
+
+        .profile-header .profile-info h1 {
+            font-family: var(--font-display);
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 2px;
+        }
+
+        .profile-header .profile-info p {
+            font-size: clamp(14px, 1vw, 16px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .profile-header .profile-info .profile-stats {
+            display: flex;
+            gap: 24px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .profile-header .profile-info .profile-stats span {
+            font-family: var(--font-mono);
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .profile-header .profile-info .profile-stats span strong {
+            color: var(--gold);
+            font-weight: 500;
+        }
+
+        /* ---------- TABS ---------- */
+        .profile-tabs {
+            max-width: var(--container-max-width);
+            margin: 0 auto;
+            padding: 0 var(--container-padding);
+            border-bottom: 1px solid var(--ink-line);
+            display: flex;
+            gap: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .profile-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .profile-tabs .tab-btn {
+            padding: 14px 24px;
+            background: none;
+            border: none;
+            color: var(--paper-dim);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 400;
+            cursor: pointer;
+            transition: 0.3s ease;
+            position: relative;
+            touch-action: manipulation;
+            min-height: var(--touch-target);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .profile-tabs .tab-btn:hover {
+            color: var(--paper);
+        }
+
+        .profile-tabs .tab-btn.active {
+            color: var(--gold);
+        }
+
+        .profile-tabs .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gold);
+            border-radius: 2px;
+        }
+
+        .profile-tabs .tab-btn i {
+            margin-right: 8px;
+        }
+
+        /* ---------- TAB CONTENT ---------- */
+        .tab-content {
+            max-width: var(--container-max-width);
+            margin: 0 auto;
+            padding: 24px var(--container-padding) 60px;
+        }
+
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tab-pane h2 {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2vw, 26px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 16px;
+        }
+
+        .tab-pane .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--paper-dim);
+        }
+
+        .tab-pane .empty-state i {
+            font-size: 48px;
+            color: var(--gold);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .tab-pane .empty-state p {
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 300;
+        }
+
+        /* ---------- WATCHLIST GRID ---------- */
+        .watchlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 16vw, 200px), 1fr));
+            gap: 20px;
+        }
+
+        .watchlist-card {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            transition: 0.3s ease;
+            position: relative;
+        }
+
+        .watchlist-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--gold-dim);
+        }
+
+        .watchlist-card .poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            background-color: var(--ink);
+        }
+
+        .watchlist-card .poster .status-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 10px;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 2px 10px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .watchlist-card .poster .status-badge.watched {
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .watchlist-card .poster .status-badge.watchlist {
+            color: var(--gold);
+            border-color: var(--gold-dim);
+        }
+
+        /* Watched film - faded poster */
+        .watchlist-card.watched .poster {
+            opacity: 0.5;
+            filter: grayscale(0.8);
+            transition: 0.3s ease;
+        }
+
+        .watchlist-card.watched:hover .poster {
+            opacity: 0.7;
+            filter: grayscale(0.5);
+        }
+
+        .watchlist-card .info {
+            padding: 12px 14px;
+        }
+
+        .watchlist-card .info .title {
+            font-family: var(--font-display);
+            font-size: clamp(13px, 1vw, 15px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .watchlist-card .info .meta {
+            font-size: clamp(11px, 0.7vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .watchlist-card .info .meta .rating {
+            color: var(--gold);
+        }
+
+        .watchlist-card .info .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .watchlist-card .info .actions button {
+            padding: 4px 12px;
+            background: transparent;
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper-dim);
+            font-family: var(--font-body);
+            font-size: clamp(10px, 0.6vw, 12px);
+            cursor: pointer;
+            transition: 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        .watchlist-card .info .actions button:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .watchlist-card .info .actions button.watched-btn {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .watchlist-card .info .actions button.watched-btn:hover {
+            background: var(--success);
+            color: var(--ink);
+        }
+
+        .watchlist-card .info .actions button.remove-btn:hover {
+            border-color: var(--rust);
+            color: var(--rust);
+        }
+
+        /* ---------- BOOKINGS LIST ---------- */
+        .booking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .booking-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            transition: 0.3s ease;
+            flex-wrap: wrap;
+        }
+
+        .booking-item:hover {
+            border-color: var(--gold-dim);
+        }
+
+        .booking-item .booking-poster {
+            width: 50px;
+            height: 75px;
+            border-radius: var(--radius-sm);
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+            background-color: var(--ink);
+        }
+
+        .booking-item .booking-info {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .booking-item .booking-info .title {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            color: var(--paper);
+        }
+
+        .booking-item .booking-info .details {
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .booking-item .booking-status {
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.7vw, 13px);
+            padding: 4px 14px;
+            border-radius: 12px;
+        }
+
+        .booking-item .booking-status.upcoming {
+            background: rgba(232, 179, 76, 0.1);
+            color: var(--gold);
+            border: 1px solid var(--gold-dim);
+        }
+
+        .booking-item .booking-status.past {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--paper-dim);
+            border: 1px solid var(--ink-line);
+        }
+
+        /* ---------- STATS GRID ---------- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(clamp(140px, 15vw, 200px), 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card .stat-number {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 3vw, 36px);
+            font-weight: 500;
+            color: var(--gold);
+        }
+
+        .stat-card .stat-label {
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            margin-top: 4px;
+        }
+
+        /* ---------- SETTINGS ---------- */
+        .settings-group {
+            margin-bottom: 24px;
+        }
+
+        .settings-group h3 {
+            font-family: var(--font-display);
+            font-size: clamp(16px, 1.2vw, 20px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 12px;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .settings-item .settings-label {
+            font-size: clamp(14px, 0.9vw, 16px);
+            color: var(--paper);
+            font-weight: 400;
+        }
+
+        .settings-item .settings-desc {
+            font-size: clamp(12px, 0.7vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .settings-item .settings-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-item .settings-control input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--gold);
+            cursor: pointer;
+        }
+
+        .settings-item .settings-control select {
+            padding: 6px 12px;
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            cursor: pointer;
+            min-height: 38px;
+        }
+
+        .settings-item .settings-control select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .settings-item .settings-control .btn-settings {
+            padding: 6px 16px;
+            background: var(--rust);
+            color: var(--paper);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            cursor: pointer;
+            transition: 0.3s ease;
+            touch-action: manipulation;
+            min-height: 38px;
+        }
+
+        .settings-item .settings-control .btn-settings:hover {
+            background: var(--rust-hover);
+        }
+
+        .settings-item .settings-control .btn-settings.danger {
+            background: transparent;
+            color: var(--rust);
+            border: 1px solid var(--rust);
+        }
+
+        .settings-item .settings-control .btn-settings.danger:hover {
+            background: var(--rust);
+            color: var(--paper);
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 768px) {
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 12px;
+            }
+
+            .profile-header .profile-info .profile-stats {
+                justify-content: center;
+            }
+
+            .profile-tabs .tab-btn {
+                padding: 12px 16px;
+                font-size: 13px;
+            }
+
+            .profile-tabs .tab-btn i {
+                margin-right: 4px;
+            }
+
+            .watchlist-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 14px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .booking-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .booking-item .booking-poster {
+                width: 60px;
+                height: 90px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .profile-header .profile-avatar-large {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+
+            .profile-tabs .tab-btn {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+
+            .watchlist-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .watchlist-card .info {
+                padding: 8px 10px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .settings-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .settings-item .settings-control {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+
+        /* ---------- SCROLLBAR ---------- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================
+    NAVIGATION
+    ============================================================ -->
+    <nav class="nav">
+        <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+        <div class="nav-right">
+            <div class="profile-wrapper" id="profileWrapper">
+                <div class="avatar" id="avatarBtn">DA</div>
+                <div class="profile-menu" id="profileMenu">
+                    <div class="who">
+                        <div class="name">Daniel Asamoah</div>
+                        <div class="stat">142 films watched</div>
+                    </div>
+                    <a href="profile.html">My Profile</a>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Account settings</a>
+                    <a href="logout.html">Sign out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================================
+    PROFILE HEADER
+    ============================================================ -->
+    <div class="profile-header">
+        <div class="profile-avatar-large">DA</div>
+        <div class="profile-info">
+            <h1>Daniel Asamoah</h1>
+            <p>Member since 2024 · Savannah Cinemas</p>
+            <div class="profile-stats">
+                <span><strong>142</strong> Films Watched</span>
+                <span><strong>24</strong> Genres Explored</span>
+                <span><strong>8</strong> Countries</span>
+                <span><strong>4.2</strong> ⭐ Avg Rating</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    PROFILE TABS
+    ============================================================ -->
+    <div class="profile-tabs" id="profileTabs">
+        <button class="tab-btn active" data-tab="watchlist"><i class="fas fa-list"></i> Watchlist</button>
+        <button class="tab-btn" data-tab="bookings"><i class="fas fa-ticket-alt"></i> My Bookings</button>
+        <button class="tab-btn" data-tab="stats"><i class="fas fa-chart-bar"></i> Stats</button>
+        <button class="tab-btn" data-tab="settings"><i class="fas fa-cog"></i> Settings</button>
+    </div>
+
+    <!-- ============================================================
+    TAB CONTENT
+    ============================================================ -->
+    <div class="tab-content">
+
+        <!-- WATCHLIST TAB -->
+        <div class="tab-pane active" id="tabWatchlist">
+            <h2>My Watchlist</h2>
+            <div class="watchlist-grid" id="watchlistGrid">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- BOOKINGS TAB -->
+        <div class="tab-pane" id="tabBookings">
+            <h2>My Bookings</h2>
+            <div class="booking-list" id="bookingList">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- STATS TAB -->
+        <div class="tab-pane" id="tabStats">
+            <h2>Your Film Stats</h2>
+            <div class="stats-grid" id="statsGrid">
+                <!-- Populated by JavaScript -->
+            </div>
+            <div style="background:var(--ink-raised);border:1px solid var(--ink-line);border-radius:var(--radius-md);padding:20px;text-align:center;">
+                <p style="color:var(--paper-dim);font-weight:300;font-size:clamp(14px,1vw,16px);">
+                    <i class="fas fa-film" style="color:var(--gold);margin-right:8px;"></i>
+                    You're a cinema champion! Keep watching and exploring new films.
+                </p>
+            </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div class="tab-pane" id="tabSettings">
+            <h2>Settings</h2>
+
+            <div class="settings-group">
+                <h3>Profile</h3>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">Display Name</div>
+                        <div class="settings-desc">Daniel Asamoah</div>
+                    </div>
+                    <div class="settings-control">
+                        <button class="btn-settings">Edit</button>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">Email Address</div>
+                        <div class="settings-desc">daniel@example.com</div>
+                    </div>
+                    <div class="settings-control">
+                        <button class="btn-settings">Change</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>Preferences</h3>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">Language</div>
+                        <div class="settings-desc">Choose your preferred language</div>
+                    </div>
+                    <div class="settings-control">
+                        <select>
+                            <option>English</option>
+                            <option>French</option>
+                            <option>Spanish</option>
+                            <option>Portuguese</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">Email Notifications</div>
+                        <div class="settings-desc">Receive updates about new releases and events</div>
+                    </div>
+                    <div class="settings-control">
+                        <input type="checkbox" checked>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">Dark Mode</div>
+                        <div class="settings-desc">Always on (Savannah Cinemas style)</div>
+                    </div>
+                    <div class="settings-control">
+                        <span style="color:var(--gold);font-size:14px;">🌙</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>Account</h3>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">Change Password</div>
+                        <div class="settings-desc">Update your password to keep your account secure</div>
+                    </div>
+                    <div class="settings-control">
+                        <button class="btn-settings">Update</button>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">Delete Account</div>
+                        <div class="settings-desc">Permanently remove your account and all data</div>
+                    </div>
+                    <div class="settings-control">
+                        <button class="btn-settings danger">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================================
+    JAVASCRIPT
+    ============================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+            
+            const profileWrapper = document.getElementById('profileWrapper');
+            const avatarBtn = document.getElementById('avatarBtn');
+            let closeTimer = null;
+
+            if (profileWrapper) {
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(function() {
+                        profileWrapper.classList.remove('is-open');
+                    }, 150);
+                });
+
+                avatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileWrapper.classList.toggle('is-open');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // TAB SWITCHING
+            // ============================================================
+            
+            const tabs = document.querySelectorAll('.tab-btn');
+            const panes = {
+                watchlist: document.getElementById('tabWatchlist'),
+                bookings: document.getElementById('tabBookings'),
+                stats: document.getElementById('tabStats'),
+                settings: document.getElementById('tabSettings')
+            };
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Hide all panes
+                    Object.values(panes).forEach(pane => {
+                        pane.classList.remove('active');
+                    });
+
+                    // Show selected pane
+                    const target = this.dataset.tab;
+                    if (panes[target]) {
+                        panes[target].classList.add('active');
+                    }
+                });
+            });
+
+            // ============================================================
+            // WATCHLIST DATA
+            // ============================================================
+            
+            const watchlistData = [
+                {
+                    id: 1,
+                    title: 'Inception',
+                    year: '2010',
+                    rating: '8.8',
+                    poster: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+                    watched: true,
+                    watchedDate: 'Dec 12, 2024'
+                },
+                {
+                    id: 2,
+                    title: 'The Dark Knight',
+                    year: '2008',
+                    rating: '9.0',
+                    poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
+                    watched: true,
+                    watchedDate: 'Nov 28, 2024'
+                },
+                {
+                    id: 3,
+                    title: 'Interstellar',
+                    year: '2014',
+                    rating: '8.6',
+                    poster: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+                    watched: false,
+                    watchedDate: null
+                },
+                {
+                    id: 4,
+                    title: 'Dune: Part Two',
+                    year: '2024',
+                    rating: '8.9',
+                    poster: 'https://image.tmdb.org/t/p/w500/8cdWjvZQUDoUJvW6sLFLq7JVJ2q.jpg',
+                    watched: false,
+                    watchedDate: null
+                },
+                {
+                    id: 5,
+                    title: 'Avatar',
+                    year: '2009',
+                    rating: '7.9',
+                    poster: 'https://image.tmdb.org/t/p/w500/6WBIzCgmDCYrTJ2s9M1XcP9lQ0e.jpg',
+                    watched: true,
+                    watchedDate: 'Oct 15, 2024'
+                },
+                {
+                    id: 6,
+                    title: 'The Matrix',
+                    year: '1999',
+                    rating: '8.7',
+                    poster: 'https://image.tmdb.org/t/p/w500/f89U3ADr1oTB1hH3gP8CwH9g8Dp.jpg',
+                    watched: false,
+                    watchedDate: null
+                }
+            ];
+
+            function renderWatchlist() {
+                const grid = document.getElementById('watchlistGrid');
+                
+                const watchedFilms = watchlistData.filter(f => f.watched);
+                const unwatchedFilms = watchlistData.filter(f => !f.watched);
+
+                // Show unwatched first, then watched
+                const sortedFilms = [...unwatchedFilms, ...watchedFilms];
+
+                if (sortedFilms.length === 0) {
+                    grid.innerHTML = `
+                        <div class="empty-state" style="grid-column:1/-1;">
+                            <i class="fas fa-list"></i>
+                            <p>Your watchlist is empty. Start adding films you want to watch!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                grid.innerHTML = sortedFilms.map(film => {
+                    const watchedClass = film.watched ? 'watched' : '';
+                    const statusBadge = film.watched 
+                        ? `<span class="status-badge watched">✓ Watched</span>` 
+                        : `<span class="status-badge watchlist">⏳ Watchlist</span>`;
+                    
+                    const watchedDate = film.watched && film.watchedDate 
+                        ? `<span style="font-size:10px;color:var(--paper-dim);">Watched on ${film.watchedDate}</span>` 
+                        : '';
+
+                    return `
+                        <div class="watchlist-card ${watchedClass}">
+                            <div class="poster" style="background-image: url('${film.poster}');">
+                                ${statusBadge}
+                            </div>
+                            <div class="info">
+                                <div class="title">${film.title}</div>
+                                <div class="meta">
+                                    <span>${film.year}</span>
+                                    <span class="rating">★ ${film.rating}</span>
+                                </div>
+                                <div style="font-size:10px;color:var(--paper-dim);margin-top:2px;">${watchedDate}</div>
+                                <div class="actions">
+                                    ${film.watched 
+                                        ? `<button class="watched-btn" onclick="markUnwatched(${film.id})"><i class="fas fa-undo"></i> Mark Unwatched</button>`
+                                        : `<button class="watched-btn" onclick="markWatched(${film.id})"><i class="fas fa-check"></i> Mark Watched</button>`
+                                    }
+                                    <button class="remove-btn" onclick="removeFromWatchlist(${film.id})"><i class="fas fa-times"></i> Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // ============================================================
+            // WATCHLIST ACTIONS
+            // ============================================================
+            
+            window.markWatched = function(id) {
+                const film = watchlistData.find(f => f.id === id);
+                if (film) {
+                    film.watched = true;
+                    film.watchedDate = new Date().toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    renderWatchlist();
+                    updateStats();
+                }
+            };
+
+            window.markUnwatched = function(id) {
+                const film = watchlistData.find(f => f.id === id);
+                if (film) {
+                    film.watched = false;
+                    film.watchedDate = null;
+                    renderWatchlist();
+                    updateStats();
+                }
+            };
+
+            window.removeFromWatchlist = function(id) {
+                const index = watchlistData.findIndex(f => f.id === id);
+                if (index > -1) {
+                    watchlistData.splice(index, 1);
+                    renderWatchlist();
+                    updateStats();
+                }
+            };
+
+            // ============================================================
+            // BOOKINGS DATA
+            // ============================================================
+            
+            const bookingsData = [
+                {
+                    id: 1,
+                    title: 'Inception',
+                    poster: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+                    date: 'Dec 12, 2024',
+                    time: '7:45 PM',
+                    screen: 'Screen 1',
+                    seats: 'C5, C6',
+                    status: 'upcoming'
+                },
+                {
+                    id: 2,
+                    title: 'The Dark Knight',
+                    poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
+                    date: 'Nov 28, 2024',
+                    time: '8:30 PM',
+                    screen: 'Screen 2',
+                    seats: 'B3, B4',
+                    status: 'past'
+                },
+                {
+                    id: 3,
+                    title: 'Interstellar',
+                    poster: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+                    date: 'Dec 25, 2024',
+                    time: '9:15 PM',
+                    screen: 'Screen 3',
+                    seats: 'D7, D8, D9',
+                    status: 'upcoming'
+                }
+            ];
+
+            function renderBookings() {
+                const container = document.getElementById('bookingList');
+                
+                if (bookingsData.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-ticket-alt"></i>
+                            <p>You haven't made any bookings yet. Book your first ticket today!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = bookingsData.map(booking => `
+                    <div class="booking-item">
+                        <div class="booking-poster" style="background-image: url('${booking.poster}');"></div>
+                        <div class="booking-info">
+                            <div class="title">${booking.title}</div>
+                            <div class="details">
+                                ${booking.date} · ${booking.time} · ${booking.screen} · Seats: ${booking.seats}
+                            </div>
+                        </div>
+                        <span class="booking-status ${booking.status}">
+                            ${booking.status === 'upcoming' ? '🎟️ Upcoming' : '✓ Watched'}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // ============================================================
+            // STATS DATA
+            // ============================================================
+            
+            function updateStats() {
+                const watchedCount = watchlistData.filter(f => f.watched).length;
+                const totalCount = watchlistData.length;
+                const genres = ['Sci-Fi', 'Action', 'Drama', 'Thriller', 'Adventure'];
+                const countries = ['USA', 'UK', 'Canada', 'Australia', 'Japan'];
+                
+                const stats = [
+                    { number: watchedCount, label: 'Films Watched' },
+                    { number: totalCount - watchedCount, label: 'To Watch' },
+                    { number: genres.length, label: 'Genres Explored' },
+                    { number: countries.length, label: 'Countries' },
+                    { number: '4.2', label: 'Avg Rating' },
+                    { number: 'Sci-Fi', label: 'Top Genre' }
+                ];
+
+                const grid = document.getElementById('statsGrid');
+                grid.innerHTML = stats.map(stat => `
+                    <div class="stat-card">
+                        <div class="stat-number">${stat.number}</div>
+                        <div class="stat-label">${stat.label}</div>
+                    </div>
+                `).join('');
+            }
+
+            // ============================================================
+            // SETTINGS ACTIONS
+            // ============================================================
+            
+            document.querySelectorAll('.btn-settings').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (this.textContent.includes('Delete')) {
+                        if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                            alert('Account deletion would be processed here.');
+                        }
+                    } else if (this.textContent.includes('Edit') || this.textContent.includes('Change') || this.textContent.includes('Update')) {
+                        alert('This would open an edit form.');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.settings-control select').forEach(select => {
+                select.addEventListener('change', function() {
+                    alert(`Language preference updated to: ${this.value}`);
+                });
+            });
+
+            document.querySelectorAll('.settings-control input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const status = this.checked ? 'enabled' : 'disabled';
+                    alert(`Notifications ${status}.`);
+                });
+            });
+
+            // ============================================================
+            // INITIALIZE
+            // ============================================================
+            
+            renderWatchlist();
+            renderBookings();
+            updateStats();
+
+        });
+    </script>
+
+</body>
+</html>
