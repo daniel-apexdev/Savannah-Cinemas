@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events & Promotions — Savannah Cinemas</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --ink: #14141C;
+            --ink-raised: #1D1D28;
+            --ink-line: #2C2C3A;
+            --paper: #F2EFE9;
+            --paper-dim: #B9B6AC;
+            --gold: #E8B34C;
+            --gold-dim: #7A5C22;
+            --rust: #B33951;
+            --rust-hover: #c94661;
+            --rust-deep: #6E2333;
+            --success: #4C9A6A;
+            --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
+            --font-body: 'Inter', 'Public Sans', -apple-system, sans-serif;
+            --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --container-padding: clamp(16px, 4vw, 60px);
+            --touch-target: clamp(44px, 5vw, 56px);
+            --max-width: 1200px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---------- NAV ---------- */
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px var(--container-padding);
+            border-bottom: 1px solid var(--ink-line);
+            background: rgba(20, 20, 28, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            gap: 16px;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .wordmark {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2.5vw, 28px);
+            font-weight: 500;
+            text-decoration: none;
+            color: var(--paper);
+        }
+
+        .wordmark span {
+            color: var(--gold);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: clamp(16px, 2vw, 32px);
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 1vw, 15px);
+            font-weight: 400;
+            transition: 0.3s ease;
+            letter-spacing: 0.02em;
+            position: relative;
+            padding: 4px 0;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--gold);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--gold);
+            border-radius: 2px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            z-index: 1001;
+        }
+
+        /* ---------- HAMBURGER MENU TOGGLE ---------- */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px 8px;
+            z-index: 1001;
+            position: relative;
+            flex-shrink: 0;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            justify-content: center;
+            align-items: center;
+            border-radius: var(--radius-sm);
+            touch-action: manipulation;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 28px;
+            height: 2.5px;
+            background: var(--paper);
+            transition: 0.3s ease;
+            border-radius: 2px;
+            transform-origin: center;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        /* ---------- MOBILE MENU - SLIDE FROM LEFT ---------- */
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 85%;
+            max-width: 380px;
+            height: 100vh;
+            background: var(--ink);
+            z-index: 1000;
+            padding: 0;
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            box-shadow: 8px 0 40px rgba(0, 0, 0, 0.6);
+            border-right: 1px solid var(--ink-line);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-menu.open {
+            left: 0;
+        }
+
+        .mobile-menu-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 24px 20px;
+            border-bottom: 1px solid var(--ink-line);
+            background: var(--ink-raised);
+            flex-shrink: 0;
+        }
+
+        .mobile-menu-brand {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 500;
+            color: var(--paper);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .mobile-menu-brand span {
+            color: var(--gold);
+        }
+
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            color: var(--paper);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 12px;
+            transition: 0.3s ease;
+            line-height: 1;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            touch-action: manipulation;
+        }
+
+        .mobile-menu-close:hover {
+            color: var(--gold);
+            transform: rotate(90deg);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .mobile-menu-links {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .mobile-menu-links li {
+            padding: 0 24px;
+            margin: 4px 0;
+        }
+
+        .mobile-menu-links a {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 12px;
+            color: var(--paper);
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 400;
+            transition: 0.2s ease;
+            border-radius: 10px;
+            width: 100%;
+            letter-spacing: 0.02em;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .mobile-menu-links a i {
+            width: 28px;
+            text-align: center;
+            color: var(--paper-dim);
+            font-size: 20px;
+            transition: 0.2s ease;
+        }
+
+        .mobile-menu-links a:hover {
+            color: var(--gold);
+            background: rgba(232, 179, 76, 0.06);
+            padding-left: 18px;
+        }
+
+        .mobile-menu-links a:hover i {
+            color: var(--gold);
+        }
+
+        .mobile-menu-links a.active {
+            color: var(--gold);
+            background: rgba(232, 179, 76, 0.08);
+        }
+
+        .mobile-menu-links a.active i {
+            color: var(--gold);
+        }
+
+        .mobile-divider {
+            height: 1px;
+            background: var(--ink-line);
+            margin: 12px 24px;
+        }
+
+        .mobile-logout {
+            color: #d95b5b !important;
+            margin-top: 8px;
+        }
+
+        .mobile-logout i {
+            color: #d95b5b !important;
+        }
+
+        .mobile-logout:hover {
+            color: #ff6b6b !important;
+            background: rgba(217, 91, 91, 0.08) !important;
+        }
+
+        .mobile-logout:hover i {
+            color: #ff6b6b !important;
+        }
+
+        .mobile-menu-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--ink-line);
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--paper-dim);
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        /* ---------- PROFILE ---------- */
+        .profile-wrapper {
+            position: relative;
+        }
+
+        .avatar {
+            width: var(--touch-target);
+            height: var(--touch-target);
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 15px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.3s ease;
+            user-select: none;
+        }
+
+        .avatar:hover {
+            border-color: var(--gold-dim);
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            width: 220px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .profile-wrapper.is-open .profile-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-menu .who {
+            padding: 16px;
+            border-bottom: 1px solid var(--ink-line);
+        }
+
+        .profile-menu .who .name {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--paper);
+        }
+
+        .profile-menu .who .stat {
+            color: var(--gold);
+            font-size: 12px;
+            font-family: var(--font-mono);
+            margin-top: 4px;
+        }
+
+        .profile-menu a {
+            display: block;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--paper-dim);
+            text-decoration: none;
+            border-bottom: 1px solid var(--ink-line);
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .profile-menu a:last-child {
+            border-bottom: none;
+            color: #d95b5b;
+        }
+
+        .profile-menu a:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--paper);
+        }
+
+        .profile-menu a:last-child:hover {
+            color: #ff6b6b;
+        }
+
+        /* ---------- PAGE HEADER ---------- */
+        .page-header {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 32px var(--container-padding) 16px;
+        }
+
+        .page-header .eyebrow {
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 1vw, 13px);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 400;
+            margin-bottom: 4px;
+        }
+
+        .page-header h1 {
+            font-family: var(--font-display);
+            font-size: clamp(32px, 4vw, 48px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 6px;
+        }
+
+        .page-header p {
+            font-size: clamp(14px, 1vw, 17px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            max-width: 600px;
+        }
+
+        /* ---------- FILTERS ---------- */
+        .filters-bar {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 var(--container-padding) 16px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            border-bottom: 1px solid var(--ink-line);
+        }
+
+        .filters-bar .filter-label {
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            font-family: var(--font-mono);
+        }
+
+        .filters-bar select {
+            padding: 8px 14px;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            cursor: pointer;
+            min-height: 40px;
+            transition: 0.3s ease;
+        }
+
+        .filters-bar select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .filters-bar select:hover {
+            border-color: var(--gold-dim);
+        }
+
+        .filters-bar .result-count {
+            margin-left: auto;
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            font-family: var(--font-mono);
+        }
+
+        .filters-bar .result-count span {
+            color: var(--gold);
+        }
+
+        /* ---------- PROMO BANNER ---------- */
+        .promo-banner {
+            max-width: var(--max-width);
+            margin: 0 auto 24px;
+            padding: 0 var(--container-padding);
+        }
+
+        .promo-banner .promo-content {
+            background: linear-gradient(135deg, var(--rust-deep), var(--rust));
+            border-radius: var(--radius-md);
+            padding: clamp(24px, 3vw, 40px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .promo-banner .promo-content::before {
+            content: '🎬';
+            position: absolute;
+            right: -20px;
+            top: -20px;
+            font-size: 120px;
+            opacity: 0.1;
+            transform: rotate(15deg);
+        }
+
+        .promo-banner .promo-text {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .promo-banner .promo-text .promo-label {
+            font-family: var(--font-mono);
+            font-size: clamp(10px, 0.7vw, 12px);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 300;
+        }
+
+        .promo-banner .promo-text h2 {
+            font-family: var(--font-display);
+            font-size: clamp(24px, 2.5vw, 34px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 4px;
+        }
+
+        .promo-banner .promo-text p {
+            font-size: clamp(14px, 0.9vw, 16px);
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+        }
+
+        .promo-banner .promo-text .promo-code {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: clamp(18px, 1.5vw, 24px);
+            color: var(--gold);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 16px;
+            border-radius: var(--radius-sm);
+            margin-top: 6px;
+            letter-spacing: 0.1em;
+        }
+
+        .promo-banner .promo-btn {
+            padding: 12px 32px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 0.9vw, 16px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            touch-action: manipulation;
+            min-height: var(--touch-target);
+            flex-shrink: 0;
+        }
+
+        .promo-banner .promo-btn:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+        }
+
+        .promo-banner .promo-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* ---------- EVENTS GRID ---------- */
+        .events-grid {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 20px var(--container-padding) 60px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(clamp(280px, 25vw, 340px), 1fr));
+            gap: 24px;
+        }
+
+        .event-card {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            transition: 0.3s ease;
+        }
+
+        .event-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--gold-dim);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .event-card .event-image {
+            height: 180px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .event-card .event-image .event-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 14px;
+            border-radius: 12px;
+            background: var(--gold);
+            color: var(--ink);
+        }
+
+        .event-card .event-image .event-badge.free {
+            background: var(--success);
+            color: var(--paper);
+        }
+
+        .event-card .event-image .event-badge.promo {
+            background: var(--rust);
+            color: var(--paper);
+        }
+
+        .event-card .event-body {
+            padding: 18px;
+        }
+
+        .event-card .event-body .event-title {
+            font-family: var(--font-display);
+            font-size: clamp(18px, 1.3vw, 22px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 4px;
+        }
+
+        .event-card .event-body .event-meta {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .event-card .event-body .event-meta i {
+            color: var(--gold);
+            width: 14px;
+            font-size: 12px;
+        }
+
+        .event-card .event-body .event-desc {
+            font-size: clamp(13px, 0.9vw, 15px);
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 300;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .event-card .event-body .event-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-top: 12px;
+            border-top: 1px solid var(--ink-line);
+        }
+
+        .event-card .event-body .event-footer .event-price {
+            font-family: var(--font-mono);
+            font-size: clamp(14px, 0.9vw, 16px);
+            color: var(--gold);
+        }
+
+        .event-card .event-body .event-footer .event-price.free {
+            color: var(--success);
+        }
+
+        .event-card .event-body .btn-event {
+            padding: 8px 24px;
+            background: var(--rust);
+            color: var(--paper);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            font-weight: 400;
+            cursor: pointer;
+            transition: 0.3s ease;
+            touch-action: manipulation;
+            min-height: var(--touch-target);
+        }
+
+        .event-card .event-body .btn-event:hover {
+            background: var(--rust-hover);
+            transform: translateY(-2px);
+        }
+
+        .event-card .event-body .btn-event:active {
+            transform: scale(0.96);
+        }
+
+        .event-card .event-body .btn-event.ghost {
+            background: transparent;
+            color: var(--gold);
+            border: 1px solid var(--gold-dim);
+        }
+
+        .event-card .event-body .btn-event.ghost:hover {
+            background: var(--gold);
+            color: var(--ink);
+        }
+
+        /* ---------- EMPTY STATE ---------- */
+        .empty-state {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 60px var(--container-padding);
+            text-align: center;
+            color: var(--paper-dim);
+            grid-column: 1 / -1;
+        }
+
+        .empty-state i {
+            color: var(--gold);
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .empty-state h3 {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2vw, 28px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 4px;
+        }
+
+        .empty-state p {
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 300;
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .events-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                padding: 16px var(--container-padding) 40px;
+            }
+
+            .event-card .event-image {
+                height: 140px;
+            }
+
+            .filters-bar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .filters-bar .result-count {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .promo-banner .promo-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .promo-banner .promo-content::before {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .events-grid {
+                grid-template-columns: 2fr;
+                gap: 14px;
+                padding: 12px var(--container-padding) 30px;
+            }
+
+            .event-card .event-image {
+                height: 160px;
+            }
+
+            .event-card .event-body .event-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .event-card .event-body .btn-event {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .page-header h1 {
+                font-size: 26px;
+            }
+
+            .page-header p {
+                font-size: 13px;
+            }
+
+            .promo-banner .promo-text h2 {
+                font-size: 22px;
+            }
+
+            .promo-banner .promo-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .filters-bar select {
+                font-size: 11px;
+                padding: 6px 10px;
+                min-height: 34px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .events-grid {
+                grid-template-columns: 2fr;
+            }
+        }
+
+        /* ---------- SCROLLBAR ---------- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================
+    NAVIGATION
+    ============================================================ -->
+    <nav class="nav">
+        <div class="nav-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <a href="index.html" class="wordmark">SAVANNAH <span>CINEMAS</span></a>
+        </div>
+        
+        <!-- Desktop Navigation -->
+        <ul class="nav-links" id="navLinks">
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html" class="active">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+            <li><a href="extras.html">Extras</a></li>
+        </ul>
+        
+        <div class="nav-right">
+            <div class="profile-wrapper" id="profileWrapper">
+                <div class="avatar" id="avatarBtn">DA</div>
+                <div class="profile-menu" id="profileMenu">
+                    <div class="who">
+                        <div class="name">Daniel Asamoah</div>
+                        <div class="stat">142 films watched</div>
+                    </div>
+                    <a href="profile.html">My Profile</a>
+                    <a href="logout.html">Sign out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================================
+    MOBILE MENU
+    ============================================================ -->
+    <div class="mobile-menu-overlay" id="mobileOverlay"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <div class="mobile-menu-brand">Savannah <span>Cinemas</span></div>
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="mobile-menu-links">
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html" class="active">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+            <li><a href="extras.html">Extras</a></li>
+            <li class="mobile-divider"></li>
+            <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+        </ul>
+        <div class="mobile-menu-footer">
+            <p>© 2026 Savannah Cinemas</p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    PAGE HEADER
+    ============================================================ -->
+    <div class="page-header">
+        <div class="eyebrow">Events & Promotions</div>
+        <h1>Special Screenings & Offers</h1>
+        <p>Discover exclusive events, film festivals, and promotions at Savannah Cinemas.</p>
+    </div>
+
+    <!-- ============================================================
+    PROMO BANNER
+    ============================================================ -->
+    <div class="promo-banner">
+        <div class="promo-content">
+            <div class="promo-text">
+                <div class="promo-label">🎉 Limited Time Offer</div>
+                <h2>Buy One Get One Free</h2>
+                <p>Get a free ticket for any film when you purchase a combo meal. Use code:</p>
+                <span class="promo-code">SAVANNAH-BOGO</span>
+            </div>
+            <button class="promo-btn" onclick="alert('Promo code SAVANNAH-BOGO applied! 🎉')">
+                Claim Offer <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    FILTERS BAR
+    ============================================================ -->
+    <div class="filters-bar">
+        <span class="filter-label">Filter:</span>
+        <select id="filterCategory">
+            <option value="all">All Events</option>
+            <option value="screening">Special Screenings</option>
+            <option value="festival">Film Festivals</option>
+            <option value="panel">Panels & Talks</option>
+            <option value="promo">Promotions</option>
+        </select>
+
+        <span class="filter-label" style="margin-left:8px;">Sort by:</span>
+        <select id="filterSort">
+            <option value="date-asc">Date (Earliest)</option>
+            <option value="date-desc">Date (Latest)</option>
+            <option value="title">Title A-Z</option>
+        </select>
+
+        <span class="result-count">Showing <span id="resultCount">0</span> events</span>
+    </div>
+
+    <!-- ============================================================
+    EVENTS GRID
+    ============================================================ -->
+    <div class="events-grid" id="eventsGrid">
+        <!-- Populated by JavaScript -->
+    </div>
+
+    <!-- ============================================================
+    JAVASCRIPT
+    ============================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ============================================================
+            // MOBILE MENU
+            // ============================================================
+            
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            const mobileMenuClose = document.getElementById('mobileMenuClose');
+
+            function openMobileMenu() {
+                mobileMenu.classList.add('open');
+                mobileOverlay.classList.add('active');
+                menuToggle.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMobileMenu() {
+                mobileMenu.classList.remove('open');
+                mobileOverlay.classList.remove('active');
+                menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (mobileMenu.classList.contains('open')) {
+                        closeMobileMenu();
+                    } else {
+                        openMobileMenu();
+                    }
+                });
+            }
+
+            if (mobileMenuClose) {
+                mobileMenuClose.addEventListener('click', closeMobileMenu);
+            }
+
+            if (mobileOverlay) {
+                mobileOverlay.addEventListener('click', closeMobileMenu);
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
+                    closeMobileMenu();
+                }
+            });
+
+            document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
+                link.addEventListener('click', closeMobileMenu);
+            });
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+            
+            const profileWrapper = document.getElementById('profileWrapper');
+            const avatarBtn = document.getElementById('avatarBtn');
+            let closeTimer = null;
+
+            if (profileWrapper) {
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(function() {
+                        profileWrapper.classList.remove('is-open');
+                    }, 150);
+                });
+
+                avatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileWrapper.classList.toggle('is-open');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // EVENTS DATA
+            // ============================================================
+            
+            const eventsData = [
+                {
+                    id: 1,
+                    title: 'Director\'s Cut Night: Inception',
+                    date: 'Dec 15, 2024',
+                    time: '7:00 PM',
+                    location: 'Screen 1',
+                    type: 'screening',
+                    badge: 'Special Screening',
+                    badgeType: 'default',
+                    price: 'Free Entry',
+                    isFree: true,
+                    image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&h=400&fit=crop',
+                    description: 'Experience Christopher Nolan\'s masterpiece with exclusive behind-the-scenes commentary and director\'s insights. Includes a Q&A session with film critics.',
+                    buttonText: 'Reserve Seat'
+                },
+                {
+                    id: 2,
+                    title: 'Christmas Movie Marathon',
+                    date: 'Dec 20, 2024',
+                    time: '10:00 AM - 10:00 PM',
+                    location: 'Screen 2 & 3',
+                    type: 'festival',
+                    badge: 'All-Day Pass',
+                    badgeType: 'default',
+                    price: '$25.00',
+                    isFree: false,
+                    image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&h=400&fit=crop',
+                    description: 'Four classic Christmas films back-to-back with special holiday treats, hot chocolate, and festive decorations. Get into the holiday spirit with us!',
+                    buttonText: 'Get Pass'
+                },
+                {
+                    id: 3,
+                    title: 'Film Industry Panel: The Future of Cinema',
+                    date: 'Jan 10, 2025',
+                    time: '6:30 PM',
+                    location: 'Lobby Lounge',
+                    type: 'panel',
+                    badge: 'Free Entry',
+                    badgeType: 'free',
+                    price: 'Free Entry',
+                    isFree: true,
+                    image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&h=400&fit=crop',
+                    description: 'Local filmmakers, directors, and critics discuss the art of storytelling, the future of cinema, and the impact of AI on filmmaking. Open to all film enthusiasts.',
+                    buttonText: 'RSVP Now'
+                },
+                {
+                    id: 4,
+                    title: 'Student Film Festival 2025',
+                    date: 'Jan 25, 2025',
+                    time: '2:00 PM',
+                    location: 'Screen 1 & 4',
+                    type: 'festival',
+                    badge: 'Student Showcase',
+                    badgeType: 'default',
+                    price: '$10.00',
+                    isFree: false,
+                    image: 'https://images.unsplash.com/photo-1534269222344-5d0b1f1d1b3d?w=600&h=400&fit=crop',
+                    description: 'Celebrating the next generation of filmmakers. Watch short films created by local students and vote for your favorite. Winners receive industry mentorship.',
+                    buttonText: 'Get Tickets'
+                },
+                {
+                    id: 5,
+                    title: 'Weekend Promo: 2-for-1 Tickets',
+                    date: 'Every Saturday & Sunday',
+                    time: 'All Day',
+                    location: 'All Screens',
+                    type: 'promo',
+                    badge: '🔥 BOGO',
+                    badgeType: 'promo',
+                    price: '2-for-1',
+                    isFree: false,
+                    image: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?w=600&h=400&fit=crop',
+                    description: 'Buy one ticket, get one free on any standard screening this weekend! Valid for all films and showtimes. Bring a friend and enjoy the movies together.',
+                    buttonText: 'Book Now'
+                },
+                {
+                    id: 6,
+                    title: 'Sci-Fi Double Feature',
+                    date: 'Feb 5, 2025',
+                    time: '6:00 PM',
+                    location: 'Screen 1',
+                    type: 'screening',
+                    badge: 'Double Feature',
+                    badgeType: 'default',
+                    price: '$18.00',
+                    isFree: false,
+                    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&h=400&fit=crop',
+                    description: 'Two classic sci-fi films back-to-back with a 15-minute intermission. Includes a free popcorn and drink combo with every ticket purchase.',
+                    buttonText: 'Get Tickets'
+                },
+                {
+                    id: 7,
+                    title: 'Women in Film Networking Event',
+                    date: 'Feb 12, 2025',
+                    time: '7:00 PM',
+                    location: 'Lobby Lounge',
+                    type: 'panel',
+                    badge: 'Free Entry',
+                    badgeType: 'free',
+                    price: 'Free Entry',
+                    isFree: true,
+                    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=400&fit=crop',
+                    description: 'Connect with women working in the film industry. A networking event featuring panel discussions, mentorship opportunities, and film screenings.',
+                    buttonText: 'Register'
+                },
+                {
+                    id: 8,
+                    title: 'Spring Film Festival',
+                    date: 'Mar 8, 2025',
+                    time: '12:00 PM - 8:00 PM',
+                    location: 'All Screens',
+                    type: 'festival',
+                    badge: '🎬 Festival',
+                    badgeType: 'default',
+                    price: '$15.00',
+                    isFree: false,
+                    image: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=400&fit=crop',
+                    description: 'A celebration of independent cinema. Screenings of award-winning indie films, filmmaker Q&As, and a closing party with special guests.',
+                    buttonText: 'Buy Pass'
+                }
+            ];
+
+            let filteredEvents = [...eventsData];
+            let currentFilter = {
+                category: 'all',
+                sort: 'date-asc'
+            };
+
+            // ============================================================
+            // RENDER FUNCTIONS
+            // ============================================================
+            
+            function renderEvents(events) {
+                const grid = document.getElementById('eventsGrid');
+                
+                if (events.length === 0) {
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-times"></i>
+                            <h3>No Events Found</h3>
+                            <p>Try adjusting your filters to see more events.</p>
+                        </div>
+                    `;
+                    document.getElementById('resultCount').textContent = '0';
+                    return;
+                }
+
+                document.getElementById('resultCount').textContent = events.length;
+
+                grid.innerHTML = events.map(event => {
+                    const badgeClass = event.badgeType === 'free' ? 'free' : 
+                                      event.badgeType === 'promo' ? 'promo' : 'default';
+                    const priceClass = event.isFree ? 'free' : '';
+                    
+                    return `
+                        <div class="event-card" onclick="eventDetail('${event.title}')">
+                            <div class="event-image" style="background-image: url('${event.image}');">
+                                <span class="event-badge ${badgeClass}">${event.badge}</span>
+                            </div>
+                            <div class="event-body">
+                                <div class="event-title">${event.title}</div>
+                                <div class="event-meta">
+                                    <span><i class="far fa-calendar-alt"></i> ${event.date}</span>
+                                    <span><i class="far fa-clock"></i> ${event.time}</span>
+                                    <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
+                                </div>
+                                <div class="event-desc">${event.description}</div>
+                                <div class="event-footer">
+                                    <span class="event-price ${priceClass}">${event.price}</span>
+                                    <button class="btn-event ${event.isFree ? 'ghost' : ''}" onclick="event.stopPropagation(); bookEvent('${event.title}')">
+                                        ${event.buttonText}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // ============================================================
+            // FILTER FUNCTIONS
+            // ============================================================
+            
+            function applyFilters() {
+                let events = [...eventsData];
+
+                if (currentFilter.category !== 'all') {
+                    events = events.filter(event => event.type === currentFilter.category);
+                }
+
+                switch (currentFilter.sort) {
+                    case 'date-asc':
+                        events.sort((a, b) => {
+                            const dateA = new Date(a.date);
+                            const dateB = new Date(b.date);
+                            return dateA - dateB;
+                        });
+                        break;
+                    case 'date-desc':
+                        events.sort((a, b) => {
+                            const dateA = new Date(a.date);
+                            const dateB = new Date(b.date);
+                            return dateB - dateA;
+                        });
+                        break;
+                    case 'title':
+                        events.sort((a, b) => a.title.localeCompare(b.title));
+                        break;
+                    default:
+                        break;
+                }
+
+                filteredEvents = events;
+                renderEvents(events);
+            }
+
+            // ============================================================
+            // EVENT FUNCTIONS
+            // ============================================================
+            
+            window.eventDetail = function(title) {
+                alert(`📽️ Event: "${title}"\n\nMore details will be available soon. Check back for updates!`);
+            };
+
+            window.bookEvent = function(title) {
+                alert(`🎟️ You've booked a spot for "${title}"!\n\nWe'll send you a confirmation email shortly.`);
+            };
+
+            // ============================================================
+            // FILTER EVENT LISTENERS
+            // ============================================================
+            
+            document.getElementById('filterCategory').addEventListener('change', function() {
+                currentFilter.category = this.value;
+                applyFilters();
+            });
+
+            document.getElementById('filterSort').addEventListener('change', function() {
+                currentFilter.sort = this.value;
+                applyFilters();
+            });
+
+            // ============================================================
+            // PROMO BANNER
+            // ============================================================
+            
+            document.querySelector('.promo-btn')?.addEventListener('click', function() {
+                alert('🎉 Promo code SAVANNAH-BOGO applied!\n\nGet a free ticket when you purchase a combo meal.');
+            });
+
+            // ============================================================
+            // INITIALIZE
+            // ============================================================
+            
+            renderEvents(eventsData);
+            document.getElementById('resultCount').textContent = eventsData.length;
+
+        });
+    </script>
+
+</body>
+</html>

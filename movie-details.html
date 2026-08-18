@@ -8,7 +8,7 @@
     <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         :root {
             --ink: #14141C;
@@ -84,6 +84,40 @@
             gap: 16px;
             position: relative;
             z-index: 1001;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: clamp(16px, 3vw, 32px);
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 1.2vw, 15px);
+            font-weight: 400;
+            transition: 0.3s ease;
+            letter-spacing: 0.02em;
+            position: relative;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--gold);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--gold);
+            border-radius: 2px;
         }
 
         /* ---------- HAMBURGER MENU TOGGLE ---------- */
@@ -331,7 +365,7 @@
             justify-content: center;
             font-family: var(--font-display);
             font-weight: 500;
-            font-size: 15px;
+            font-size: 13px;
             cursor: pointer;
             border: 2px solid transparent;
             transition: 0.3s ease;
@@ -689,6 +723,52 @@
             color: var(--rust);
         }
 
+        /* ---------- TOAST NOTIFICATION ---------- */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: 14px 24px;
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 0.9vw, 16px);
+            font-weight: 400;
+            z-index: 3000;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast .toast-icon.added {
+            color: var(--success);
+        }
+
+        .toast .toast-icon.removed {
+            color: var(--rust);
+        }
+
+        .toast .toast-icon.already {
+            color: var(--gold);
+        }
+
         /* ---------- DETAILS LAYOUT ---------- */
         .details-layout {
             max-width: var(--container-max-width);
@@ -805,15 +885,26 @@
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-sm);
-            padding: 20px;
+            padding: 24px;
             text-align: center;
             color: var(--paper-dim);
         }
 
         .coming-soon-message i {
             color: var(--gold);
-            font-size: 28px;
+            font-size: 32px;
             display: block;
+            margin-bottom: 10px;
+        }
+
+        .coming-soon-message .year-badge {
+            display: inline-block;
+            background: var(--gold-dim);
+            color: var(--gold);
+            padding: 2px 14px;
+            border-radius: 12px;
+            font-family: var(--font-mono);
+            font-size: clamp(12px, 0.8vw, 14px);
             margin-bottom: 8px;
         }
 
@@ -823,10 +914,33 @@
             margin-bottom: 4px;
         }
 
-        .coming-soon-message .release-date {
+        .coming-soon-message .release-year {
             color: var(--gold);
-            font-family: var(--font-mono);
-            font-size: clamp(12px, 0.8vw, 14px);
+            font-family: var(--font-display);
+            font-size: clamp(20px, 1.8vw, 28px);
+            font-weight: 500;
+        }
+
+        .past-film-message {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            padding: 24px;
+            text-align: center;
+            color: var(--paper-dim);
+        }
+
+        .past-film-message i {
+            color: var(--paper-dim);
+            font-size: 32px;
+            display: block;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        .past-film-message p {
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 300;
         }
 
         /* ---------- CAST LIST ---------- */
@@ -1058,6 +1172,13 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            .toast {
+                bottom: 20px;
+                padding: 12px 18px;
+                font-size: 14px;
+                max-width: 95%;
+            }
         }
 
         @media (max-width: 480px) {
@@ -1140,7 +1261,16 @@
                 <span></span>
             </button>
             <a href="index.html" class="wordmark">SAVANNAH <span>CINEMAS</span></a>
+
         </div>
+
+        <ul class="nav-links" id="navLinks">
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+            <li><a href="extras.html">Extras</a></li>
+        </ul>
+
         <div class="nav-right">
             <div class="profile-wrapper" id="profileWrapper">
                 <div class="avatar" id="avatarBtn">DA</div>
@@ -1168,7 +1298,6 @@
             </button>
         </div>
         <ul class="mobile-menu-links">
-            <li><a href="index.html" class="active">Now Showing</a></li>
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
             <li><a href="discovery.html">Discovery</a></li>
@@ -1179,6 +1308,14 @@
         <div class="mobile-menu-footer">
             <p>© 2026 Savannah Cinemas</p>
         </div>
+    </div>
+
+    <!-- ============================================================
+    TOAST NOTIFICATION
+    ============================================================ -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✅</span>
+        <span id="toastMessage">Added to watchlist</span>
     </div>
 
     <!-- ============================================================
@@ -1340,15 +1477,97 @@
                 trailerModalBody: document.getElementById('trailerModalBody'),
                 trailerLoading: document.getElementById('trailerLoading'),
                 trailerIframe: document.getElementById('trailerIframe'),
-                noTrailer: document.getElementById('noTrailer')
+                noTrailer: document.getElementById('noTrailer'),
+                toast: document.getElementById('toast'),
+                toastIcon: document.getElementById('toastIcon'),
+                toastMessage: document.getElementById('toastMessage')
             };
 
             // ============================================================
-            // WATCHLIST STATE
+            // WATCHLIST STORAGE
             // ============================================================
 
-            let currentMovie = null;
-            let isInWatchlist = false;
+            const STORAGE_KEY = 'savannah_watchlist';
+
+            function getWatchlist() {
+                try {
+                    const data = localStorage.getItem(STORAGE_KEY);
+                    return data ? JSON.parse(data) : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveWatchlist(watchlist) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist));
+            }
+
+            function isInWatchlist(movieId) {
+                const watchlist = getWatchlist();
+                return watchlist.some(item => item.id === movieId);
+            }
+
+            function addToWatchlist(movie) {
+                const watchlist = getWatchlist();
+                
+                // Check if already exists
+                if (watchlist.some(item => item.id === movie.id)) {
+                    return { success: false, message: 'Already in watchlist' };
+                }
+                
+                // Add to watchlist
+                const watchlistItem = {
+                    id: movie.id,
+                    title: movie.title,
+                    year: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
+                    poster: movie.poster_path ? `${CONFIG.IMAGE_BASE}${movie.poster_path}` : '',
+                    rating: movie.vote_average || 0,
+                    addedDate: new Date().toISOString(),
+                    watched: false,
+                    favorite: false
+                };
+                
+                watchlist.push(watchlistItem);
+                saveWatchlist(watchlist);
+                return { success: true, message: 'Added to watchlist' };
+            }
+
+            function removeFromWatchlist(movieId) {
+                const watchlist = getWatchlist();
+                const updatedWatchlist = watchlist.filter(item => item.id !== movieId);
+                
+                if (updatedWatchlist.length === watchlist.length) {
+                    return { success: false, message: 'Not in watchlist' };
+                }
+                
+                saveWatchlist(updatedWatchlist);
+                return { success: true, message: 'Removed from watchlist' };
+            }
+
+            // ============================================================
+            // TOAST NOTIFICATION
+            // ============================================================
+
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                const iconMap = {
+                    added: '✅',
+                    removed: '🗑️',
+                    already: 'ℹ️'
+                };
+                
+                DOM.toastIcon.textContent = iconMap[type] || 'ℹ️';
+                DOM.toastIcon.className = `toast-icon ${type}`;
+                DOM.toastMessage.textContent = message;
+                
+                DOM.toast.classList.add('show');
+                
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    DOM.toast.classList.remove('show');
+                }, 3000);
+            }
 
             // ============================================================
             // PROFILE DROPDOWN
@@ -1426,21 +1645,33 @@
             // WATCHLIST FUNCTIONS
             // ============================================================
 
+            let currentMovie = null;
+
             function toggleWatchlist() {
                 if (!currentMovie) return;
 
-                isInWatchlist = !isInWatchlist;
-                updateWatchlistUI();
+                const movieId = currentMovie.id;
+                const inWatchlist = isInWatchlist(movieId);
 
-                // Show feedback
-                const message = isInWatchlist 
-                    ? `"${currentMovie.title}" added to your watchlist ❤️` 
-                    : `"${currentMovie.title}" removed from your watchlist`;
-                alert(message);
+                if (inWatchlist) {
+                    const result = removeFromWatchlist(movieId);
+                    if (result.success) {
+                        updateWatchlistUI(false);
+                        showToast(`"${currentMovie.title}" removed from watchlist`, 'removed');
+                    }
+                } else {
+                    const result = addToWatchlist(currentMovie);
+                    if (result.success) {
+                        updateWatchlistUI(true);
+                        showToast(`"${currentMovie.title}" added to watchlist ❤️`, 'added');
+                    } else {
+                        showToast(`"${currentMovie.title}" is already in your watchlist`, 'already');
+                    }
+                }
             }
 
-            function updateWatchlistUI() {
-                if (isInWatchlist) {
+            function updateWatchlistUI(inWatchlist) {
+                if (inWatchlist) {
                     DOM.watchlistBtn.classList.add('in-watchlist');
                     DOM.watchlistBtn.querySelector('i').className = 'fas fa-heart';
                     DOM.watchlistLabel.textContent = 'In Watchlist';
@@ -1449,6 +1680,11 @@
                     DOM.watchlistBtn.querySelector('i').className = 'far fa-heart';
                     DOM.watchlistLabel.textContent = 'Add to Watchlist';
                 }
+            }
+
+            function checkWatchlistStatus(movieId) {
+                const inWatchlist = isInWatchlist(movieId);
+                updateWatchlistUI(inWatchlist);
             }
 
             // ============================================================
@@ -1619,8 +1855,8 @@
                 DOM.movieTagline.textContent = movie.tagline || '';
 
                 // Year
-                DOM.movieYear.textContent = movie.release_date ? 
-                    movie.release_date.substring(0, 4) : 'N/A';
+                const movieYear = movie.release_date ? movie.release_date.substring(0, 4) : 'N/A';
+                DOM.movieYear.textContent = movieYear;
 
                 // Runtime
                 const runtime = movie.runtime;
@@ -1665,13 +1901,12 @@
                 // Overview
                 DOM.movieOverview.textContent = movie.overview || 'No overview available.';
 
-                // ---------- SHOWTIMES - CONDITIONAL BASED ON RELEASE DATE ----------
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                // ============================================================
+                // SHOWTIMES - BASED ON YEAR
+                // ============================================================
                 
-                const releaseDate = movie.release_date ? new Date(movie.release_date) : null;
-                const isReleased = releaseDate && releaseDate <= today;
-                const isUpcoming = releaseDate && releaseDate > today;
+                const currentYear = new Date().getFullYear();
+                const yearNum = parseInt(movieYear);
 
                 const sampleShowtimes = [
                     { time: '10:30 AM', screen: 'Screen 1', format: '2D' },
@@ -1681,8 +1916,7 @@
                     { time: '9:45 PM', screen: 'Screen 1', format: '2D' }
                 ];
 
-                // Only show showtimes if the film is released (release date <= today)
-                if (isReleased && sampleShowtimes.length > 0) {
+                if (yearNum >= currentYear && yearNum !== 'N/A') {
                     DOM.showtimesContainer.innerHTML = '';
                     sampleShowtimes.forEach(st => {
                         const item = document.createElement('div');
@@ -1699,29 +1933,40 @@
                         `;
                         DOM.showtimesContainer.appendChild(item);
                     });
-                } else if (isUpcoming) {
-                    // Coming soon - show release date
-                    const formattedDate = new Date(movie.release_date).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                    });
+                    
+                    if (yearNum === currentYear) {
+                        const indicator = document.createElement('div');
+                        indicator.style.cssText = `
+                            text-align: center;
+                            font-family: var(--font-mono);
+                            font-size: clamp(11px, 0.8vw, 13px);
+                            color: var(--success);
+                            margin-bottom: 10px;
+                            padding: 4px 12px;
+                            border: 1px solid var(--success);
+                            border-radius: 20px;
+                            display: inline-block;
+                            background: rgba(76, 154, 106, 0.1);
+                        `;
+                        indicator.textContent = '🎬 Now Showing';
+                        DOM.showtimesContainer.prepend(indicator);
+                    }
+                    
+                } else if (yearNum < currentYear && yearNum !== 'N/A') {
                     DOM.showtimesContainer.innerHTML = `
-                        <div class="coming-soon-message">
-                            <i class="fas fa-calendar-star"></i>
-                            <p>Coming Soon!</p>
-                            <div class="release-date">Releasing ${formattedDate}</div>
-                            <p style="margin-top:8px;font-size:clamp(12px,0.8vw,14px);color:var(--paper-dim);">
-                                Check back closer to the release date for showtimes.
+                        <div class="past-film-message">
+                            <i class="fas fa-film"></i>
+                            <p>This film was released in <strong>${movieYear}</strong>.</p>
+                            <p style="margin-top:4px;font-size:clamp(12px,0.8vw,14px);color:var(--paper-dim);">
+                                Check out our current lineup for films showing now.
                             </p>
                         </div>
                     `;
                 } else {
-                    // No release date or not showing
                     DOM.showtimesContainer.innerHTML = `
                         <p class="no-showtimes">
                             <i class="fas fa-clock" style="margin-right:8px;"></i>
-                            This film is not currently showing. Check back soon!
+                            No showtimes available for this film.
                         </p>
                     `;
                 }
@@ -1773,11 +2018,10 @@
                 document.title = `${movie.title} — Savannah Cinemas`;
 
                 // ---------- BOOK BUTTON ----------
-                // Only enable booking if film is released
-                if (isReleased) {
+                if (yearNum >= currentYear && yearNum !== 'N/A') {
                     DOM.bookBtn.href = `booking.html?film=${encodeURIComponent(JSON.stringify({
                         filmTitle: movie.title,
-                        filmYear: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
+                        filmYear: movieYear,
                         cinema: 'Savannah Mall',
                         screen: 'Screen 1',
                         showtime: 'Today, 7:45 PM',
@@ -1791,6 +2035,8 @@
                 }
 
                 // ---------- WATCHLIST BUTTON ----------
+                // Check if in watchlist and update UI
+                checkWatchlistStatus(movie.id);
                 DOM.watchlistBtn.addEventListener('click', toggleWatchlist);
 
                 // ---------- TRAILER BUTTON ----------
