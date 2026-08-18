@@ -541,18 +541,6 @@
     font-size: 14px;
   }
 
-  /* ---------- FILM BADGE ---------- */
-  .film-badge {
-    display: inline-block;
-    background: var(--ink-line);
-    padding: 2px 12px;
-    border-radius: 12px;
-    font-family: var(--font-mono);
-    font-size: clamp(10px, 0.8vw, 12px);
-    color: var(--paper-dim);
-    margin-right: 8px;
-  }
-
 </style>
 <!-- Font Awesome for back icon -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -569,8 +557,9 @@
       <i class="fas fa-arrow-left"></i> Back to movies
     </a>
     <p class="eyebrow">Select seats</p>
-    <h1 id="filmTitle">The Long Horizon</h1>
-    <p class="sub" id="filmDetails">Savannah Mall · Screen 1 · Today, 7:45 PM</p>
+    <!-- Title will be set dynamically by JavaScript -->
+    <h1 id="filmTitle">Loading...</h1>
+    <p class="sub" id="filmDetails">Loading film details...</p>
   </div>
 
   <div class="booking-layout">
@@ -649,8 +638,8 @@
     <!-- SIDEBAR SUMMARY -->
     <div class="booking-sidebar">
       <div class="panel">
-        <p class="summary-film" id="sidebarFilm">The Long Horizon</p>
-        <p class="summary-sub" id="sidebarDetails">Savannah Mall · Screen 1 · 7:45 PM</p>
+        <p class="summary-film" id="sidebarFilm">Loading...</p>
+        <p class="summary-sub" id="sidebarDetails">Loading details...</p>
 
         <ul class="summary-list" id="seatSummaryList">
           <li class="summary-empty">No seats selected yet</li>
@@ -709,11 +698,21 @@
     
     const currentFilm = filmData || defaultFilm;
     
-    // Update UI with film data
+    // ============================================================
+    // UPDATE UI WITH FILM DATA - TITLE IS SET HERE
+    // ============================================================
+    
+    // Set the film title in the h1
     document.getElementById('filmTitle').textContent = currentFilm.filmTitle;
+    
+    // Set the film details in the subtitle
     document.getElementById('filmDetails').textContent = 
       `${currentFilm.cinema} · ${currentFilm.screen} · ${currentFilm.showtime}`;
+    
+    // Set the sidebar film title
     document.getElementById('sidebarFilm').textContent = currentFilm.filmTitle;
+    
+    // Set the sidebar details
     document.getElementById('sidebarDetails').textContent = 
       `${currentFilm.cinema} · ${currentFilm.screen} · ${currentFilm.showtime}`;
     
