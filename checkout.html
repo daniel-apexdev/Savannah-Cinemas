@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout — Savannah Cinemas</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --ink: #14141C;
+            --ink-raised: #1D1D28;
+            --ink-line: #2C2C3A;
+            --paper: #F2EFE9;
+            --paper-dim: #B9B6AC;
+            --gold: #E8B34C;
+            --gold-dim: #7A5C22;
+            --rust: #B33951;
+            --rust-hover: #c94661;
+            --success: #4C9A6A;
+            --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
+            --font-body: 'Inter', 'Public Sans', -apple-system, sans-serif;
+            --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --container-padding: clamp(16px, 4vw, 60px);
+            --touch-target: clamp(44px, 5vw, 56px);
+            --max-width: 900px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---------- NAV ---------- */
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px var(--container-padding);
+            border-bottom: 1px solid var(--ink-line);
+            background: rgba(20, 20, 28, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            gap: 16px;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .wordmark {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2.5vw, 28px);
+            font-weight: 500;
+            text-decoration: none;
+            color: var(--paper);
+        }
+
+        .wordmark span {
+            color: var(--gold);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            z-index: 1001;
+        }
+
+        .avatar {
+            width: var(--touch-target);
+            height: var(--touch-target);
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 15px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.3s ease;
+            user-select: none;
+        }
+
+        .avatar:hover {
+            border-color: var(--gold-dim);
+        }
+
+        .profile-wrapper {
+            position: relative;
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            width: 220px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .profile-wrapper.is-open .profile-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-menu .who {
+            padding: 16px;
+            border-bottom: 1px solid var(--ink-line);
+        }
+
+        .profile-menu .who .name {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--paper);
+        }
+
+        .profile-menu .who .stat {
+            color: var(--gold);
+            font-size: 12px;
+            font-family: var(--font-mono);
+            margin-top: 4px;
+        }
+
+        .profile-menu a {
+            display: block;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--paper-dim);
+            text-decoration: none;
+            border-bottom: 1px solid var(--ink-line);
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .profile-menu a:last-child {
+            border-bottom: none;
+            color: #d95b5b;
+        }
+
+        .profile-menu a:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--paper);
+        }
+
+        .profile-menu a:last-child:hover {
+            color: #ff6b6b;
+        }
+
+        /* ---------- CHECKOUT CONTAINER ---------- */
+        .checkout-container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 32px var(--container-padding) 60px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .checkout-left {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .checkout-right {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ---------- CHECKOUT HEADER ---------- */
+        .checkout-header {
+            grid-column: 1 / -1;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--ink-line);
+        }
+
+        .checkout-header .eyebrow {
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 1vw, 13px);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 400;
+            margin-bottom: 4px;
+        }
+
+        .checkout-header h1 {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 3vw, 38px);
+            font-weight: 500;
+            color: var(--paper);
+        }
+
+        .checkout-header p {
+            font-size: clamp(14px, 1vw, 16px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        /* ---------- RECEIPT CARD ---------- */
+        .receipt-card {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: 24px;
+        }
+
+        .receipt-card .receipt-title {
+            font-family: var(--font-display);
+            font-size: clamp(16px, 1.2vw, 20px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .receipt-card .receipt-title i {
+            color: var(--gold);
+        }
+
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--ink-line);
+            font-size: clamp(13px, 0.9vw, 15px);
+        }
+
+        .receipt-item:last-child {
+            border-bottom: none;
+        }
+
+        .receipt-item .item-label {
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .receipt-item .item-value {
+            color: var(--paper);
+            font-weight: 400;
+        }
+
+        .receipt-item .item-value.gold {
+            color: var(--gold);
+        }
+
+        .receipt-total {
+            display: flex;
+            justify-content: space-between;
+            padding: 14px 0 0;
+            margin-top: 4px;
+            border-top: 2px solid var(--gold);
+            font-family: var(--font-display);
+            font-size: clamp(20px, 1.6vw, 26px);
+            font-weight: 500;
+        }
+
+        .receipt-total .total-label {
+            color: var(--paper);
+        }
+
+        .receipt-total .total-value {
+            color: var(--gold);
+        }
+
+        /* ---------- EMAIL FORM ---------- */
+        .form-card {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: 24px;
+        }
+
+        .form-card .form-title {
+            font-family: var(--font-display);
+            font-size: clamp(16px, 1.2vw, 20px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 4px;
+        }
+
+        .form-card .form-title i {
+            color: var(--gold);
+            margin-right: 8px;
+        }
+
+        .form-card .form-subtitle {
+            font-size: clamp(13px, 0.9vw, 15px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            margin-bottom: 6px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 300;
+            min-height: var(--touch-target);
+            transition: 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(232, 179, 76, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .form-group .input-hint {
+            font-size: clamp(11px, 0.7vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            margin-top: 4px;
+        }
+
+        .form-group .input-hint i {
+            color: var(--gold);
+            margin-right: 4px;
+        }
+
+        /* ---------- PAYMENT METHODS ---------- */
+        .payment-methods {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 12px 0 4px;
+        }
+
+        .payment-methods .payment-badge {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--paper-dim);
+            background: var(--ink);
+            padding: 4px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--ink-line);
+        }
+
+        .payment-methods .payment-badge i {
+            margin-right: 4px;
+            color: var(--gold);
+        }
+
+        /* ---------- CHECKOUT BUTTON ---------- */
+        .btn-checkout {
+            width: 100%;
+            padding: 16px 0;
+            background: var(--rust);
+            color: var(--paper);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(16px, 1.1vw, 18px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-checkout:hover {
+            background: var(--rust-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(179, 57, 81, 0.3);
+        }
+
+        .btn-checkout:active {
+            transform: scale(0.97);
+        }
+
+        .btn-checkout:disabled {
+            background: var(--ink-line);
+            color: var(--paper-dim);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-checkout i {
+            font-size: 18px;
+        }
+
+        /* ---------- EMAIL SENDING OVERLAY ---------- */
+        .email-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .email-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .email-overlay .email-modal {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: 40px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .email-overlay .email-modal .email-icon {
+            font-size: 64px;
+            color: var(--gold);
+            margin-bottom: 12px;
+        }
+
+        .email-overlay .email-modal .email-icon.sending {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .email-overlay .email-modal .email-icon.success {
+            color: var(--success);
+        }
+
+        .email-overlay .email-modal h2 {
+            font-family: var(--font-display);
+            font-size: clamp(22px, 2.5vw, 28px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 8px;
+        }
+
+        .email-overlay .email-modal p {
+            font-size: clamp(14px, 1vw, 16px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            line-height: 1.6;
+        }
+
+        .email-overlay .email-modal .email-progress {
+            margin: 20px 0;
+        }
+
+        .email-overlay .email-modal .email-progress .progress-bar {
+            height: 4px;
+            background: var(--ink-line);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .email-overlay .email-modal .email-progress .progress-bar .progress-fill {
+            height: 100%;
+            background: var(--gold);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .email-overlay .email-modal .email-progress .progress-text {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--paper-dim);
+            margin-top: 8px;
+        }
+
+        .email-overlay .email-modal .btn-close-overlay {
+            margin-top: 20px;
+            padding: 12px 32px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            touch-action: manipulation;
+            min-height: var(--touch-target);
+        }
+
+        .email-overlay .email-modal .btn-close-overlay:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+        }
+
+        /* ---------- TOAST ---------- */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: 14px 24px;
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 0.9vw, 16px);
+            font-weight: 400;
+            z-index: 3000;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast .toast-icon.success {
+            color: var(--success);
+        }
+
+        .toast .toast-icon.error {
+            color: var(--rust);
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 768px) {
+            .checkout-container {
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 20px var(--container-padding) 40px;
+            }
+
+            .checkout-header {
+                grid-column: 1;
+            }
+
+            .receipt-card,
+            .form-card {
+                padding: 18px;
+            }
+
+            .btn-checkout {
+                font-size: 15px;
+                padding: 14px 0;
+            }
+
+            .email-overlay .email-modal {
+                padding: 28px;
+                margin: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .receipt-card,
+            .form-card {
+                padding: 14px;
+            }
+
+            .receipt-item {
+                padding: 8px 0;
+                font-size: 13px;
+            }
+
+            .receipt-total {
+                font-size: 18px;
+            }
+
+            .checkout-container {
+                padding: 16px var(--container-padding) 30px;
+                gap: 16px;
+            }
+
+            .checkout-header h1 {
+                font-size: 24px;
+            }
+
+            .btn-checkout {
+                font-size: 14px;
+                padding: 12px 0;
+            }
+
+            .payment-methods .payment-badge {
+                font-size: 10px;
+                padding: 3px 10px;
+            }
+
+            .email-overlay .email-modal {
+                padding: 20px;
+            }
+
+            .email-overlay .email-modal .email-icon {
+                font-size: 48px;
+            }
+        }
+
+        /* ---------- SCROLLBAR ---------- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================
+    NAVIGATION
+    ============================================================ -->
+    <nav class="nav">
+        <div class="nav-left">
+            <a href="index.html" class="wordmark">SAVANNAH <span>CINEMAS</span></a>
+        </div>
+        <div class="nav-right">
+            <div class="profile-wrapper" id="profileWrapper">
+                <div class="avatar" id="avatarBtn">DA</div>
+                <div class="profile-menu" id="profileMenu">
+                    <div class="who">
+                        <div class="name">Daniel Asamoah</div>
+                        <div class="stat">142 films watched</div>
+                    </div>
+                    <a href="profile.html">My Profile</a>
+                    <a href="logout.html">Sign out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================================
+    EMAIL SENDING OVERLAY
+    ============================================================ -->
+    <div class="email-overlay" id="emailOverlay">
+        <div class="email-modal">
+            <div class="email-icon" id="emailIcon">📧</div>
+            <h2 id="emailTitle">Sending Your Tickets</h2>
+            <p id="emailMessage">Preparing your tickets and sending them to your email...</p>
+            <div class="email-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+            <button class="btn-close-overlay" id="closeOverlayBtn" style="display:none;">Continue to Home</button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    TOAST NOTIFICATION
+    ============================================================ -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✅</span>
+        <span id="toastMessage">Success!</span>
+    </div>
+
+    <!-- ============================================================
+    CHECKOUT CONTENT
+    ============================================================ -->
+    <div class="checkout-container">
+        <!-- Header -->
+        <div class="checkout-header">
+            <div class="eyebrow">Checkout</div>
+            <h1>Complete Your Booking</h1>
+            <p>Review your order and enter your email to receive your tickets.</p>
+        </div>
+
+        <!-- LEFT COLUMN -->
+        <div class="checkout-left">
+            <!-- Receipt Card -->
+            <div class="receipt-card">
+                <div class="receipt-title">
+                    <i class="fas fa-receipt"></i> Order Summary
+                </div>
+
+                <div class="receipt-item">
+                    <span class="item-label">Film</span>
+                    <span class="item-value" id="receiptFilm">The Long Horizon</span>
+                </div>
+
+                <div class="receipt-item">
+                    <span class="item-label">Screen / Showtime</span>
+                    <span class="item-value" id="receiptShowtime">Screen 1 · Today, 7:45 PM</span>
+                </div>
+
+                <div class="receipt-item">
+                    <span class="item-label">Tickets</span>
+                    <span class="item-value" id="receiptTickets">1 × $9.00</span>
+                </div>
+
+                <div class="receipt-item" id="receiptSeatsRow">
+                    <span class="item-label">Seats</span>
+                    <span class="item-value" id="receiptSeats">C5, C6</span>
+                </div>
+
+                <div class="receipt-item" id="receiptSnacksRow">
+                    <span class="item-label">Snacks</span>
+                    <span class="item-value" id="receiptSnacks">None</span>
+                </div>
+
+                <div class="receipt-total">
+                    <span class="total-label">Total</span>
+                    <span class="total-value" id="receiptTotal">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="payment-methods">
+                <span class="payment-badge"><i class="fas fa-credit-card"></i> Card</span>
+                <span class="payment-badge"><i class="fas fa-mobile-alt"></i> Mobile Money</span>
+                <span class="payment-badge"><i class="fas fa-university"></i> Bank Transfer</span>
+                <span class="payment-badge"><i class="fas fa-wallet"></i> Wallet</span>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="checkout-right">
+            <!-- Email Form -->
+            <div class="form-card">
+                <div class="form-title">
+                    <i class="fas fa-envelope"></i> Send Tickets To
+                </div>
+                <div class="form-subtitle">Enter your email to receive your tickets and booking confirmation.</div>
+
+                <div class="form-group">
+                    <label for="emailInput">Email Address</label>
+                    <input type="email" id="emailInput" placeholder="you@example.com" required>
+                    <div class="input-hint">
+                        <i class="fas fa-info-circle"></i> 
+                        We'll send your tickets and confirmation to this email
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phoneInput">Phone Number (Optional)</label>
+                    <input type="tel" id="phoneInput" placeholder="+233 XX XXX XXXX">
+                </div>
+            </div>
+
+            <!-- Checkout Button -->
+            <button class="btn-checkout" id="checkoutBtn">
+                <i class="fas fa-lock"></i> 
+                Proceed to Payment · <span id="checkoutTotal">$0.00</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    JAVASCRIPT
+    ============================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+            
+            const profileWrapper = document.getElementById('profileWrapper');
+            const avatarBtn = document.getElementById('avatarBtn');
+            let closeTimer = null;
+
+            if (profileWrapper) {
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(function() {
+                        profileWrapper.classList.remove('is-open');
+                    }, 150);
+                });
+
+                avatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileWrapper.classList.toggle('is-open');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // GET DATA FROM URL PARAMETERS
+            // ============================================================
+            
+            function getDataFromURL() {
+                const params = new URLSearchParams(window.location.search);
+                const dataParam = params.get('data');
+                
+                if (dataParam) {
+                    try {
+                        return JSON.parse(decodeURIComponent(dataParam));
+                    } catch (e) {
+                        console.error('Error parsing data:', e);
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            // ============================================================
+            // LOAD RECEIPT DATA
+            // ============================================================
+            
+            const bookingData = getDataFromURL();
+            
+            // Default data for demo if no data from URL
+            const defaultData = {
+                filmTitle: 'The Long Horizon',
+                filmYear: '2024',
+                cinema: 'Savannah Mall',
+                screen: 'Screen 1',
+                showtime: 'Today, 7:45 PM',
+                screenFormat: 'Standard',
+                ticketQuantity: 1,
+                ticketPrice: 9.00,
+                selectedSeats: ['C5', 'C6'],
+                snacks: [
+                    { name: 'Large Popcorn', flavor: 'Butter', qty: 1, price: 5.50 },
+                    { name: 'Soft Drink', flavor: 'Coca-Cola', qty: 2, price: 4.00 }
+                ],
+                total: 18.50
+            };
+
+            const data = bookingData || defaultData;
+
+            // Calculate totals if not provided
+            const ticketTotal = data.ticketQuantity * data.ticketPrice;
+            const snackTotal = data.snacks ? data.snacks.reduce((sum, snack) => sum + (snack.qty * snack.price), 0) : 0;
+            const grandTotal = data.total || (ticketTotal + snackTotal);
+
+            const seatString = data.selectedSeats && data.selectedSeats.length > 0 
+                ? data.selectedSeats.join(', ') 
+                : 'None';
+            
+            const snackString = data.snacks && data.snacks.length > 0 
+                ? data.snacks.map(s => `${s.qty}× ${s.name}${s.flavor ? ' (' + s.flavor + ')' : ''}`).join(', ') 
+                : 'None';
+
+            // ============================================================
+            // UPDATE RECEIPT UI
+            // ============================================================
+            
+            document.getElementById('receiptFilm').textContent = data.filmTitle;
+            document.getElementById('receiptShowtime').textContent = `${data.screen} · ${data.showtime}`;
+            document.getElementById('receiptTickets').textContent = `${data.ticketQuantity} × $${data.ticketPrice.toFixed(2)}`;
+            document.getElementById('receiptSeats').textContent = seatString;
+            
+            // Show/hide seats row based on whether there are seats
+            const seatsRow = document.getElementById('receiptSeatsRow');
+            if (data.selectedSeats && data.selectedSeats.length > 0) {
+                seatsRow.style.display = 'flex';
+            } else {
+                seatsRow.style.display = 'none';
+            }
+            
+            document.getElementById('receiptSnacks').textContent = snackString;
+            
+            // Show/hide snacks row based on whether there are snacks
+            const snacksRow = document.getElementById('receiptSnacksRow');
+            if (data.snacks && data.snacks.length > 0) {
+                snacksRow.style.display = 'flex';
+            } else {
+                snacksRow.style.display = 'none';
+            }
+            
+            document.getElementById('receiptTotal').textContent = `$${grandTotal.toFixed(2)}`;
+            document.getElementById('checkoutTotal').textContent = `$${grandTotal.toFixed(2)}`;
+
+            // ============================================================
+            // TOAST SYSTEM
+            // ============================================================
+            
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                const iconMap = {
+                    success: '✅',
+                    error: '❌',
+                    info: 'ℹ️'
+                };
+                
+                document.getElementById('toastIcon').textContent = iconMap[type] || 'ℹ️';
+                document.getElementById('toastIcon').className = `toast-icon ${type}`;
+                document.getElementById('toastMessage').textContent = message;
+                
+                document.getElementById('toast').classList.add('show');
+                
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    document.getElementById('toast').classList.remove('show');
+                }, 4000);
+            }
+
+            // ============================================================
+            // EMAIL SENDING SIMULATION
+            // ============================================================
+            
+            function simulateEmailSending(email, bookingData) {
+                return new Promise((resolve) => {
+                    const overlay = document.getElementById('emailOverlay');
+                    const icon = document.getElementById('emailIcon');
+                    const title = document.getElementById('emailTitle');
+                    const message = document.getElementById('emailMessage');
+                    const progressFill = document.getElementById('progressFill');
+                    const progressText = document.getElementById('progressText');
+                    const closeBtn = document.getElementById('closeOverlayBtn');
+
+                    // Reset overlay
+                    overlay.classList.add('active');
+                    icon.className = 'email-icon sending';
+                    icon.textContent = '✉️';
+                    title.textContent = 'Sending Your Tickets';
+                    message.textContent = 'Preparing your tickets and sending them to your email...';
+                    progressFill.style.width = '0%';
+                    progressText.textContent = '0%';
+                    closeBtn.style.display = 'none';
+
+                    const steps = [
+                        { progress: 20, text: 'Generating your tickets...' },
+                        { progress: 45, text: 'Creating QR codes...' },
+                        { progress: 70, text: 'Attaching ticket PDF...' },
+                        { progress: 90, text: 'Sending email to ' + email + '...' },
+                        { progress: 100, text: '✅ Email sent successfully!' }
+                    ];
+
+                    let stepIndex = 0;
+
+                    function updateProgress() {
+                        if (stepIndex < steps.length) {
+                            const step = steps[stepIndex];
+                            progressFill.style.width = step.progress + '%';
+                            progressText.textContent = step.progress + '%';
+                            message.textContent = step.text;
+                            
+                            // Update message for final step
+                            if (step.progress === 100) {
+                                icon.className = 'email-icon success';
+                                icon.textContent = '✅';
+                                title.textContent = 'Tickets Sent! 🎉';
+                                message.innerHTML = `Your tickets have been sent to <strong>${email}</strong><br>Booking Reference: <strong>${bookingData.bookingRef}</strong>`;
+                                closeBtn.style.display = 'inline-block';
+                                
+                                // Log the email details to console for demo
+                                console.log('📧 Email Sent to:', email);
+                                console.log('📋 Booking Details:', bookingData);
+                                console.log('🎫 Ticket Details:', {
+                                    film: data.filmTitle,
+                                    screen: data.screen,
+                                    showtime: data.showtime,
+                                    seats: seatString,
+                                    tickets: data.ticketQuantity,
+                                    total: '$' + grandTotal.toFixed(2)
+                                });
+                                
+                                resolve({ success: true, email: email });
+                            }
+                            
+                            stepIndex++;
+                            setTimeout(updateProgress, 800);
+                        }
+                    }
+
+                    // Start the progress
+                    setTimeout(updateProgress, 600);
+                });
+            }
+
+            // ============================================================
+            // CHECKOUT BUTTON - WITH EMAIL SIMULATION
+            // ============================================================
+            
+            document.getElementById('checkoutBtn').addEventListener('click', function() {
+                const email = document.getElementById('emailInput').value.trim();
+                
+                if (!email) {
+                    showToast('Please enter your email address to receive tickets', 'error');
+                    document.getElementById('emailInput').focus();
+                    return;
+                }
+
+                if (!isValidEmail(email)) {
+                    showToast('Please enter a valid email address', 'error');
+                    document.getElementById('emailInput').focus();
+                    return;
+                }
+
+                // Disable button and show loading
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+                // Generate booking reference
+                const bookingRef = 'SC-' + Date.now().toString().slice(-6);
+
+                // Prepare booking data for email
+                const bookingData = {
+                    bookingRef: bookingRef,
+                    film: data.filmTitle,
+                    screen: data.screen,
+                    showtime: data.showtime,
+                    seats: seatString,
+                    tickets: data.ticketQuantity,
+                    snacks: snackString,
+                    total: '$' + grandTotal.toFixed(2),
+                    email: email,
+                    timestamp: new Date().toLocaleString()
+                };
+
+                // Simulate payment processing then send email
+                setTimeout(() => {
+                    // Show success toast
+                    showToast(`Payment successful! Sending tickets to ${email}`, 'success');
+                    
+                    // Simulate email sending
+                    simulateEmailSending(email, bookingData).then((result) => {
+                        // Reset button
+                        document.getElementById('checkoutBtn').disabled = false;
+                        document.getElementById('checkoutBtn').innerHTML = `
+                            <i class="fas fa-lock"></i> 
+                            Proceed to Payment · <span id="checkoutTotal">$${grandTotal.toFixed(2)}</span>
+                        `;
+                    });
+                    
+                }, 1500);
+            });
+
+            // ============================================================
+            // CLOSE OVERLAY BUTTON
+            // ============================================================
+            
+            document.getElementById('closeOverlayBtn').addEventListener('click', function() {
+                document.getElementById('emailOverlay').classList.remove('active');
+                // Redirect to home or profile
+                window.location.href = 'index.html';
+            });
+
+            // ============================================================
+            // UTILITY FUNCTIONS
+            // ============================================================
+            
+            function isValidEmail(email) {
+                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return re.test(email);
+            }
+
+            // ============================================================
+            // EMAIL INPUT VALIDATION
+            // ============================================================
+            
+            document.getElementById('emailInput').addEventListener('blur', function() {
+                if (this.value.trim() && !isValidEmail(this.value.trim())) {
+                    this.style.borderColor = 'var(--rust)';
+                } else {
+                    this.style.borderColor = '';
+                }
+            });
+
+            document.getElementById('emailInput').addEventListener('input', function() {
+                this.style.borderColor = '';
+            });
+
+            // ============================================================
+            // ENTER KEY SUPPORT
+            // ============================================================
+            
+            document.getElementById('emailInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('checkoutBtn').click();
+                }
+            });
+
+            document.getElementById('phoneInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('checkoutBtn').click();
+                }
+            });
+
+        });
+    </script>
+
+</body>
+</html>

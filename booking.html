@@ -234,7 +234,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: column;
+    justify-content: center;
   }
 
   .mobile-menu-links li {
@@ -1104,7 +1104,7 @@
     }
 
     .panel {
-      padding: 9px;
+      padding: 16px;
     }
 
     .panel h2 {
@@ -1993,7 +1993,7 @@
     // UPDATE SUMMARY
     // ============================================================
     
-    function updateSummary(){
+    function updateSummary() {
       // Update seat list in sidebar
       var seatList = document.getElementById('seatSummaryList');
       seatList.innerHTML = '';
@@ -2034,7 +2034,7 @@
       var grandTotalFormatted = '¢' + grandTotal.toFixed(2);
       document.getElementById('grandTotal').textContent = grandTotalFormatted;
 
-      // Update pay button
+      // Update pay button - Redirect to checkout.html
       var payBtn = document.getElementById('payBtn');
       
       var isReady = false;
@@ -2044,7 +2044,8 @@
         btnText = 'Select a showtime first';
         isReady = false;
       } else if (selectedSeats.length === ticketQuantity && ticketQuantity > 0) {
-        btnText = 'Proceed to checkout = ' + grandTotalFormatted;
+        // ✅ All seats selected - redirect to checkout
+        btnText = 'Proceed to Checkout · ' + grandTotalFormatted;
         isReady = true;
       } else if (selectedSeats.length > 0 && selectedSeats.length < ticketQuantity) {
         btnText = 'Select ' + (ticketQuantity - selectedSeats.length) + ' more seat(s)';
@@ -2059,23 +2060,38 @@
     }
 
     // ============================================================
-    // PAYMENT BUTTON
+    // CHECKOUT REDIRECT
     // ============================================================
     
-    document.getElementById('payBtn').addEventListener('click', function(){
+    document.getElementById('payBtn').addEventListener('click', function() {
       if (this.disabled) return;
       
-      var snackDetails = Object.keys(snackQuantities).map(function(key) {
-        var item = snackQuantities[key];
-        return item.qty + '× ' + (item.flavor ? item.name + ' (' + item.flavor + ')' : item.name);
-      }).join(', ');
-      
-      alert('Proceeding to payment for "' + currentFilm.filmTitle + '" at ' + 
-            selectedScreen.name + ' (' + selectedScreen.time + ') with ' +
-            ticketQuantity + ' ticket(s), ' +
-            selectedSeats.length + ' seat(s)' + 
-            (snackDetails ? ' and ' + snackDetails : '') +
-            '. Total: ' + document.getElementById('grandTotal').textContent);
+      // Build checkout data
+      var checkoutData = {
+        filmTitle: currentFilm.filmTitle,
+        filmYear: currentFilm.filmYear || '2024',
+        cinema: currentFilm.cinema || 'Savannah Mall',
+        screen: selectedScreen ? selectedScreen.name : currentFilm.screen,
+        showtime: selectedScreen ? selectedScreen.time : currentFilm.showtime,
+        screenFormat: selectedScreen ? selectedScreen.format : 'Standard',
+        ticketQuantity: ticketQuantity,
+        ticketPrice: ticketPrice,
+        selectedSeats: selectedSeats,
+        snacks: Object.keys(snackQuantities).map(function(key) {
+          var item = snackQuantities[key];
+          return {
+            name: item.name,
+            flavor: item.flavor || 'Regular',
+            qty: item.qty,
+            price: item.price
+          };
+        }),
+        total: parseFloat(document.getElementById('grandTotal').textContent.replace('¢', ''))
+      };
+
+      // Redirect to checkout page with data
+      var checkoutURL = 'checkout.html?data=' + encodeURIComponent(JSON.stringify(checkoutData));
+      window.location.href = checkoutURL;
     });
 
     // ============================================================
