@@ -78,17 +78,9 @@
             color: var(--gold);
         }
 
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            position: relative;
-            z-index: 1001;
-        }
-
         .nav-links {
             display: flex;
-            gap: clamp(16px, 3vw, 32px);
+            gap: clamp(16px, 2vw, 32px);
             list-style: none;
             margin: 0;
             padding: 0;
@@ -97,11 +89,12 @@
         .nav-links a {
             color: var(--paper-dim);
             text-decoration: none;
-            font-size: clamp(13px, 1.2vw, 15px);
+            font-size: clamp(13px, 1vw, 15px);
             font-weight: 400;
             transition: 0.3s ease;
             letter-spacing: 0.02em;
             position: relative;
+            padding: 4px 0;
         }
 
         .nav-links a:hover,
@@ -118,6 +111,14 @@
             height: 2px;
             background: var(--gold);
             border-radius: 2px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            z-index: 1001;
         }
 
         /* ---------- HAMBURGER MENU TOGGLE ---------- */
@@ -175,7 +176,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             z-index: 999;
             opacity: 0;
             transition: opacity 0.3s ease;
@@ -365,7 +366,7 @@
             justify-content: center;
             font-family: var(--font-display);
             font-weight: 500;
-            font-size: 13px;
+            font-size: 15px;
             cursor: pointer;
             border: 2px solid transparent;
             transition: 0.3s ease;
@@ -1155,6 +1156,10 @@
                 display: flex;
             }
 
+            .nav-links {
+                display: none;
+            }
+
             .showtime-item {
                 flex-wrap: wrap;
                 gap: 8px;
@@ -1261,9 +1266,9 @@
                 <span></span>
             </button>
             <a href="index.html" class="wordmark">SAVANNAH <span>CINEMAS</span></a>
-
         </div>
 
+        <!-- Desktop Navigation -->
         <ul class="nav-links" id="navLinks">
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
@@ -1279,7 +1284,7 @@
                         <div class="name">Daniel Asamoah</div>
                         <div class="stat">142 films watched</div>
                     </div>
-                    <a href="profile.html">My profile</a>
+                    <a href="profile.html">My Profile</a>
                     <a href="logout.html">Sign out</a>
                 </div>
             </div>
@@ -1510,12 +1515,10 @@
             function addToWatchlist(movie) {
                 const watchlist = getWatchlist();
                 
-                // Check if already exists
                 if (watchlist.some(item => item.id === movie.id)) {
                     return { success: false, message: 'Already in watchlist' };
                 }
                 
-                // Add to watchlist
                 const watchlistItem = {
                     id: movie.id,
                     title: movie.title,
@@ -2035,7 +2038,6 @@
                 }
 
                 // ---------- WATCHLIST BUTTON ----------
-                // Check if in watchlist and update UI
                 checkWatchlistStatus(movie.id);
                 DOM.watchlistBtn.addEventListener('click', toggleWatchlist);
 
