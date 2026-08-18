@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Savannah Cinemas — Select Seats</title>
+<style>
+
+  :root{
+    --ink:          #14141C;   /* page background, theater dark   */
+    --ink-raised:   #1D1D28;   /* card / panel surface             */
+    --ink-line:     #2C2C3A;   /* hairline borders on dark         */
+    --paper:        #F2EFE9;   /* cream, primary text on dark      */
+    --paper-dim:    #B9B6AC;   /* secondary text on dark           */
+    --gold:         #E8B34C;   /* marquee gold — primary accent    */
+    --gold-dim:     #7A5C22;   /* gold used as border/dim accent   */
+    --rust:         #B33951;   /* velvet — primary CTA (Book/Pay)  */
+    --rust-hover:   #c94661;
+    --rust-deep:    #6E2333;
+
+    --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
+    --font-body:    'Inter', 'Public Sans', -apple-system, sans-serif;
+    --font-mono:    'IBM Plex Mono', 'Courier New', monospace;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--font-body);
+  }
+
+  /* ---------- NAV ---------- */
+  .nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px clamp(20px,5vw,72px);
+    border-bottom:1px solid var(--ink-line);
+  }
+  .wordmark{ font-family:var(--font-display); font-size:24px; font-weight:600; }
+  .wordmark span{ color:var(--gold); }
+  .avatar{
+    width:38px; height:38px; border-radius:50%;
+    background:var(--gold); color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:600; font-size:15px;
+  }
+
+  /* ---------- BOOKING HEADER ---------- */
+  .booking-header{
+    padding:28px clamp(20px,5vw,72px) 8px;
+  }
+  .eyebrow{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--gold); margin:0 0 6px;
+  }
+  .booking-header h1{
+    font-family:var(--font-display); font-size:28px; font-weight:600; margin:0 0 6px;
+  }
+  .booking-header .sub{
+    color:var(--paper-dim); font-size:13px; font-family:var(--font-mono);
+  }
+
+  /* ---------- LAYOUT ---------- */
+  .booking-layout{
+    display:flex; gap:32px; align-items:flex-start;
+    padding:24px clamp(20px,5vw,72px) 120px;
+  }
+  .booking-main{ flex:1; min-width:0; }
+  .booking-sidebar{
+    flex:none; width:300px;
+    position:sticky; top:24px;
+  }
+  @media (max-width:920px){
+    .booking-layout{ flex-direction:column; }
+    .booking-sidebar{ width:100%; position:static; }
+  }
+
+  .panel{
+    background:var(--ink-raised);
+    border:1px solid var(--ink-line);
+    border-radius:var(--radius-md);
+    padding:24px;
+  }
+  .panel + .panel{ margin-top:24px; }
+  .panel h2{
+    font-family:var(--font-display); font-size:18px; font-weight:600; margin:0 0 20px;
+  }
+
+  /* ---------- SCREEN ---------- */
+  .screen-wrap{ text-align:center; margin-bottom:32px; }
+  .screen{
+    width:80%;
+    max-width:480px;
+    height:8px;
+    margin:0 auto 10px;
+    background:linear-gradient(90deg, transparent, var(--gold), transparent);
+    border-radius:50%;
+    box-shadow:0 8px 24px -4px rgba(231,194,125,.35);
+  }
+  .screen-label{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.15em;
+    text-transform:uppercase; color:var(--paper-dim);
+  }
+
+  /* ---------- SEAT MAP ---------- */
+  .seat-map{
+    display:flex; flex-direction:column; gap:8px; align-items:center;
+    margin-bottom:24px;
+  }
+  .seat-row{ display:flex; align-items:center; gap:8px; }
+  .row-label{
+    width:18px; font-family:var(--font-mono); font-size:11px;
+    color:var(--paper-dim); text-align:center;
+  }
+  .seat{
+    width:26px; height:26px; border-radius:6px 6px 3px 3px;
+    border:1.5px solid var(--ink-line);
+    background:transparent;
+    color:var(--paper-dim);
+    font-family:var(--font-mono); font-size:9px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease;
+  }
+  .seat.aisle-gap{ width:16px; border:none; cursor:default; }
+  .seat:not(.taken):not(.aisle-gap):hover{
+    border-color:var(--gold-dim);
+    transform:translateY(-2px);
+  }
+  .seat.premium{ border-color:var(--gold-dim); color:var(--gold); }
+  .seat.selected{
+    background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:700;
+  }
+  .seat.taken{
+    background:var(--ink-line); border-color:var(--ink-line);
+    color:#8a7862; cursor:not-allowed;
+  }
+
+  .seat-legend{
+    display:flex; gap:24px; justify-content:center; flex-wrap:wrap;
+    font-size:12px; color:var(--paper-dim); padding-top:16px;
+    border-top:1px solid var(--ink-line);
+  }
+  .legend-item{ display:flex; align-items:center; gap:8px; }
+  .legend-swatch{ width:16px; height:16px; border-radius:4px 4px 2px 2px; border:1.5px solid var(--ink-line); }
+  .legend-swatch.available{ background:transparent; }
+  .legend-swatch.selected{ background:var(--gold); border-color:var(--gold); }
+  .legend-swatch.taken{ background:var(--ink-line); }
+  .legend-swatch.premium{ border-color:var(--gold-dim); }
+
+  /* ---------- SNACKS ---------- */
+  .snack-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:16px;
+  }
+  .snack-card{
+    border:1px solid var(--ink-line); border-radius:var(--radius-sm);
+    padding:14px; background:var(--ink);
+  }
+  .snack-thumb{
+    height:80px; border-radius:6px; margin-bottom:10px;
+    background:linear-gradient(160deg,#6b5443,#3d2d22);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--paper-dim); font-family:var(--font-mono); font-size:10px;
+  }
+  .snack-name{ font-size:13px; font-weight:600; margin:0 0 2px; }
+  .snack-price{ font-size:12px; color:var(--gold); font-family:var(--font-mono); margin:0 0 12px; }
+  .qty-stepper{
+    display:flex; align-items:center; justify-content:space-between;
+    border:1px solid var(--ink-line); border-radius:999px; padding:4px;
+  }
+  .qty-stepper button{
+    width:24px; height:24px; border-radius:50%; border:none;
+    background:var(--ink-raised); color:var(--paper);
+    cursor:pointer; font-size:14px; line-height:1;
+  }
+  .qty-stepper button:hover{ background:var(--gold); color:var(--ink); }
+  .qty-value{ font-family:var(--font-mono); font-size:13px; }
+
+  /* ---------- SIDEBAR SUMMARY ---------- */
+  .summary-film{ font-family:var(--font-display); font-size:16px; font-weight:600; margin:0 0 2px; }
+  .summary-sub{ font-size:12px; color:var(--paper-dim); font-family:var(--font-mono); margin:0 0 20px; }
+
+  .summary-list{ list-style:none; margin:0 0 16px; padding:0; }
+  .summary-list li{
+    display:flex; justify-content:space-between;
+    font-size:13px; padding:8px 0; border-bottom:1px solid var(--ink-line);
+  }
+  .summary-list li span:last-child{ color:var(--paper-dim); font-family:var(--font-mono); }
+  .summary-empty{ font-size:12px; color:var(--paper-dim); padding:8px 0; }
+
+  .summary-total{
+    display:flex; justify-content:space-between; align-items:center;
+    padding-top:12px; margin-top:4px; border-top:1px solid var(--ink-line);
+    font-family:var(--font-display); font-size:18px; font-weight:600;
+  }
+  .summary-total span:last-child{ color:var(--gold); }
+
+  .btn-pay{
+    width:100%; margin-top:18px;
+    background:var(--rust); color:var(--paper); border:none;
+    padding:14px 0; border-radius:var(--radius-sm);
+    font-family:var(--font-body); font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .btn-pay:hover{ background:var(--rust-hover); }
+  .btn-pay:disabled{ background:var(--ink-line); color:var(--paper-dim); cursor:not-allowed; }
+
+</style>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="wordmark">Savannah <span>Cinemas</span></div>
+    <div class="avatar">JT</div>
+  </div>
+
+  <div class="booking-header">
+    <p class="eyebrow">Select seats</p>
+    <h1>The Long Horizon</h1>
+    <p class="sub">Savannah Mall · Screen 1 · Today, 7:45 PM</p>
+  </div>
+
+  <div class="booking-layout">
+    <div class="booking-main">
+
+      <!-- SEATING CHART -->
+      <div class="panel">
+        <h2>Choose your seats</h2>
+
+        <div class="screen-wrap">
+          <div class="screen"></div>
+          <div class="screen-label">Screen</div>
+        </div>
+
+        <div class="seat-map" id="seatMap">
+          <!-- rows generated by JS -->
+        </div>
+
+        <div class="seat-legend">
+          <div class="legend-item"><span class="legend-swatch available"></span> Available</div>
+          <div class="legend-item"><span class="legend-swatch premium"></span> Premium</div>
+          <div class="legend-item"><span class="legend-swatch selected"></span> Selected</div>
+          <div class="legend-item"><span class="legend-swatch taken"></span> Taken</div>
+        </div>
+      </div>
+
+      <!-- SNACKS -->
+      <div class="panel">
+        <h2>Add snacks &amp; drinks</h2>
+        <div class="snack-grid" id="snackGrid">
+          <div class="snack-card" data-name="Large Popcorn" data-price="6.50">
+            <div class="snack-thumb">Popcorn</div>
+            <p class="snack-name">Large Popcorn</p>
+            <p class="snack-price">$6.50</p>
+            <div class="qty-stepper">
+              <button class="qty-minus">−</button>
+              <span class="qty-value">0</span>
+              <button class="qty-plus">+</button>
+            </div>
+          </div>
+          <div class="snack-card" data-name="Soft Drink" data-price="4.00">
+            <div class="snack-thumb">Drink</div>
+            <p class="snack-name">Soft Drink</p>
+            <p class="snack-price">$4.00</p>
+            <div class="qty-stepper">
+              <button class="qty-minus">−</button>
+              <span class="qty-value">0</span>
+              <button class="qty-plus">+</button>
+            </div>
+          </div>
+          <div class="snack-card" data-name="Nachos" data-price="5.50">
+            <div class="snack-thumb">Nachos</div>
+            <p class="snack-name">Nachos &amp; Cheese</p>
+            <p class="snack-price">$5.50</p>
+            <div class="qty-stepper">
+              <button class="qty-minus">−</button>
+              <span class="qty-value">0</span>
+              <button class="qty-plus">+</button>
+            </div>
+          </div>
+          <div class="snack-card" data-name="Combo Meal" data-price="10.00">
+            <div class="snack-thumb">Combo</div>
+            <p class="snack-name">Popcorn + Drink Combo</p>
+            <p class="snack-price">$10.00</p>
+            <div class="qty-stepper">
+              <button class="qty-minus">−</button>
+              <span class="qty-value">0</span>
+              <button class="qty-plus">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SIDEBAR SUMMARY -->
+    <div class="booking-sidebar">
+      <div class="panel">
+        <p class="summary-film">The Long Horizon</p>
+        <p class="summary-sub">Savannah Mall · Screen 1 · 7:45 PM</p>
+
+        <ul class="summary-list" id="seatSummaryList">
+          <li class="summary-empty" id="seatSummaryEmpty">No seats selected yet</li>
+        </ul>
+
+        <ul class="summary-list" id="snackSummaryList"></ul>
+
+        <div class="summary-total">
+          <span>Total</span>
+          <span id="grandTotal">$0.00</span>
+        </div>
+
+        <button class="btn-pay" id="payBtn" disabled>Select seats to continue</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var SEAT_PRICE_STANDARD = 9.00;
+    var SEAT_PRICE_PREMIUM  = 13.50;
+
+    // Rows A–H, 12 seats each, aisle gap after seat 6.
+    // Row A is Premium. A handful of seats are pre-marked taken.
+    var rows = ['A','B','C','D','E','F','G','H'];
+    var takenSeats = ['A4','A5','C7','C8','D2','F10','G6','G7','H1'];
+
+    var seatMap = document.getElementById('seatMap');
+    var selectedSeats = {}; // { "B4": price }
+
+    rows.forEach(function(rowLetter){
+      var rowEl = document.createElement('div');
+      rowEl.className = 'seat-row';
+
+      var label = document.createElement('div');
+      label.className = 'row-label';
+      label.textContent = rowLetter;
+      rowEl.appendChild(label);
+
+      for (var i = 1; i <= 12; i++){
+        if (i === 7){
+          var gap = document.createElement('div');
+          gap.className = 'seat aisle-gap';
+          rowEl.appendChild(gap);
+        }
+        var seatId = rowLetter + i;
+        var isPremium = (rowLetter === 'A');
+        var isTaken = takenSeats.indexOf(seatId) !== -1;
+
+        var seat = document.createElement('div');
+        seat.className = 'seat' + (isPremium ? ' premium' : '') + (isTaken ? ' taken' : '');
+        seat.textContent = i;
+        seat.dataset.seatId = seatId;
+        seat.dataset.price = isPremium ? SEAT_PRICE_PREMIUM : SEAT_PRICE_STANDARD;
+
+        if (!isTaken){
+          seat.addEventListener('click', function(){
+            var id = this.dataset.seatId;
+            var price = parseFloat(this.dataset.price);
+            if (this.classList.contains('selected')){
+              this.classList.remove('selected');
+              delete selectedSeats[id];
+            } else {
+              this.classList.add('selected');
+              selectedSeats[id] = price;
+            }
+            updateSummary();
+          });
+        }
+
+        rowEl.appendChild(seat);
+      }
+      seatMap.appendChild(rowEl);
+    });
+
+    // Snack quantity steppers
+    var snackQuantities = {}; // { "Large Popcorn": {qty, price} }
+
+    document.querySelectorAll('.snack-card').forEach(function(card){
+      var name = card.dataset.name;
+      var price = parseFloat(card.dataset.price);
+      var valueEl = card.querySelector('.qty-value');
+
+      card.querySelector('.qty-plus').addEventListener('click', function(){
+        var qty = (snackQuantities[name] ? snackQuantities[name].qty : 0) + 1;
+        snackQuantities[name] = { qty: qty, price: price };
+        valueEl.textContent = qty;
+        updateSummary();
+      });
+      card.querySelector('.qty-minus').addEventListener('click', function(){
+        var current = snackQuantities[name] ? snackQuantities[name].qty : 0;
+        var qty = Math.max(0, current - 1);
+        if (qty === 0) delete snackQuantities[name];
+        else snackQuantities[name] = { qty: qty, price: price };
+        valueEl.textContent = qty;
+        updateSummary();
+      });
+    });
+
+    function updateSummary(){
+      var seatList = document.getElementById('seatSummaryList');
+      var seatIds = Object.keys(selectedSeats);
+      seatList.innerHTML = '';
+      if (seatIds.length === 0){
+        seatList.innerHTML = '<li class="summary-empty">No seats selected yet</li>';
+      } else {
+        seatIds.sort().forEach(function(id){
+          var li = document.createElement('li');
+          li.innerHTML = '<span>Seat ' + id + '</span><span>$' + selectedSeats[id].toFixed(2) + '</span>';
+          seatList.appendChild(li);
+        });
+      }
+
+      var snackList = document.getElementById('snackSummaryList');
+      snackList.innerHTML = '';
+      Object.keys(snackQuantities).forEach(function(name){
+        var item = snackQuantities[name];
+        var li = document.createElement('li');
+        li.innerHTML = '<span>' + name + ' × ' + item.qty + '</span><span>$' + (item.price * item.qty).toFixed(2) + '</span>';
+        snackList.appendChild(li);
+      });
+
+      var seatTotal = seatIds.reduce(function(sum, id){ return sum + selectedSeats[id]; }, 0);
+      var snackTotal = Object.keys(snackQuantities).reduce(function(sum, name){
+        var item = snackQuantities[name];
+        return sum + (item.price * item.qty);
+      }, 0);
+      var grandTotal = seatTotal + snackTotal;
+
+      document.getElementById('grandTotal').textContent = '$' + grandTotal.toFixed(2);
+
+      var payBtn = document.getElementById('payBtn');
+      if (seatIds.length > 0){
+        payBtn.disabled = false;
+        payBtn.textContent = 'Proceed to payment · $' + grandTotal.toFixed(2);
+      } else {
+        payBtn.disabled = true;
+        payBtn.textContent = 'Select seats to continue';
+      }
+    }
+
+    document.getElementById('payBtn').addEventListener('click', function(){
+      if (this.disabled) return;
+      alert('Proceeding to payment with ' + Object.keys(selectedSeats).length + ' seat(s) and total ' + document.getElementById('grandTotal').textContent);
+    });
+  </script>
+
+</body>
+</html>
+
+
+
+<!-- TICKET STUB CARDS -->
+  <div class="section">
+    <h2 class="section-title">Now Showing</h2>
+    <p class="section-sub">The stub is the through-line of the whole product — the same shape sells a ticket and later records that you used it.</p>
+    <div class="stub-grid">
+      <div class="stub">
+        <span class="badge now">Now showing</span>
+        <div class="poster">Poster art</div>
+        <div class="tear"></div>
+        <div class="info">
+          <p class="title">The Long Reel</p>
+          <p class="meta">Screen 4 · 2h 18m · 15</p>
+          <div class="row"><span>Fri 7:45 PM</span><span class="seat">12 seats left</span></div>
+        </div>
+      </div>
+      <div class="stub">
+        <span class="badge now">Now showing</span>
+        <div class="poster">Poster art</div>
+        <div class="tear"></div>
+        <div class="info">
+          <p class="title">Static Horizon</p>
+          <p class="meta">Screen 1 · 1h 54m · 12A</p>
+          <div class="row"><span>Fri 9:15 PM</span><span class="seat">4 seats left</span></div>
+        </div>
+      </div>
+      <div class="stub">
+        <span class="badge watched">Watched — Jun 12</span>
+        <div class="poster">Poster art</div>
+        <div class="tear"></div>
+        <div class="info">
+          <p class="title">Nine Red Doors</p>
+          <p class="meta">Screen 3 · 2h 05m · 15</p>
+          <div class="row"><span>★★★★☆ your rating</span><span class="seat">D12</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="section section-search">
+    <p class="label">Component — search</p>
+    <div class="search-bar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search for movies, showtimes and many more...">
+      <button>Search</button>
+    </div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="section">
+    <p class="label">Component — buttons</p>
+    <div class="btn-row">
+      <div class="btn btn-primary">Book tickets</div>
+      <div class="btn btn-gold">Confirm booking</div>
+      <div class="btn btn-outline">View details</div>
+      <div class="btn btn-ghost">Cancel</div>
+      <div class="btn btn-outline" style="opacity:.4;pointer-events:none">Sold out</div>
+    </div>
+  </div>
