@@ -291,12 +291,14 @@
     NAVIGATION
     ============================================================ -->
     <nav class="nav">
-        <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-        <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+        <div class="nav-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+        </div>
         
         <!-- Desktop Navigation -->
         <ul class="nav-links" id="navLinks">
@@ -322,7 +324,7 @@
     </nav>
 
     <!-- ============================================================
-    MOBILE MENU (Slide-in from right)
+    MOBILE MENU
     ============================================================ -->
     <div class="mobile-menu-overlay" id="mobileOverlay"></div>
     <div class="mobile-menu" id="mobileMenu">
@@ -394,16 +396,15 @@
                 <p class="eyebrow">Coming Soon</p>
                 <h2 class="section-title">Upcoming Films</h2>
             </div>
+            <a href="coming-soon.html" class="btn btn-ghost" style="font-size: clamp(12px, 0.9vw, 14px); padding: 8px 20px;">
+                View All <i class="fas fa-arrow-right"></i>
+            </a>
         </div>
         <div class="upcoming-grid" id="upcomingGrid">
             <div class="upcoming-loading">
                 <i class="fas fa-spinner fa-spin"></i> Loading upcoming films...
             </div>
         </div>
-        <br>
-        <a href="coming-soon.html" class="btn btn-ghost" style="font-size: clamp(12px, 0.9vw, 14px); padding: 8px 20px;">
-            View All <i class="fas fa-arrow-right"></i>
-        </a>
     </section>
 
     <!-- ============================================================
@@ -415,14 +416,13 @@
                 <p class="eyebrow">Special Events</p>
                 <h2 class="section-title">Events &amp; Screenings</h2>
             </div>
+            <a href="events.html" class="btn btn-ghost" style="font-size: clamp(12px, 0.9vw, 14px); padding: 8px 20px;">
+                View All <i class="fas fa-arrow-right"></i>
+            </a>
         </div>
         <div class="events-grid" id="eventsGrid">
             <!-- Populated by JavaScript -->
         </div>
-        <br>
-        <a href="events.html" class="btn btn-ghost" style="font-size: clamp(12px, 0.9vw, 14px); padding: 8px 20px;">
-            View All <i class="fas fa-arrow-right"></i>
-        </a>
     </section>
 
     <!-- ============================================================
@@ -482,9 +482,257 @@
             
             const API_KEY = 'a0b31df2c8c2865ebe236c9e1eb7cbd9';
             const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+            const BACKDROP_BASE = 'https://image.tmdb.org/t/p/original';
 
             // ============================================================
-            // FETCH UPCOMING FILMS FROM API
+            // HERO CAROUSEL DATA - CURRENT YEAR ONLY
+            // ============================================================
+            
+            // This will be populated dynamically from the API
+            let heroMovies = [];
+
+            async function fetchHeroMovies() {
+                try {
+                    const currentYear = new Date().getFullYear();
+                    const response = await fetch(
+                        `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&primary_release_year=${currentYear}&page=1`
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`API Error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    // Filter for films with posters and backdrops
+                    const movies = data.results.filter(movie => 
+                        movie.poster_path && movie.backdrop_path && movie.release_date
+                    );
+
+                    // Take first 5 movies for hero
+                    heroMovies = movies.slice(0, 5);
+                    
+                    renderHeroSlides(heroMovies);
+                    renderHeroDots(heroMovies);
+                    
+                } catch (error) {
+                    console.error('Error fetching hero movies:', error);
+                    // Fallback to popular movies of current year
+                    fallbackHeroMovies();
+                }
+            }
+
+            function fallbackHeroMovies() {
+                // Fallback data if API fails
+                heroMovies = [
+                    {
+                        id: 27205,
+                        title: 'Inception',
+                        release_date: '2010-07-16',
+                        overview: 'A thief who steals corporate secrets through the use of dream-sharing technology.',
+                        vote_average: 8.8,
+                        poster_path: '/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+                        backdrop_path: '/edv5CZvWj09upOsy2Y6IwDhK8Ap.jpg',
+                        tagline: 'Your mind is the scene of the crime.'
+                    },
+                    {
+                        id: 155,
+                        title: 'The Dark Knight',
+                        release_date: '2008-07-18',
+                        overview: 'When the menace known as the Joker wreaks havoc and chaos on the people of Gotham.',
+                        vote_average: 9.0,
+                        poster_path: '/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
+                        backdrop_path: '/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
+                        tagline: 'Why so serious?'
+                    },
+                    {
+                        id: 157336,
+                        title: 'Interstellar',
+                        release_date: '2014-11-07',
+                        overview: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.",
+                        vote_average: 8.6,
+                        poster_path: '/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+                        backdrop_path: '/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+                        tagline: 'Mankind was born on Earth. It was never meant to die here.'
+                    },
+                    {
+                        id: 603,
+                        title: 'The Matrix',
+                        release_date: '1999-03-31',
+                        overview: 'A computer hacker learns about the true nature of reality and his role in the war against its controllers.',
+                        vote_average: 8.7,
+                        poster_path: '/f89U3ADr1oTB1hH3gP8CwH9g8Dp.jpg',
+                        backdrop_path: '/f89U3ADr1oTB1hH3gP8CwH9g8Dp.jpg',
+                        tagline: 'Welcome to the Real World.'
+                    }
+                ];
+                renderHeroSlides(heroMovies);
+                renderHeroDots(heroMovies);
+            }
+
+            // ============================================================
+            // HERO CAROUSEL RENDER
+            // ============================================================
+
+            function renderHeroSlides(movies) {
+                const container = document.getElementById('heroSlides');
+                if (!container || movies.length === 0) return;
+
+                container.innerHTML = movies.map((movie, index) => {
+                    const year = movie.release_date ? movie.release_date.substring(0, 4) : 'N/A';
+                    const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '0.0';
+                    const stars = getRatingStars(movie.vote_average || 0);
+                    const backdrop = movie.backdrop_path ? `${BACKDROP_BASE}${movie.backdrop_path}` : '';
+                    const tagline = movie.tagline || 'Experience the story.';
+
+                    return `
+                        <div class="hero-slide" style="background-image: url('${backdrop}');" data-index="${index}">
+                            <div class="hero-slide-content">
+                                <p class="label">🎬 Now Showing</p>
+                                <h2 class="movie-title">${movie.title || 'Untitled'}</h2>
+                                <p class="movie-year">${year}</p>
+                                <p class="tagline">"${tagline}"</p>
+                                <p class="description">${movie.overview || 'No description available.'}</p>
+                                <div class="rating-row">
+                                    <span class="stars">${stars}</span>
+                                    <span class="rating-number">${rating}</span>
+                                    <span class="rating-label">/ 10 · Popular</span>
+                                </div>
+                                <div class="btn-row">
+                                    <a href="booking.html?film=${encodeURIComponent(JSON.stringify({
+                                        filmTitle: movie.title,
+                                        filmYear: year,
+                                        cinema: 'Savannah Mall',
+                                        screen: 'Screen 1',
+                                        showtime: 'Today, 7:45 PM',
+                                        priceStandard: 9.00,
+                                        pricePremium: 13.50,
+                                        id: movie.id
+                                    }))}" class="btn btn-primary">
+                                        🎫 Get Tickets
+                                    </a>
+                                    <a href="movie-details.html?id=${movie.id}" class="btn btn-ghost">
+                                        Learn more →
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Reset position to first slide
+                updateSlidePosition(0);
+            }
+
+            function renderHeroDots(movies) {
+                const container = document.getElementById('heroDots');
+                if (!container || movies.length === 0) return;
+
+                container.innerHTML = movies.map((_, index) => `
+                    <button class="hero-dot ${index === 0 ? 'active' : ''}" data-index="${index}" aria-label="Go to slide ${index + 1}"></button>
+                `).join('');
+
+                // Add click listeners to dots
+                container.querySelectorAll('.hero-dot').forEach(dot => {
+                    dot.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        goToSlide(index);
+                    });
+                });
+            }
+
+            function getRatingStars(rating) {
+                const fullStars = Math.floor(rating / 2);
+                let stars = '';
+                for (let i = 0; i < 5; i++) {
+                    stars += i < fullStars ? '★' : '☆';
+                }
+                return stars;
+            }
+
+            // ============================================================
+            // SLIDE NAVIGATION
+            // ============================================================
+
+            let currentSlide = 0;
+            let isTransitioning = false;
+            let autoplayInterval = null;
+
+            function goToSlide(index) {
+                const slides = document.querySelectorAll('.hero-slide');
+                const dots = document.querySelectorAll('.hero-dot');
+                
+                if (!slides.length || isTransitioning || index === currentSlide) return;
+                if (index < 0) index = slides.length - 1;
+                if (index >= slides.length) index = 0;
+
+                isTransitioning = true;
+                currentSlide = index;
+
+                // Move slides
+                const slideWidth = slides[0].offsetWidth || 100;
+                document.getElementById('heroSlides').style.transform = `translateX(-${index * slideWidth}px)`;
+
+                // Update dots
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === index);
+                });
+
+                setTimeout(() => {
+                    isTransitioning = false;
+                }, 500);
+
+                resetAutoplay();
+            }
+
+            function nextSlide() {
+                const slides = document.querySelectorAll('.hero-slide');
+                goToSlide(currentSlide + 1);
+            }
+
+            function prevSlide() {
+                const slides = document.querySelectorAll('.hero-slide');
+                goToSlide(currentSlide - 1);
+            }
+
+            function updateSlidePosition(index) {
+                const slides = document.querySelectorAll('.hero-slide');
+                if (!slides.length) return;
+                
+                currentSlide = index;
+                const slideWidth = slides[0].offsetWidth || 100;
+                document.getElementById('heroSlides').style.transform = `translateX(-${index * slideWidth}px)`;
+                
+                document.querySelectorAll('.hero-dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i === index);
+                });
+            }
+
+            // ============================================================
+            // AUTOPLAY
+            // ============================================================
+
+            function startAutoplay() {
+                if (autoplayInterval) clearInterval(autoplayInterval);
+                autoplayInterval = setInterval(nextSlide, 6000);
+            }
+
+            function resetAutoplay() {
+                if (autoplayInterval) {
+                    clearInterval(autoplayInterval);
+                    startAutoplay();
+                }
+            }
+
+            function stopAutoplay() {
+                if (autoplayInterval) {
+                    clearInterval(autoplayInterval);
+                    autoplayInterval = null;
+                }
+            }
+
+            // ============================================================
+            // FETCH UPCOMING FILMS
             // ============================================================
             
             async function fetchUpcomingFilms() {
@@ -569,9 +817,17 @@
                 }).join('');
             }
 
+            // ============================================================
+            // VIEW MOVIE
+            // ============================================================
+
             window.viewMovie = function(movieId) {
                 window.location.href = `movie-details.html?id=${movieId}`;
             };
+
+            // ============================================================
+            // NOTIFY ME
+            // ============================================================
 
             window.notifyMe = function(title) {
                 const btn = event.target.closest('.btn-notify');
@@ -656,12 +912,126 @@
             renderEvents();
 
             // ============================================================
-            // FETCH UPCOMING FILMS ON LOAD
+            // INITIALIZE
             // ============================================================
             
+            // Hero carousel controls
+            document.getElementById('heroPrev').addEventListener('click', function(e) {
+                e.preventDefault();
+                stopAutoplay();
+                prevSlide();
+                setTimeout(startAutoplay, 3000);
+            });
+
+            document.getElementById('heroNext').addEventListener('click', function(e) {
+                e.preventDefault();
+                stopAutoplay();
+                nextSlide();
+                setTimeout(startAutoplay, 3000);
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    stopAutoplay();
+                    prevSlide();
+                    setTimeout(startAutoplay, 3000);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    stopAutoplay();
+                    nextSlide();
+                    setTimeout(startAutoplay, 3000);
+                }
+            });
+
+            // Pause autoplay on hover            const heroContainer = document.getElementById('heroCarousel');
+            if (heroContainer) {
+                heroContainer.addEventListener('mouseenter', stopAutoplay);
+                heroContainer.addEventListener('mouseleave', startAutoplay);
+            }
+
+            // Handle visibility change
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    stopAutoplay();
+                } else {
+                    startAutoplay();
+                }
+            });
+
+            // Fetch hero movies (current year)
+            fetchHeroMovies();
+
+            // Fetch upcoming films
             fetchUpcomingFilms();
+
+            // Start autoplay after initial load
+            setTimeout(startAutoplay, 2000);
+
+            // Update slide position on resize
+            let resizeTimer = null;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    const slides = document.querySelectorAll('.hero-slide');
+                    if (slides.length && slides[0]) {
+                        const slideWidth = slides[0].offsetWidth || 100;
+                        document.getElementById('heroSlides').style.transform = `translateX(-${currentSlide * slideWidth}px)`;
+                    }
+                }, 250);
+            });
+
+            // ============================================================
+            // POPULAR MOVIES CAROUSEL
+            // ============================================================
+            
+            const carouselTrack = document.getElementById('carouselTrack');
+            const carouselPrev = document.getElementById('carouselPrev');
+            const carouselNext = document.getElementById('carouselNext');
+
+            // Sample popular movies - these would come from API
+            const popularMovies = [
+                { title: 'Dune: Part Two', year: '2024', rating: '8.9', poster: 'https://image.tmdb.org/t/p/w500/8cdWjvZQUDoUJvW6sLFLq7JVJ2q.jpg' },
+                { title: 'The Batman', year: '2022', rating: '8.7', poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg' },
+                { title: 'Interstellar', year: '2014', rating: '8.6', poster: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg' },
+                { title: 'Inception', year: '2010', rating: '8.8', poster: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg' },
+                { title: 'The Dark Knight', year: '2008', rating: '9.0', poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg' },
+                { title: 'Gladiator II', year: '2025', rating: '8.5', poster: 'https://image.tmdb.org/t/p/w500/6WBIzCgmDCYrTJ2s9M1XcP9lQ0e.jpg' },
+                { title: 'Mad Max: Fury Road', year: '2015', rating: '8.8', poster: 'https://image.tmdb.org/t/p/w500/f89U3ADr1oTB1hH3gP8CwH9g8Dp.jpg' }
+            ];
+
+            function renderPopularMovies() {
+                if (!carouselTrack) return;
+
+                carouselTrack.innerHTML = popularMovies.map(movie => `
+                    <div class="carousel-card" onclick="viewMovie(${movie.id || 0})">
+                        <div class="film-poster" style="background-image: url('${movie.poster}');">
+                            <span class="rating-badge">★ ${movie.rating}</span>
+                        </div>
+                        <div class="c-title">${movie.title}</div>
+                        <div class="c-meta">${movie.year}</div>
+                    </div>
+                `).join('');
+            }
+
+            renderPopularMovies();
+
+            // Carousel scroll controls
+            if (carouselPrev && carouselTrack) {
+                carouselPrev.addEventListener('click', function() {
+                    carouselTrack.scrollBy({ left: -220, behavior: 'smooth' });
+                });
+            }
+
+            if (carouselNext && carouselTrack) {
+                carouselNext.addEventListener('click', function() {
+                    carouselTrack.scrollBy({ left: 220, behavior: 'smooth' });
+                });
+            }
 
         });
     </script>
+
 </body>
 </html>
