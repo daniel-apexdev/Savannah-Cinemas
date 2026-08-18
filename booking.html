@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Savannah Cinemas — Select Seats</title>
+<link rel="stylesheet" href="css/style.css">
 <style>
 
   :root{
@@ -63,19 +64,26 @@
   
   .wordmark span{ color:var(--gold); }
   
-  .avatar{
-    width:38px; height:38px; border-radius:50%;
-    background:var(--gold); color:var(--ink);
-    display:flex; align-items:center; justify-content:center;
-    font-family:var(--font-display); font-weight:600; font-size:15px;
-    cursor:pointer;
-    transition:0.3s ease;
-  }
-  
-  .avatar:hover{
-    transform:scale(1.05);
-    box-shadow:0 0 20px rgba(232,179,76,0.3);
-  }
+ .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: 0.3s ease;
+}
+
+.avatar:hover {
+    border-color: var(--gold-dim);
+}
 
   /* ---------- BOOKING HEADER ---------- */
   .booking-header{
