@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extras — Savannah Cinemas</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <style>
+        /* ============================================================
+           EXTRAS PAGE STYLES
+        ============================================================ */
+
+        .extras-hero {
+            padding: 32px var(--container-padding) 8px;
+            text-align: center;
+            max-width: 80%;
+            margin: 0 auto;
+        }
+
+        .extras-hero .extras-icon {
+            font-size: clamp(36px, 4vw, 52px);
+            margin-bottom: 8px;
+        }
+
+        .extras-hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 6px;
+        }
+
+        .extras-hero p {
+            font-size: clamp(14px, 1vw, 17px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        /* ---------- EXTRAS GRID - SMALLER CARDS WITH BETTER SPACING ---------- */
+        .extras-grid-wrapper {
+            max-width: 90%;
+            margin: 0 auto;
+            padding: 16px var(--container-padding) 40px;
+        }
+
+        .extras-grid-page {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(clamp(170px, 14vw, 210px), 1fr));
+            gap: 14px;
+            margin-top: 4px;
+        }
+
+        .extra-card-page {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            padding: clamp(14px, 1.2vw, 20px);
+            text-decoration: none;
+            color: var(--paper);
+            transition: 0.3s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            min-height: 120px;
+            justify-content: center;
+        }
+
+        .extra-card-page::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gold);
+            transform: scaleX(0);
+            transition: 0.3s ease;
+        }
+
+        .extra-card-page:hover::after {
+            transform: scaleX(1);
+        }
+
+        .extra-card-page:hover {
+            border-color: var(--gold);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .extra-card-page .extra-icon {
+            font-size: clamp(24px, 2vw, 32px);
+            margin-bottom: 4px;
+        }
+
+        .extra-card-page .extra-name {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 17px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 2px;
+        }
+
+        .extra-card-page .extra-desc {
+            font-size: clamp(11px, 0.7vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            line-height: 1.3;
+            margin-bottom: 6px;
+        }
+
+        .extra-card-page .extra-tag {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gold);
+            padding: 2px 10px;
+            border: 1px solid var(--gold-dim);
+            border-radius: 8px;
+        }
+
+        /* ---------- MODAL STYLES ---------- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            max-width: 520px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: clamp(18px, 2.5vw, 28px);
+            position: relative;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-content .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            background: none;
+            border: none;
+            color: var(--paper-dim);
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.3s ease;
+            padding: 6px;
+            line-height: 1;
+        }
+
+        .modal-content .modal-close:hover {
+            color: var(--paper);
+            transform: rotate(90deg);
+        }
+
+        .modal-content .modal-icon {
+            font-size: clamp(36px, 3.5vw, 48px);
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .modal-content .modal-title {
+            font-family: var(--font-display);
+            font-size: clamp(18px, 1.8vw, 24px);
+            font-weight: 500;
+            color: var(--paper);
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .modal-content .modal-body {
+            font-size: clamp(13px, 0.9vw, 15px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            line-height: 1.7;
+        }
+
+        .modal-content .modal-body ul {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+
+        .modal-content .modal-body ul li {
+            padding: 5px 8px;
+            border-bottom: 1px solid var(--ink-line);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: clamp(12px, 0.8vw, 14px);
+        }
+
+        .modal-content .modal-body ul li:last-child {
+            border-bottom: none;
+        }
+
+        .modal-content .modal-body ul li i {
+            color: var(--gold);
+            width: 18px;
+            font-size: 14px;
+        }
+
+        .modal-content .modal-btn {
+            margin-top: 14px;
+            padding: 8px 24px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 400;
+            cursor: pointer;
+            transition: 0.3s ease;
+            width: 100%;
+            min-height: 40px;
+        }
+
+        .modal-content .modal-btn:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+        }
+
+        .modal-content .modal-btn.profile-link {
+            background: var(--ink);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+        }
+
+        .modal-content .modal-btn.profile-link:hover {
+            background: var(--gold);
+            color: var(--ink);
+        }
+
+        /* ---------- QUIZ INSIDE MODAL ---------- */
+        .quiz-modal .quiz-question {
+            font-size: clamp(15px, 1vw, 18px);
+            font-weight: 400;
+            color: var(--paper);
+            margin-bottom: 12px;
+        }
+
+        .quiz-modal .quiz-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .quiz-modal .quiz-options .quiz-option {
+            padding: 8px 12px;
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            font-weight: 300;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-align: left;
+            touch-action: manipulation;
+            min-height: 38px;
+        }
+
+        .quiz-modal .quiz-options .quiz-option:hover {
+            border-color: var(--gold-dim);
+            background: rgba(232, 179, 76, 0.05);
+        }
+
+        .quiz-modal .quiz-options .quiz-option.correct {
+            border-color: var(--success);
+            background: rgba(76, 154, 106, 0.12);
+            color: var(--success);
+        }
+
+        .quiz-modal .quiz-options .quiz-option.wrong {
+            border-color: var(--rust);
+            background: rgba(179, 57, 81, 0.12);
+            color: var(--rust);
+        }
+
+        .quiz-modal .quiz-options .quiz-option:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .quiz-modal .quiz-feedback {
+            font-size: clamp(12px, 0.8vw, 14px);
+            font-weight: 300;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            display: none;
+        }
+
+        .quiz-modal .quiz-feedback.show {
+            display: block;
+        }
+
+        .quiz-modal .quiz-feedback.correct {
+            background: rgba(76, 154, 106, 0.08);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .quiz-modal .quiz-feedback.wrong {
+            background: rgba(179, 57, 81, 0.08);
+            border: 1px solid var(--rust);
+            color: var(--rust);
+        }
+
+        .quiz-modal .quiz-next {
+            padding: 8px 20px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            font-weight: 400;
+            cursor: pointer;
+            transition: 0.3s ease;
+            display: none;
+            touch-action: manipulation;
+            min-height: 38px;
+            margin-top: 6px;
+        }
+
+        .quiz-modal .quiz-next:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+        }
+
+        .quiz-modal .quiz-next.show {
+            display: inline-flex;
+        }
+
+        .quiz-modal .quiz-score {
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.7vw, 13px);
+            color: var(--gold);
+            margin-top: 8px;
+            font-weight: 300;
+        }
+
+        /* ---------- POLL SECTION ---------- */
+        .poll-options {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 8px 0;
+        }
+
+        .poll-options .poll-option {
+            padding: 8px 12px;
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            font-weight: 300;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-align: left;
+            touch-action: manipulation;
+            min-height: 38px;
+        }
+
+        .poll-options .poll-option:hover {
+            border-color: var(--gold-dim);
+            background: rgba(232, 179, 76, 0.05);
+        }
+
+        .poll-options .poll-option.selected {
+            border-color: var(--gold);
+            background: rgba(232, 179, 76, 0.08);
+        }
+
+        .poll-options .poll-option .poll-votes {
+            float: right;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--paper-dim);
+        }
+
+        .poll-result-bar {
+            height: 3px;
+            background: var(--ink-line);
+            border-radius: 2px;
+            margin-top: 3px;
+            overflow: hidden;
+        }
+
+        .poll-result-bar .poll-fill {
+            height: 100%;
+            background: var(--gold);
+            border-radius: 2px;
+            transition: width 0.6s ease;
+            width: 0%;
+        }
+
+        /* ---------- INPUTS ---------- */
+        .modal-body input[type="email"],
+        .modal-body select {
+            padding: 8px 12px;
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(12px, 0.8vw, 14px);
+            min-height: 38px;
+            width: 100%;
+        }
+
+        .modal-body input[type="email"]:focus,
+        .modal-body select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 768px) {
+            .extras-grid-page {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 10px;
+            }
+
+            .extra-card-page {
+                min-height: 100px;
+                padding: 12px;
+            }
+
+            .extra-card-page .extra-icon {
+                font-size: 22px;
+            }
+
+            .extra-card-page .extra-name {
+                font-size: 13px;
+            }
+
+            .extra-card-page .extra-desc {
+                font-size: 10px;
+            }
+
+            .quiz-modal .quiz-options {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .extras-grid-wrapper {
+                padding: 12px var(--container-padding) 30px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .extras-grid-page {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 8px;
+            }
+
+            .extra-card-page {
+                min-height: 90px;
+                padding: 10px;
+            }
+
+            .extra-card-page .extra-icon {
+                font-size: 20px;
+            }
+
+            .extra-card-page .extra-name {
+                font-size: 12px;
+            }
+
+            .extra-card-page .extra-desc {
+                font-size: 9px;
+                line-height: 1.2;
+            }
+
+            .extra-card-page .extra-tag {
+                font-size: 8px;
+                padding: 2px 8px;
+            }
+
+            .extras-hero {
+                padding: 20px var(--container-padding) 4px;
+            }
+
+            .extras-hero h1 {
+                font-size: 24px;
+            }
+
+            .extras-hero p {
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .extras-grid-page {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .extra-card-page {
+                min-height: 85px;
+                padding: 8px;
+            }
+
+            .modal-content {
+                padding: 14px;
+                margin: 6px;
+            }
+
+            .quiz-modal .quiz-options {
+                grid-template-columns: 1fr;
+            }
+
+            .extras-grid-wrapper {
+                padding: 8px var(--container-padding) 20px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .extras-grid-page {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+
+            .extra-card-page {
+                min-height: 75px;
+                padding: 6px;
+            }
+
+            .extra-card-page .extra-icon {
+                font-size: 18px;
+            }
+
+            .extra-card-page .extra-name {
+                font-size: 11px;
+            }
+
+            .extra-card-page .extra-desc {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================
+    NAVIGATION
+    ============================================================ -->
+    <nav class="nav">
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+        
+        <ul class="nav-links" id="navLinks">
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+            <li><a href="extras.html" class="active">Extras</a></li>
+        </ul>
+        
+        <div class="nav-right">
+            <div class="profile-wrapper" id="profileWrapper">
+                <div class="avatar">DA</div>
+                <div class="profile-menu">
+                    <div class="who">
+                        <div class="name">Daniel Asamoah</div>
+                        <div class="stat">142 films watched</div>
+                    </div>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Account settings</a>
+                    <a href="logout.html">Sign out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================================
+    MOBILE MENU
+    ============================================================ -->
+    <div class="mobile-menu-overlay" id="mobileOverlay"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <div class="mobile-menu-brand">Savannah <span>Cinemas</span></div>
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="mobile-menu-links">
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+            <li><a href="extras.html" class="active">Extras</a></li>
+            <li class="mobile-divider"></li>
+            <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+        </ul>
+        <div class="mobile-menu-footer">
+            <p>© 2026 Savannah Cinemas</p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    EXTRAS HERO
+    ============================================================ -->
+    <div class="extras-hero">
+        <br>
+        <h1>Extras</h1>
+        <p>Explore more from the world of cinema — quizzes, trivia, recommendations, and more.</p>
+    </div>
+    <br>
+
+    <!-- ============================================================
+    EXTRAS GRID - WITH PROPER SPACING
+    ============================================================ -->
+    <div class="extras-grid-wrapper">
+        <div class="extras-grid-page">
+            
+            <!-- Film Quiz -->
+            <div class="extra-card-page" id="quizCard">
+                <div class="extra-icon">🧠</div>
+                <div class="extra-name">Film Quiz</div>
+                <div class="extra-desc">Test your movie knowledge</div>
+                <span class="extra-tag">Play Now</span>
+            </div>
+
+            <!-- Film Trivia -->
+            <div class="extra-card-page" id="triviaCard">
+                <div class="extra-icon">💡</div>
+                <div class="extra-name">Film Trivia</div>
+                <div class="extra-desc">Fascinating film facts</div>
+                <span class="extra-tag">Learn More</span>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="extra-card-page" id="recommendCard">
+                <div class="extra-icon">🎯</div>
+                <div class="extra-name">Recommendations</div>
+                <div class="extra-desc">Personalized picks</div>
+                <span class="extra-tag">Discover</span>
+            </div>
+
+            <!-- Weekly Poll -->
+            <div class="extra-card-page" id="pollCard">
+                <div class="extra-icon">📊</div>
+                <div class="extra-name">Weekly Poll</div>
+                <div class="extra-desc">Vote on film topics</div>
+                <span class="extra-tag">Vote Now</span>
+            </div>
+
+            <!-- Newsletter -->
+            <div class="extra-card-page" id="newsletterCard">
+                <div class="extra-icon">📬</div>
+                <div class="extra-name">Newsletter</div>
+                <div class="extra-desc">Stay in the loop</div>
+                <span class="extra-tag">Subscribe</span>
+            </div>
+
+            <!-- Watchlist -->
+            <div class="extra-card-page" id="watchlistCard">
+                <div class="extra-icon">📝</div>
+                <div class="extra-name">Watchlist</div>
+                <div class="extra-desc">Save films to watch</div>
+                <span class="extra-tag">Manage</span>
+            </div>
+
+            <!-- Film Stats -->
+            <div class="extra-card-page" id="statsCard">
+                <div class="extra-icon">📈</div>
+                <div class="extra-name">Film Stats</div>
+                <div class="extra-desc">Track your habits</div>
+                <span class="extra-tag">View Stats</span>
+            </div>
+
+        </div>
+    </div>
+    <br>
+
+    <!-- ============================================================
+    MODAL OVERLAY
+    ============================================================ -->
+    
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content" id="modalContent">
+            <button class="modal-close" id="modalClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="modalBody">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="nav-brand">SAVANNAH <span>CINEMAS</span></div>
+                <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4>Browse</h4>
+                    <a href="coming-soon.html">Coming soon</a>
+                    <a href="events.html">Events</a>
+                    <a href="discovery.html">Discovery</a>
+                    <a href="extras.html">Extras</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Settings</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="help.html">Help centre</a>
+                    <a href="refunds.html">Refunds</a>
+                    <a href="contact.html">Contact us</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-tear"></div>
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
+    JAVASCRIPT
+    ============================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ============================================================
+            // MOBILE MENU
+            // ============================================================
+            
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            const mobileMenuClose = document.getElementById('mobileMenuClose');
+
+            function openMobileMenu() {
+                mobileMenu.classList.add('open');
+                mobileOverlay.classList.add('active');
+                menuToggle.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMobileMenu() {
+                mobileMenu.classList.remove('open');
+                mobileOverlay.classList.remove('active');
+                menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (mobileMenu.classList.contains('open')) {
+                        closeMobileMenu();
+                    } else {
+                        openMobileMenu();
+                    }
+                });
+            }
+
+            if (mobileMenuClose) {
+                mobileMenuClose.addEventListener('click', closeMobileMenu);
+            }
+
+            if (mobileOverlay) {
+                mobileOverlay.addEventListener('click', closeMobileMenu);
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
+                    closeMobileMenu();
+                }
+            });
+
+            document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
+                link.addEventListener('click', closeMobileMenu);
+            });
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+            
+            const profileWrapper = document.getElementById('profileWrapper');
+            const avatarBtn = document.querySelector('.avatar');
+            let closeTimer = null;
+
+            if (profileWrapper) {
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(function() {
+                        profileWrapper.classList.remove('is-open');
+                    }, 150);
+                });
+
+                if (avatarBtn) {
+                    avatarBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        profileWrapper.classList.toggle('is-open');
+                    });
+                }
+
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // MODAL SYSTEM
+            // ============================================================
+            
+            const modalOverlay = document.getElementById('modalOverlay');
+            const modalBody = document.getElementById('modalBody');
+            const modalClose = document.getElementById('modalClose');
+
+            function openModal(html) {
+                modalBody.innerHTML = html;
+                modalOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeModal() {
+                modalOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            modalClose.addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', function(e) {
+                if (e.target === this) closeModal();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+                    closeModal();
+                }
+            });
+
+            // ============================================================
+            // FILM QUIZ (Inside Modal)
+            // ============================================================
+            
+            const quizData = [
+                {
+                    question: 'Which film won the Academy Award for Best Picture in 2024?',
+                    options: ['Oppenheimer', 'Barbie', 'Killers of the Flower Moon', 'Poor Things'],
+                    correct: 0,
+                    explain: 'Oppenheimer won Best Picture at the 96th Academy Awards.'
+                },
+                {
+                    question: 'Who directed the 2024 film "Dune: Part Two"?',
+                    options: ['Christopher Nolan', 'Denis Villeneuve', 'Greta Gerwig', 'Martin Scorsese'],
+                    correct: 1,
+                    explain: 'Denis Villeneuve directed the sequel to his 2021 adaptation of Dune.'
+                },
+                {
+                    question: 'Which film features the song "I\'m Just Ken"?',
+                    options: ['Barbie', 'Wonka', 'The Color Purple', 'Mean Girls'],
+                    correct: 0,
+                    explain: 'Ryan Gosling performed "I\'m Just Ken" in the 2023 Barbie film.'
+                },
+                {
+                    question: 'What is the highest-grossing film of all time (unadjusted for inflation)?',
+                    options: ['Avatar', 'Avengers: Endgame', 'Titanic', 'Star Wars: The Force Awakens'],
+                    correct: 0,
+                    explain: 'Avatar holds the record with over $2.9 billion at the global box office.'
+                },
+                {
+                    question: 'Which director is known for the "Cornetto Trilogy"?',
+                    options: ['Edgar Wright', 'Taika Waititi', 'Wes Anderson', 'Quentin Tarantino'],
+                    correct: 0,
+                    explain: 'Edgar Wright directed Shaun of the Dead, Hot Fuzz, and The World\'s End.'
+                }
+            ];
+
+            let currentQuizIndex = 0;
+            let quizScore = 0;
+            let quizAnswered = false;
+
+            function loadQuizQuestion() {
+                const data = quizData[currentQuizIndex];
+                if (!data) return;
+
+                const container = document.getElementById('quizContainer');
+                if (!container) return;
+
+                const questionEl = container.querySelector('.quiz-question');
+                const optionsEl = container.querySelector('.quiz-options');
+                const feedbackEl = container.querySelector('.quiz-feedback');
+                const nextBtn = container.querySelector('.quiz-next');
+                const scoreEl = container.querySelector('.quiz-score');
+
+                questionEl.textContent = data.question;
+                feedbackEl.className = 'quiz-feedback';
+                feedbackEl.textContent = '';
+                nextBtn.className = 'quiz-next';
+                scoreEl.textContent = `Score: ${quizScore} / ${quizData.length}`;
+
+                optionsEl.innerHTML = '';
+                quizAnswered = false;
+
+                data.options.forEach((option, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'quiz-option';
+                    btn.textContent = option;
+                    btn.dataset.index = index;
+                    btn.addEventListener('click', function() {
+                        if (quizAnswered) return;
+                        selectQuizAnswer(index);
+                    });
+                    optionsEl.appendChild(btn);
+                });
+            }
+
+            function selectQuizAnswer(index) {
+                if (quizAnswered) return;
+                quizAnswered = true;
+
+                const data = quizData[currentQuizIndex];
+                const container = document.getElementById('quizContainer');
+                const options = container.querySelectorAll('.quiz-option');
+                const feedbackEl = container.querySelector('.quiz-feedback');
+                const nextBtn = container.querySelector('.quiz-next');
+                const scoreEl = container.querySelector('.quiz-score');
+                
+                options.forEach((btn, i) => {
+                    btn.disabled = true;
+                    if (i === data.correct) {
+                        btn.classList.add('correct');
+                    } else if (i === index && i !== data.correct) {
+                        btn.classList.add('wrong');
+                    }
+                });
+
+                if (index === data.correct) {
+                    quizScore++;
+                    feedbackEl.className = 'quiz-feedback show correct';
+                    feedbackEl.textContent = `✅ Correct! ${data.explain}`;
+                } else {
+                    feedbackEl.className = 'quiz-feedback show wrong';
+                    feedbackEl.textContent = `❌ Wrong. ${data.explain}`;
+                }
+
+                scoreEl.textContent = `Score: ${quizScore} / ${quizData.length}`;
+
+                nextBtn.className = 'quiz-next show';
+                if (currentQuizIndex >= quizData.length - 1) {
+                    nextBtn.textContent = '🏆 See Results';
+                } else {
+                    nextBtn.textContent = 'Next Question →';
+                }
+            }
+
+            function handleQuizNext() {
+                const container = document.getElementById('quizContainer');
+                const nextBtn = container.querySelector('.quiz-next');
+                const feedbackEl = container.querySelector('.quiz-feedback');
+                const questionEl = container.querySelector('.quiz-question');
+                const optionsEl = container.querySelector('.quiz-options');
+                const scoreEl = container.querySelector('.quiz-score');
+
+                currentQuizIndex++;
+                if (currentQuizIndex >= quizData.length) {
+                    feedbackEl.className = 'quiz-feedback show correct';
+                    const percentage = Math.round((quizScore / quizData.length) * 100);
+                    let emoji = '🎉';
+                    if (percentage < 50) emoji = '💪';
+                    else if (percentage < 80) emoji = '🌟';
+                    else emoji = '🏆';
+                    feedbackEl.textContent = `${emoji} Quiz Complete! You scored ${quizScore} out of ${quizData.length} (${percentage}%)`;
+                    questionEl.textContent = 'Great job! 🎬';
+                    optionsEl.innerHTML = '';
+                    nextBtn.className = 'quiz-next';
+                    return;
+                }
+                loadQuizQuestion();
+            }
+
+            // ============================================================
+            // EXTRAS CARD CLICK HANDLERS
+            // ============================================================
+            
+            // Film Quiz - Opens modal with quiz
+            document.getElementById('quizCard').addEventListener('click', function() {
+                currentQuizIndex = 0;
+                quizScore = 0;
+                quizAnswered = false;
+
+                const quizHTML = `
+                    <div class="modal-icon">🧠</div>
+                    <h2 class="modal-title">Film Quiz</h2>
+                    <div class="modal-body quiz-modal" id="quizContainer">
+                        <div class="quiz-question">Loading question...</div>
+                        <div class="quiz-options"></div>
+                        <div class="quiz-feedback"></div>
+                        <button class="quiz-next" onclick="window.handleQuizNext()">Next Question →</button>
+                        <div class="quiz-score">Score: 0 / 0</div>
+                    </div>
+                `;
+
+                openModal(quizHTML);
+                
+                setTimeout(() => {
+                    loadQuizQuestion();
+                }, 100);
+            });
+
+            // Film Trivia
+            document.getElementById('triviaCard').addEventListener('click', function() {
+                openModal(`
+                    <div class="modal-icon">💡</div>
+                    <h2 class="modal-title">Film Trivia</h2>
+                    <div class="modal-body">
+                        <p>Did you know these fascinating film facts?</p>
+                        <ul>
+                            <li><i class="fas fa-film"></i> First film ever made: <strong>"Roundhay Garden Scene"</strong> (1888) - only 2 seconds!</li>
+                            <li><i class="fas fa-clock"></i> Longest film: <strong>"Logistics"</strong> (2012) - runs 857 hours (35 days)!</li>
+                            <li><i class="fas fa-dollar-sign"></i> Most expensive film: <strong>"Star Wars: The Force Awakens"</strong> - $447M+</li>
+                            <li><i class="fas fa-trophy"></i> Most awarded film: <strong>"Ben-Hur"</strong> (1959) - 11 Academy Awards</li>
+                            <li><i class="fas fa-popcorn"></i> Highest-grossing film: <strong>"Avatar"</strong> - $2.9B+</li>
+                        </ul>
+                        <button class="modal-btn" onclick="closeModal()">That's Awesome! 🎬</button>
+                    </div>
+                `);
+            });
+
+            // Recommendations - Redirects to Discovery page
+            document.getElementById('recommendCard').addEventListener('click', function() {
+                window.location.href = 'discovery.html';
+            });
+
+            // Weekly Poll
+            document.getElementById('pollCard').addEventListener('click', function() {
+                openModal(`
+                    <div class="modal-icon">📊</div>
+                    <h2 class="modal-title">Weekly Poll</h2>
+                    <div class="modal-body">
+                        <p><strong>What's your favorite film genre?</strong></p>
+                        <div class="poll-options">
+                            <div class="poll-option" onclick="votePoll(this, 'Action')">
+                                🎬 Action <span class="poll-votes">32 votes</span>
+                                <div class="poll-result-bar"><div class="poll-fill" style="width:32%"></div></div>
+                            </div>
+                            <div class="poll-option" onclick="votePoll(this, 'Comedy')">
+                                😂 Comedy <span class="poll-votes">28 votes</span>
+                                <div class="poll-result-bar"><div class="poll-fill" style="width:28%"></div></div>
+                            </div>
+                            <div class="poll-option" onclick="votePoll(this, 'Drama')">
+                                🎭 Drama <span class="poll-votes">20 votes</span>
+                                <div class="poll-result-bar"><div class="poll-fill" style="width:20%"></div></div>
+                            </div>
+                            <div class="poll-option" onclick="votePoll(this, 'Sci-Fi')">
+                                🚀 Sci-Fi <span class="poll-votes">18 votes</span>
+                                <div class="poll-result-bar"><div class="poll-fill" style="width:18%"></div></div>
+                            </div>
+                            <div class="poll-option" onclick="votePoll(this, 'Horror')">
+                                👻 Horror <span class="poll-votes">10 votes</span>
+                                <div class="poll-result-bar"><div class="poll-fill" style="width:10%"></div></div>
+                            </div>
+                        </div>
+                        <p style="font-size:12px;color:var(--paper-dim);margin-top:6px;">Click to vote! Results update in real-time.</p>
+                        <button class="modal-btn" onclick="closeModal()">Thanks for Voting! 📊</button>
+                    </div>
+                `);
+            });
+
+            // Newsletter
+            document.getElementById('newsletterCard').addEventListener('click', function() {
+                openModal(`
+                    <div class="modal-icon">📬</div>
+                    <h2 class="modal-title">Newsletter</h2>
+                    <div class="modal-body">
+                        <p>Get weekly updates on:</p>
+                        <ul>
+                            <li><i class="fas fa-newspaper"></i> Latest movie news & releases</li>
+                            <li><i class="fas fa-ticket-alt"></i> Exclusive screenings & premieres</li>
+                            <li><i class="fas fa-gift"></i> Special discounts & offers</li>
+                            <li><i class="fas fa-star"></i> Behind-the-scenes content</li>
+                        </ul>
+                        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+                            <input type="email" placeholder="Enter your email" style="flex:1;min-height:38px;">
+                            <button class="modal-btn" style="flex:0 0 auto;width:auto;padding:8px 20px;min-height:38px;" onclick="this.textContent='✅ Subscribed!'">Subscribe</button>
+                        </div>
+                        <p style="font-size:11px;color:var(--paper-dim);margin-top:6px;">No spam, unsubscribe anytime.</p>
+                    </div>
+                `);
+            });
+
+            // Watchlist - Navigates to profile page
+            document.getElementById('watchlistCard').addEventListener('click', function() {
+                window.location.href = 'settings.html';
+            });
+
+            // Film Stats - Navigates to profile page
+            document.getElementById('statsCard').addEventListener('click', function() {
+                window.location.href = 'settings.html';
+            });
+
+            // ============================================================
+            // POLL VOTING FUNCTION
+            // ============================================================
+            
+            window.votePoll = function(element, genre) {
+                const options = document.querySelectorAll('.poll-option');
+                options.forEach(opt => opt.classList.remove('selected'));
+                element.classList.add('selected');
+                
+                const voteSpan = element.querySelector('.poll-votes');
+                const currentVotes = parseInt(voteSpan.textContent);
+                const newVotes = currentVotes + 1;
+                voteSpan.textContent = newVotes + ' votes';
+                
+                const total = 108;
+                const newTotal = total + 1;
+                options.forEach(opt => {
+                    const votes = parseInt(opt.querySelector('.poll-votes').textContent);
+                    const percentage = Math.round((votes / newTotal) * 100);
+                    opt.querySelector('.poll-fill').style.width = percentage + '%';
+                });
+                
+                alert(`You voted for "${genre}"! Thanks for participating! 📊`);
+            };
+
+            // ============================================================
+            // EXPOSE FUNCTIONS TO GLOBAL SCOPE
+            // ============================================================
+            
+            window.closeModal = closeModal;
+            window.handleQuizNext = handleQuizNext;
+
+        });
+    </script>
+
+</body>
+</html>

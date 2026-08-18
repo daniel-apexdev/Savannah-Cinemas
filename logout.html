@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Out — Savannah Cinemas</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --ink: #14141C;
+            --ink-raised: #1D1D28;
+            --ink-line: #2C2C3A;
+            --paper: #F2EFE9;
+            --paper-dim: #B9B6AC;
+            --gold: #E8B34C;
+            --gold-dim: #7A5C22;
+            --rust: #B33951;
+            --rust-hover: #c94661;
+            --success: #4C9A6A;
+            --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
+            --font-body: 'Inter', 'Public Sans', -apple-system, sans-serif;
+            --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --container-padding: clamp(16px, 4vw, 60px);
+            --touch-target: clamp(44px, 5vw, 56px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---------- NAV ---------- */
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px var(--container-padding);
+            border-bottom: 1px solid var(--ink-line);
+            background: rgba(20, 20, 28, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            gap: 12px;
+        }
+
+        .nav-brand {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 3vw, 28px);
+            font-weight: 500;
+            color: var(--paper);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+
+        .nav-brand span {
+            color: var(--gold);
+        }
+
+        /* ---------- LOGOUT CONTAINER ---------- */
+        .logout-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px var(--container-padding);
+            min-height: calc(100vh - 80px);
+        }
+
+        .logout-card {
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: clamp(32px, 4vw, 48px);
+            max-width: 460px;
+            width: 100%;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logout-card .logout-icon {
+            text-align: center;
+            font-size: clamp(48px, 5vw, 64px);
+            margin-bottom: 8px;
+        }
+
+        .logout-card .logout-icon.logged-out {
+            color: var(--gold);
+        }
+
+        .logout-card .logout-title {
+            font-family: var(--font-display);
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 500;
+            color: var(--paper);
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        .logout-card .logout-subtitle {
+            font-size: clamp(14px, 1vw, 16px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .logout-card .logout-message {
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .logout-card .logout-message p {
+            font-size: clamp(14px, 1vw, 16px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            line-height: 1.6;
+        }
+
+        .logout-card .logout-message p strong {
+            color: var(--gold);
+            font-weight: 500;
+        }
+
+        /* ---------- TABS ---------- */
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--ink-line);
+            position: relative;
+        }
+
+        .auth-tabs .tab-btn {
+            flex: 1;
+            padding: 12px 0;
+            background: none;
+            border: none;
+            color: var(--paper-dim);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 400;
+            cursor: pointer;
+            transition: 0.3s ease;
+            position: relative;
+            touch-action: manipulation;
+            min-height: var(--touch-target);
+        }
+
+        .auth-tabs .tab-btn:hover {
+            color: var(--paper);
+        }
+
+        .auth-tabs .tab-btn.active {
+            color: var(--gold);
+        }
+
+        .auth-tabs .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gold);
+            border-radius: 2px;
+        }
+
+        /* ---------- FORMS ---------- */
+        .auth-form {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-form.active {
+            display: flex;
+        }
+
+        .auth-form .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .auth-form .form-group label {
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            letter-spacing: 0.02em;
+        }
+
+        .auth-form .form-group input {
+            padding: 12px 16px;
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+            width: 100%;
+        }
+
+        .auth-form .form-group input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(232, 179, 76, 0.1);
+        }
+
+        .auth-form .form-group input::placeholder {
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .auth-form .form-group .input-hint {
+            font-size: clamp(11px, 0.7vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .auth-form .form-group .input-hint i {
+            margin-right: 4px;
+        }
+
+        .auth-form .form-options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: clamp(12px, 0.8vw, 14px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .auth-form .form-options label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .auth-form .form-options label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--gold);
+            cursor: pointer;
+        }
+
+        .auth-form .form-options a {
+            color: var(--gold);
+            text-decoration: none;
+            transition: 0.3s ease;
+        }
+
+        .auth-form .form-options a:hover {
+            color: #f0c369;
+        }
+
+        .auth-btn {
+            padding: 14px 0;
+            background: var(--rust);
+            color: var(--paper);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .auth-btn:hover {
+            background: var(--rust-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(179, 57, 81, 0.3);
+        }
+
+        .auth-btn:active {
+            transform: scale(0.97);
+        }
+
+        .auth-btn.google-btn {
+            background: transparent;
+            border: 1px solid var(--ink-line);
+            color: var(--paper);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .auth-btn.google-btn:hover {
+            border-color: var(--paper-dim);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: none;
+        }
+
+        .auth-btn.google-btn i {
+            font-size: 18px;
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: var(--paper-dim);
+            font-size: clamp(11px, 0.7vw, 13px);
+            font-weight: 300;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--ink-line);
+        }
+
+        .auth-switch {
+            text-align: center;
+            font-size: clamp(13px, 0.9vw, 15px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .auth-switch a {
+            color: var(--gold);
+            text-decoration: none;
+            font-weight: 400;
+            transition: 0.3s ease;
+            cursor: pointer;
+        }
+
+        .auth-switch a:hover {
+            color: #f0c369;
+        }
+
+        /* ---------- SUCCESS MESSAGE ---------- */
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .success-message .success-icon {
+            font-size: clamp(48px, 5vw, 64px);
+            color: var(--success);
+            margin-bottom: 8px;
+        }
+
+        .success-message .success-title {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2vw, 28px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 4px;
+        }
+
+        .success-message .success-desc {
+            font-size: clamp(14px, 1vw, 16px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            margin-bottom: 20px;
+        }
+
+        .success-message .btn-continue {
+            padding: 12px 32px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            min-height: var(--touch-target);
+        }
+
+        .success-message .btn-continue:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+        }
+
+        /* ---------- FOOTER ---------- */
+        .footer {
+            background: var(--ink-raised);
+            border-top: 1px solid var(--ink-line);
+            padding: clamp(24px, 3vh, 40px) var(--container-padding) 0;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 0 24px;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.8vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .footer-bottom .legal a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: 0.3s ease;
+        }
+
+        .footer-bottom .legal a:hover {
+            color: var(--gold);
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 480px) {
+            .logout-card {
+                padding: 24px;
+            }
+
+            .auth-form .form-options {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .auth-btn.google-btn {
+                font-size: 13px;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-bottom .legal a {
+                margin: 0 10px;
+            }
+        }
+
+        /* ---------- SCROLLBAR ---------- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================
+    NAVIGATION
+    ============================================================ -->
+    <nav class="nav">
+        <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+    </nav>
+
+    <!-- ============================================================
+    LOGOUT / AUTH CONTAINER
+    ============================================================ -->
+    <div class="logout-container">
+        <div class="logout-card" id="authCard">
+
+            <!-- Logged Out State -->
+            <div id="loggedOutState">
+                <div class="logout-icon logged-out">👋</div>
+                <h1 class="logout-title">You're Signed Out</h1>
+                <p class="logout-subtitle">Sign back in to access your account</p>
+
+                <div class="logout-message">
+                    <p>You have been successfully signed out of <strong>Savannah Cinemas</strong>.</p>
+                </div>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="auth-tabs">
+                <button class="tab-btn active" data-tab="signin" id="tabSignin">Sign In</button>
+                <button class="tab-btn" data-tab="signup" id="tabSignup">Sign Up</button>
+            </div>
+
+            <!-- Sign In Form -->
+            <div class="auth-form active" id="signinForm">
+                <div class="form-group">
+                    <label for="signinEmail">Email Address</label>
+                    <input type="email" id="signinEmail" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signinPassword">Password</label>
+                    <input type="password" id="signinPassword" placeholder="Enter your password" required>
+                </div>
+                <div class="form-options">
+                    <label>
+                        <input type="checkbox" checked> Remember me
+                    </label>
+                    <a href="#">Forgot password?</a>
+                </div>
+                <button class="auth-btn" id="signinBtn">Sign In</button>
+
+                <div class="auth-divider">or continue with</div>
+
+                <button class="auth-btn google-btn">
+                    <i class="fab fa-google"></i> Sign in with Google
+                </button>
+
+                <div class="auth-switch">
+                    Don't have an account? <a id="switchToSignup">Sign Up</a>
+                </div>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div class="auth-form" id="signupForm">
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email Address</label>
+                    <input type="email" id="signupEmail" placeholder="you@example.com" required>
+                    <span class="input-hint"><i class="fas fa-info-circle"></i> We'll never share your email</span>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" placeholder="Create a password" required>
+                    <span class="input-hint"><i class="fas fa-check-circle"></i> Must be at least 8 characters</span>
+                </div>
+                <div class="form-group">
+                    <label for="signupConfirm">Confirm Password</label>
+                    <input type="password" id="signupConfirm" placeholder="Confirm your password" required>
+                </div>
+                <div class="form-options">
+                    <label>
+                        <input type="checkbox" required> I agree to the <a href="#" style="color:var(--gold);">Terms & Conditions</a>
+                    </label>
+                </div>
+                <button class="auth-btn" id="signupBtn">Create Account</button>
+
+                <div class="auth-divider">or continue with</div>
+
+                <button class="auth-btn google-btn">
+                    <i class="fab fa-google"></i> Sign up with Google
+                </button>
+
+                <div class="auth-switch">
+                    Already have an account? <a id="switchToSignin">Sign In</a>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                <div class="success-icon">✅</div>
+                <div class="success-title" id="successTitle">Welcome back!</div>
+                <div class="success-desc" id="successDesc">You have successfully signed in to Savannah Cinemas.</div>
+                <a href="index.html" class="btn-continue">Continue to Home</a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
+    JAVASCRIPT
+    ============================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ============================================================
+            // DOM REFS
+            // ============================================================
+            
+            const tabSignin = document.getElementById('tabSignin');
+            const tabSignup = document.getElementById('tabSignup');
+            const signinForm = document.getElementById('signinForm');
+            const signupForm = document.getElementById('signupForm');
+            const switchToSignup = document.getElementById('switchToSignup');
+            const switchToSignin = document.getElementById('switchToSignin');
+            const signinBtn = document.getElementById('signinBtn');
+            const signupBtn = document.getElementById('signupBtn');
+            const successMessage = document.getElementById('successMessage');
+            const successTitle = document.getElementById('successTitle');
+            const successDesc = document.getElementById('successDesc');
+            const authCard = document.getElementById('authCard');
+
+            // ============================================================
+            // TAB SWITCHING
+            // ============================================================
+            
+            function switchTab(tab) {
+                // Update tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                if (tab === 'signin') {
+                    tabSignin.classList.add('active');
+                    signinForm.classList.add('active');
+                    signupForm.classList.remove('active');
+                } else {
+                    tabSignup.classList.add('active');
+                    signupForm.classList.add('active');
+                    signinForm.classList.remove('active');
+                }
+                
+                // Hide success message if visible
+                successMessage.classList.remove('show');
+                
+                // Show forms
+                document.querySelectorAll('.auth-form').forEach(form => {
+                    form.style.display = '';
+                });
+            }
+
+            tabSignin.addEventListener('click', function() {
+                switchTab('signin');
+            });
+
+            tabSignup.addEventListener('click', function() {
+                switchTab('signup');
+            });
+
+            switchToSignup.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchTab('signup');
+            });
+
+            switchToSignin.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchTab('signin');
+            });
+
+            // ============================================================
+            // SIGN IN
+            // ============================================================
+            
+            signinBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const email = document.getElementById('signinEmail').value.trim();
+                const password = document.getElementById('signinPassword').value.trim();
+
+                if (!email || !password) {
+                    alert('Please fill in all fields.');
+                    return;
+                }
+
+                // Simulate sign in
+                showSuccess('Welcome back!', 'You have successfully signed in to Savannah Cinemas.');
+            });
+
+            // ============================================================
+            // SIGN UP
+            // ============================================================
+            
+            signupBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('signupName').value.trim();
+                const email = document.getElementById('signupEmail').value.trim();
+                const password = document.getElementById('signupPassword').value;
+                const confirm = document.getElementById('signupConfirm').value;
+                const terms = document.querySelector('#signupForm input[type="checkbox"]');
+
+                if (!name || !email || !password || !confirm) {
+                    alert('Please fill in all fields.');
+                    return;
+                }
+
+                if (password.length < 8) {
+                    alert('Password must be at least 8 characters long.');
+                    return;
+                }
+
+                if (password !== confirm) {
+                    alert('Passwords do not match.');
+                    return;
+                }
+
+                if (!terms.checked) {
+                    alert('Please agree to the Terms & Conditions.');
+                    return;
+                }
+
+                // Simulate sign up
+                showSuccess('Account Created!', 'Welcome to Savannah Cinemas! Your account has been successfully created.');
+            });
+
+            // ============================================================
+            // SUCCESS MESSAGE
+            // ============================================================
+            
+            function showSuccess(title, desc) {
+                // Hide forms and tabs
+                document.querySelectorAll('.auth-form').forEach(form => {
+                    form.style.display = 'none';
+                });
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.style.display = 'none';
+                });
+                
+                // Hide logged out state
+                document.getElementById('loggedOutState').style.display = 'none';
+                
+                // Show success
+                successTitle.textContent = title;
+                successDesc.textContent = desc;
+                successMessage.classList.add('show');
+            }
+
+            // ============================================================
+            // ENTER KEY SUPPORT
+            // ============================================================
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    if (signinForm.classList.contains('active')) {
+                        signinBtn.click();
+                    } else if (signupForm.classList.contains('active')) {
+                        signupBtn.click();
+                    }
+                }
+            });
+
+            // ============================================================
+            // GOOGLE BUTTONS
+            // ============================================================
+            
+            document.querySelectorAll('.google-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    alert('Google authentication would be handled here.');
+                });
+            });
+
+            // ============================================================
+            // FORGOT PASSWORD
+            // ============================================================
+            
+            document.querySelector('.form-options a[href="#"]').addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Password reset link would be sent to your email.');
+            });
+
+        });
+    </script>
+
+</body>
+</html>
