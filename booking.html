@@ -660,7 +660,7 @@
 
         <div class="summary-total">
           <span>Total</span>
-          <span id="grandTotal">$0.00</span>
+          <span id="grandTotal">¢0.00</span>
         </div>
 
         <button class="btn-pay" id="payBtn" disabled>Select seats to continue</button>
@@ -834,7 +834,7 @@
       } else {
         seatIds.sort().forEach(function(id){
           var li = document.createElement('li');
-          li.innerHTML = '<span>Seat ' + id + '</span><span>$' + selectedSeats[id].toFixed(2) + '</span>';
+          li.innerHTML = '<span>Seat ' + id + '</span><span>' + selectedSeats[id].toFixed(2) + '</span>';
           seatList.appendChild(li);
         });
       }
@@ -845,7 +845,7 @@
       Object.keys(snackQuantities).forEach(function(name){
         var item = snackQuantities[name];
         var li = document.createElement('li');
-        li.innerHTML = '<span>' + name + ' × ' + item.qty + '</span><span>$' + (item.price * item.qty).toFixed(2) + '</span>';
+        li.innerHTML = '<span>' + name + ' × ' + item.qty + '</span><span>¢' + (item.price * item.qty).toFixed(2) + '</span>';
         snackList.appendChild(li);
       });
 
@@ -856,12 +856,12 @@
       }, 0);
       var grandTotal = seatTotal + snackTotal;
 
-      document.getElementById('grandTotal').textContent = '$' + grandTotal.toFixed(2);
+      document.getElementById('grandTotal').textContent = '¢' + grandTotal.toFixed(2);
 
       var payBtn = document.getElementById('payBtn');
       if (seatIds.length > 0){
         payBtn.disabled = false;
-        payBtn.textContent = 'Proceed to payment · $' + grandTotal.toFixed(2);
+        payBtn.textContent = 'Proceed to payment · ¢' + grandTotal.toFixed(2);
       } else {
         payBtn.disabled = true;
         payBtn.textContent = 'Select seats to continue';

@@ -140,6 +140,7 @@
             return;
         }
 
+        // Take first 5 movies for hero
         const heroMovies = movies.slice(0, 5);
 
         DOM.heroSlides.innerHTML = heroMovies.map((movie, index) => {
@@ -166,7 +167,7 @@
                                 🎫 Book tickets
                             </button>
                             <button class="btn btn-ghost" onclick="window.viewMovie(${movie.id})">
-                                Learn more →
+                                View Details →
                             </button>
                         </div>
                     </div>
@@ -188,6 +189,7 @@
             return;
         }
 
+        // Take movies after first 5 for carousel
         const carouselMovies = movies.slice(5);
 
         if (carouselMovies.length === 0) {
@@ -198,15 +200,16 @@
         DOM.carouselTrack.innerHTML = carouselMovies.map(movie => {
             const year = formatDate(movie.release_date);
             const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '0.0';
+            const posterUrl = movie.poster_path ? `${CONFIG.IMAGE_BASE}${movie.poster_path}` : '';
 
             return `
-                <div class="carousel-card" data-id="${movie.id}" onclick="window.viewMovie(${movie.id})">
-                    <div class="film-poster" style="background-image: url(${CONFIG.IMAGE_BASE}${movie.poster_path});">
+                <a href="movie-details.html?id=${movie.id}" class="carousel-card" data-id="${movie.id}">
+                    <div class="film-poster" style="background-image: url(${posterUrl});">
                         <span class="rating-badge">★ ${rating}</span>
                     </div>
                     <p class="c-title">${movie.title || 'Untitled'}</p>
                     <p class="c-meta">${year} · Popular</p>
-                </div>
+                </a>
             `;
         }).join('');
     }
@@ -284,7 +287,7 @@
 
     function scrollCarousel(direction) {
         const cardWidth = DOM.carouselTrack.querySelector('.carousel-card')?.offsetWidth || 170;
-        const gap = 18;
+        const gap = 16;
         const scrollAmount = (cardWidth + gap) * 2;
 
         if (direction === 'left') {
@@ -410,18 +413,34 @@
     window.prevSlide = prevSlide;
 
     window.bookMovie = function(movieId, title) {
-        console.log(`🎟️ Booking tickets for: ${title} (ID: ${movieId})`);
-        // Direct navigation to booking page
-        window.location.href = `booking.html?movie=${movieId}&title=${encodeURIComponent(title)}`;
+        // Find the movie in state to get all details
+        const movie = state.allMovies.find(m => m.id === movieId);
+        if (movie) {
+            // Build film data for booking page
+            const filmData = {
+                filmTitle: movie.title || title,
+                filmYear: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
+                filmRating: movie.adult ? '18+' : 'PG-13',
+                filmDuration: movie.runtime || '2h 00m',
+                cinema: 'Savannah Mall',
+                screen: 'Screen 1',
+                showtime: 'Today, 7:45 PM',
+                priceStandard: 9.00,
+                pricePremium: 13.50,
+                id: movie.id
+            };
+            
+            // Navigate to booking page with film data
+            window.location.href = `booking.html?film=${encodeURIComponent(JSON.stringify(filmData))}`;
+        } else {
+            // Fallback if movie not found
+            window.location.href = `booking.html?movie=${movieId}&title=${encodeURIComponent(title)}`;
+        }
     };
 
     window.viewMovie = function(movieId) {
-        const movie = state.allMovies.find(m => m.id === movieId);
-        if (movie) {
-            console.log(`📽️ Viewing: ${movie.title}`);
-            // Direct navigation to movie detail page
-            window.location.href = `movie.html?id=${movieId}`;
-        }
+        // Navigate directly to movie details page with the TMDB ID
+        window.location.href = `movie-details.html?id=${movieId}`;
     };
 
     // ============================================================
@@ -504,7 +523,7 @@
                 }
             });
 
-            console.log('🎬 Savannah Cinemas initialized');
+            console.log(`🎬 Savannah Cinemas initialized with ${state.allMovies.length} movies`);
 
         } catch (error) {
             console.error('Error initializing:', error);
