@@ -709,27 +709,35 @@
 
   /* ---------- SEAT MAP - OPTIMIZED FOR TOUCH ---------- */
   .seat-map{
-    display:flex; 
-    flex-direction:column; 
-    gap:clamp(8px, 1vw, 12px); 
+  display:flex;
+  flex-direction:column;
+  gap:clamp(8px, 1vw, 12px);
+  align-items:flex-start;
+  margin-bottom:24px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:8px 24px;
+  -webkit-overflow-scrolling:touch;
+  scroll-snap-type:x proximity;
+  touch-action:pan-x; 
+}
+
+  .seat-map-wrap{
+    position:relative;   /* wrapper needed for the edge-fade hints below */
+  }
+  
+  .seat-row{
+    display:flex;
     align-items:center;
-    margin-bottom:24px;
-    overflow-x:auto;
-    padding:8px 0;
-    -webkit-overflow-scrolling:touch;
+    gap:clamp(6px, 0.8vw, 10px);
+    width:max-content;
   }
   
-  .seat-row{ 
-    display:flex; 
-    align-items:center; 
-    gap:clamp(6px, 0.8vw, 10px); 
-  }
-  
-  .row-label{
-    width:clamp(18px, 2vw, 24px); 
-    font-family:var(--font-mono); 
+  row-label{
+    width:clamp(18px, 2vw, 24px);
+    font-family:var(--font-mono);
     font-size:clamp(12px, 1vw, 14px);
-    color:var(--paper-dim); 
+    color:var(--paper-dim);
     text-align:center;
     flex-shrink:0;
     font-weight:400;
@@ -751,52 +759,27 @@
     transition:background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
     flex-shrink:0;
     font-weight:400;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    min-height: clamp(32px, 3.5vw, 44px);
-    min-width: clamp(32px, 3.5vw, 44px);
-  }
-  
-  .seat.aisle-gap{ 
-    width:clamp(14px, 1.5vw, 22px); 
-    border:none; 
-    cursor:default; 
-    flex-shrink:0;
-    min-width: clamp(14px, 1.5vw, 22px);
-    min-height: auto;
-  }
-  
-  .seat:not(.taken):not(.aisle-gap):active {
-    transform: scale(0.92);
+    touch-action:manipulation;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-touch-callout:none;
+    scroll-snap-align:start;
   }
 
-  .seat:not(.taken):not(.aisle-gap):hover{
-    border-color:var(--gold-dim);
-    transform:translateY(-2px);
-  }
-  
-  .seat.premium{ 
-    border-color:var(--gold-dim); 
-    color:var(--gold); 
-  }
-  
-  .seat.selected{
-    background:var(--gold); 
-    border-color:var(--gold); 
-    color:var(--ink); 
-    font-weight:500;
-    transform: scale(1.05);
-  }
-  
-  .seat.taken{
-    background:var(--ink-line); 
-    border-color:var(--ink-line);
-    color:#8a7862; 
-    cursor:not-allowed;
-    opacity:0.6;
-  }
+.seat.aisle-gap{
+  width:clamp(14px, 1.5vw, 22px);
+  border:none;
+  cursor:default;
+  flex-shrink:0;
+  min-height:auto;
+}
+
+.seat:not(.taken):not(.aisle-gap):active{ transform:scale(0.92); }
+.seat:not(.taken):not(.aisle-gap):hover{ border-color:var(--gold-dim); transform:translateY(-2px); }
+.seat.premium{ border-color:var(--gold-dim); color:var(--gold); }
+.seat.selected{ background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:500; transform:scale(1.05); }
+.seat.taken{ background:var(--ink-line); border-color:var(--ink-line); color:#8a7862; cursor:not-allowed; opacity:0.6; }
+
 
   .seat-legend{
     display:flex; 
@@ -1118,8 +1101,7 @@
     }
 
     .ticket-quantity {
-      flex-direction: column;
-      align-items: stretch;
+      flex-direction: center;
       gap: 12px;
     }
 
@@ -1143,43 +1125,50 @@
   }
 
   @media (max-width: 600px) {
-    .seat-map{
-      gap: 6px;
-    }
-    
-    .seat-row{
-      gap: 4px;
-    }
-    
     .seat{
-      width: 28px;
-      height: 28px;
-      font-size: 8px;
-      border-radius: 4px 4px 3px 3px;
-      border-width: 1.5px;
-      min-width: 28px;
-      min-height: 28px;
-    }
-    
-    .seat.aisle-gap{
-      width: 8px;
-      min-width: 8px;
-    }
-    
-    .row-label{
-      width: 14px;
-      font-size: 10px;
+      width:46px !important;
+      height:46px !important;
+      font-size:14px !important;
+      border-radius:9px 9px 6px 6px !important;
     }
 
-    .seat-legend {
-      gap: 12px;
-      font-size: 11px;
-    }
+    .seat.aisle-gap{ width:22px !important; }
+    .row-label{ width:26px !important; font-size:13px !important; }
+    .seat-row{ gap:10px !important; }
+    .seat-map{ gap:14px; padding:8px 28px; scroll-padding:28px; }
 
-    .legend-swatch {
-      width: 14px;
-      height: 14px;
-    }
+    /* ---------- EDGE FADE — hints there's more to scroll ---------- */
+  .seat-map-wrap::before,
+  .seat-map-wrap::after{
+    content:"";
+    position:absolute; top:0; bottom:24px; width:28px;
+    z-index:2; pointer-events:none;
+  }
+  .seat-map-wrap::before{
+    left:0;
+    background:linear-gradient(90deg, var(--ink-raised), transparent);
+  }
+  .seat-map-wrap::after{
+    right:0;
+    background:linear-gradient(270deg, var(--ink-raised), transparent);
+  }
+
+    /* ---------- LEGEND (unchanged from your version) ---------- */
+  .seat-legend{
+    display:flex; gap:clamp(16px, 2vw, 28px); justify-content:center; flex-wrap:wrap;
+    font-size:clamp(12px, 0.9vw, 14px); color:var(--paper-dim); padding-top:16px;
+    border-top:1px solid var(--ink-line); font-weight:300;
+  }
+  .legend-item{ display:flex; align-items:center; gap:10px; padding:4px 0; }
+  .legend-swatch{
+    width:clamp(18px, 1.5vw, 24px); height:clamp(18px, 1.5vw, 24px);
+    border-radius:clamp(4px, 0.4vw, 8px) clamp(4px, 0.4vw, 8px) clamp(3px, 0.3vw, 5px) clamp(3px, 0.3vw, 5px);
+    border:2px solid var(--ink-line); flex-shrink:0;
+  }
+  .legend-swatch.available{ background:transparent; }
+  .legend-swatch.selected{ background:var(--gold); border-color:var(--gold); }
+  .legend-swatch.taken{ background:var(--ink-line); }
+  .legend-swatch.premium{ border-color:var(--gold-dim); }
 
     .snack-grid{
       grid-template-columns:1fr 1fr;
