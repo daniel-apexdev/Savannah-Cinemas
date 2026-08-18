@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Savannah Cinemas — Select Seats</title>
 <link rel="stylesheet" href="css/style.css">
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 
   :root{
@@ -52,12 +54,19 @@
     position:sticky;
     top:0;
     z-index:100;
+    gap:16px;
+  }
+
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
   
   .wordmark{ 
     font-family: var(--font-display);
     font-size: clamp(20px, 3vw, 28px);
-    font-weight: 400;
+    font-weight: 500;
     color: var(--paper);
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -67,7 +76,229 @@
   
   .wordmark span{ color:var(--gold); }
   
- .avatar {
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 1001;
+    position: relative;
+  }
+
+  /* ---------- HAMBURGER MENU TOGGLE ---------- */
+  .menu-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 1001;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .menu-toggle span {
+    display: block;
+    width: 28px;
+    height: 2px;
+    background: var(--paper);
+    transition: 0.3s ease;
+    border-radius: 2px;
+    transform-origin: center;
+  }
+
+  .menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  .menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  .menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
+  }
+
+  /* ---------- MOBILE MENU - SLIDE FROM LEFT ---------- */
+  .mobile-menu-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .mobile-menu-overlay.active {
+    display: block;
+    opacity: 1;
+  }
+
+  .mobile-menu {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 85%;
+    max-width: 380px;
+    height: 100vh;
+    background: var(--ink);
+    z-index: 1000;
+    padding: 0;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    box-shadow: 8px 0 40px rgba(0, 0, 0, 0.6);
+    border-right: 1px solid var(--ink-line);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-menu.open {
+    left: 0;
+  }
+
+  .mobile-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--ink-line);
+    background: var(--ink-raised);
+    flex-shrink: 0;
+  }
+
+  .mobile-menu-brand {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--paper);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .mobile-menu-brand span {
+    color: var(--gold);
+  }
+
+  .mobile-menu-close {
+    background: none;
+    border: none;
+    color: var(--paper);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px;
+    transition: 0.3s ease;
+    line-height: 1;
+  }
+
+  .mobile-menu-close:hover {
+    color: var(--gold);
+    transform: rotate(90deg);
+  }
+
+  .mobile-menu-links {
+    list-style: none;
+    padding: 8px 0;
+    margin: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: column;
+  }
+
+  .mobile-menu-links li {
+    padding: 0 24px;
+    margin: 4px 0;
+  }
+
+  .mobile-menu-links a {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 12px;
+    color: var(--paper);
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 400;
+    transition: 0.2s ease;
+    border-radius: 10px;
+    width: 100%;
+    letter-spacing: 0.02em;
+  }
+
+  .mobile-menu-links a i {
+    width: 28px;
+    text-align: center;
+    color: var(--paper-dim);
+    font-size: 20px;
+    transition: 0.2s ease;
+  }
+
+  .mobile-menu-links a:hover {
+    color: var(--gold);
+    background: rgba(232, 179, 76, 0.06);
+    padding-left: 18px;
+  }
+
+  .mobile-menu-links a:hover i {
+    color: var(--gold);
+  }
+
+  .mobile-menu-links a.active {
+    color: var(--gold);
+    background: rgba(232, 179, 76, 0.08);
+  }
+
+  .mobile-menu-links a.active i {
+    color: var(--gold);
+  }
+
+  .mobile-divider {
+    height: 1px;
+    background: var(--ink-line);
+    margin: 12px 24px;
+  }
+
+  .mobile-logout {
+    color: #d95b5b !important;
+    margin-top: 8px;
+  }
+
+  .mobile-logout i {
+    color: #d95b5b !important;
+  }
+
+  .mobile-logout:hover {
+    color: #ff6b6b !important;
+    background: rgba(217, 91, 91, 0.08) !important;
+  }
+
+  .mobile-logout:hover i {
+    color: #ff6b6b !important;
+  }
+
+  .mobile-menu-footer {
+    padding: 20px 24px;
+    border-top: 1px solid var(--ink-line);
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-dim);
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+
+  /* ---------- PROFILE ---------- */
+  .profile-wrapper {
+    position: relative;
+  }
+
+  .avatar {
     width: 38px;
     height: 38px;
     border-radius: 50%;
@@ -77,16 +308,81 @@
     align-items: center;
     justify-content: center;
     font-family: var(--font-display);
-    font-weight: 400;
+    font-weight: 300;
     font-size: 15px;
     cursor: pointer;
     border: 2px solid transparent;
     transition: 0.3s ease;
-}
+  }
 
-.avatar:hover {
+  .avatar:hover {
     border-color: var(--gold-dim);
-}
+  }
+
+  .profile-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: var(--ink-raised);
+    border: 1px solid var(--ink-line);
+    border-radius: var(--radius-md);
+    width: 220px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: 0.3s ease;
+    z-index: 20;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  .profile-wrapper.is-open .profile-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .profile-menu .who {
+    padding: 16px;
+    border-bottom: 1px solid var(--ink-line);
+  }
+
+  .profile-menu .who .name {
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .profile-menu .who .stat {
+    color: var(--gold);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    margin-top: 4px;
+  }
+
+  .profile-menu a {
+    display: block;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--paper-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--ink-line);
+    transition: 0.3s ease;
+  }
+
+  .profile-menu a:last-child {
+    border-bottom: none;
+    color: #d95b5b;
+  }
+
+  .profile-menu a:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--paper);
+  }
+
+  .profile-menu a:last-child:hover {
+    color: #ff6b6b;
+  }
 
   /* ---------- BOOKING HEADER ---------- */
   .booking-header{
@@ -100,12 +396,13 @@
     text-transform:uppercase; 
     color:var(--gold); 
     margin:0 0 6px;
+    font-weight:400;
   }
   
   .booking-header h1{
     font-family:var(--font-display); 
     font-size:clamp(24px, 4vw, 40px); 
-    font-weight:400; 
+    font-weight:500; 
     margin:0 0 4px;
   }
   
@@ -113,6 +410,29 @@
     color:var(--paper-dim); 
     font-size:clamp(12px, 1vw, 15px); 
     font-family:var(--font-mono);
+    font-weight:300;
+  }
+
+  /* ---------- BACK BUTTON ---------- */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--paper-dim);
+    text-decoration: none;
+    font-size: clamp(12px, 1vw, 14px);
+    font-family: var(--font-mono);
+    margin-bottom: 16px;
+    transition: 0.3s ease;
+    font-weight:300;
+  }
+  
+  .back-link:hover {
+    color: var(--gold);
+  }
+  
+  .back-link i {
+    font-size: 14px;
   }
 
   /* ---------- LAYOUT ---------- */
@@ -154,7 +474,7 @@
   .panel h2{
     font-family:var(--font-display); 
     font-size:clamp(16px, 1.8vw, 22px); 
-    font-weight:400; 
+    font-weight:500; 
     margin:0 0 20px;
   }
 
@@ -179,6 +499,7 @@
     letter-spacing:.15em;
     text-transform:uppercase; 
     color:var(--paper-dim);
+    font-weight:300;
   }
 
   /* ---------- SEAT MAP ---------- */
@@ -206,6 +527,7 @@
     color:var(--paper-dim); 
     text-align:center;
     flex-shrink:0;
+    font-weight:300;
   }
   
   .seat{
@@ -223,6 +545,7 @@
     cursor:pointer;
     transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease;
     flex-shrink:0;
+    font-weight:300;
   }
   
   .seat.aisle-gap{ 
@@ -265,6 +588,7 @@
     color:var(--paper-dim); 
     padding-top:16px;
     border-top:1px solid var(--ink-line);
+    font-weight:300;
   }
   
   .legend-item{ display:flex; align-items:center; gap:8px; }
@@ -314,6 +638,7 @@
     font-size:clamp(8px, 0.7vw, 11px);
     text-transform:uppercase;
     letter-spacing:0.05em;
+    font-weight:300;
   }
   
   .snack-name{ 
@@ -327,6 +652,7 @@
     color:var(--gold); 
     font-family:var(--font-mono); 
     margin:0 0 12px; 
+    font-weight:300;
   }
   
   .qty-stepper{
@@ -352,6 +678,7 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    font-weight:300;
   }
   
   .qty-stepper button:hover{ 
@@ -364,13 +691,14 @@
     font-size:clamp(12px, 1vw, 15px);
     min-width:20px;
     text-align:center;
+    font-weight:300;
   }
 
   /* ---------- SIDEBAR SUMMARY ---------- */
   .summary-film{ 
     font-family:var(--font-display); 
     font-size:clamp(16px, 1.6vw, 22px); 
-    font-weight:400; 
+    font-weight:500; 
     margin:0 0 2px; 
   }
   
@@ -379,6 +707,7 @@
     color:var(--paper-dim); 
     font-family:var(--font-mono); 
     margin:0 0 20px; 
+    font-weight:300;
   }
 
   .summary-list{ 
@@ -393,6 +722,7 @@
     font-size:clamp(12px, 0.9vw, 15px); 
     padding:8px 0; 
     border-bottom:1px solid var(--ink-line);
+    font-weight:300;
   }
   
   .summary-list li:last-child{ border-bottom:none; }
@@ -406,6 +736,7 @@
     font-size:clamp(11px, 0.8vw, 14px); 
     color:var(--paper-dim); 
     padding:8px 0; 
+    font-weight:300;
   }
 
   .summary-total{
@@ -417,7 +748,7 @@
     border-top:1px solid var(--ink-line);
     font-family:var(--font-display); 
     font-size:clamp(18px, 1.8vw, 24px); 
-    font-weight:400;
+    font-weight:500;
   }
   
   .summary-total span:last-child{ color:var(--gold); }
@@ -452,6 +783,12 @@
   }
 
   /* ---------- RESPONSIVE MOBILE ---------- */
+  @media (max-width: 768px) {
+    .menu-toggle {
+      display: flex;
+    }
+  }
+
   @media (max-width: 480px) {
     .seat-map{
       gap:5px;
@@ -531,44 +868,89 @@
     border-radius:4px;
   }
 
-  /* ---------- BACK BUTTON ---------- */
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--paper-dim);
-    text-decoration: none;
-    font-size: clamp(12px, 1vw, 14px);
-    font-family: var(--font-mono);
-    margin-bottom: 16px;
-    transition: 0.3s ease;
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-  
-  .back-link:hover {
-    color: var(--gold);
+
+  ::-webkit-scrollbar-track {
+    background: var(--ink);
   }
-  
-  .back-link i {
-    font-size: 14px;
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--gold-dim);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--gold);
   }
 
 </style>
-<!-- Font Awesome for back icon -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
 
-  <div class="nav">
-    <a href="index.html" class="wordmark">Savannah <span>Cinemas</span></a>
-    <div class="avatar">DA</div>
+  <!-- ============================================================
+  NAVIGATION
+  ============================================================ -->
+  <nav class="nav">
+    <div class="nav-left">
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <a href="index.html" class="wordmark">Savannah <span>Cinemas</span></a>
+    </div>
+    <div class="nav-right">
+      <div class="profile-wrapper" id="profileWrapper">
+        <div class="avatar" id="avatarBtn">DA</div>
+        <div class="profile-menu" id="profileMenu">
+          <div class="who">
+            <div class="name">Daniel Asamoah</div>
+            <div class="stat">142 films watched</div>
+          </div>
+          <a href="bookings.html">My bookings</a>
+          <a href="history.html">Watch history</a>
+          <a href="settings.html">Account settings</a>
+          <a href="logout.html">Sign out</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+  MOBILE MENU - SLIDE FROM LEFT
+  ============================================================ -->
+  <div class="mobile-menu-overlay" id="mobileOverlay"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+      <div class="mobile-menu-brand">Savannah <span>Cinemas</span></div>
+      <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <ul class="mobile-menu-links">
+      <li><a href="index.html" class="active">Now Showing</a></li>
+      <li><a href="coming-soon.html">Coming soon</a></li>
+      <li><a href="events.html">Events</a></li>
+      <li><a href="discovery.html">Discovery</a></li>
+      <li class="mobile-divider"></li>
+      <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+    </ul>
+    <div class="mobile-menu-footer">
+      <p>© 2026 Savannah Cinemas</p>
+    </div>
   </div>
 
+  <!-- ============================================================
+  BOOKING CONTENT
+  ============================================================ -->
   <div class="booking-header">
     <a href="index.html" class="back-link">
       <i class="fas fa-arrow-left"></i> Back to movies
     </a>
     <p class="eyebrow">Select seats</p>
-    <!-- Title will be set dynamically by JavaScript -->
     <h1 id="filmTitle">Loading...</h1>
     <p class="sub" id="filmDetails">Loading film details...</p>
   </div>
@@ -670,6 +1052,100 @@
 
   <script>
     // ============================================================
+    // MOBILE MENU
+    // ============================================================
+    
+    (function setupMobileMenu() {
+      const menuToggle = document.getElementById('menuToggle');
+      const mobileMenu = document.getElementById('mobileMenu');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+      const mobileMenuClose = document.getElementById('mobileMenuClose');
+
+      function openMobileMenu() {
+        mobileMenu.classList.add('open');
+        mobileOverlay.classList.add('active');
+        menuToggle.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        mobileOverlay.classList.remove('active');
+        menuToggle.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+
+      if (menuToggle) {
+        menuToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (mobileMenu.classList.contains('open')) {
+            closeMobileMenu();
+          } else {
+            openMobileMenu();
+          }
+        });
+      }
+
+      if (mobileMenuClose) {
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+      }
+
+      if (mobileOverlay) {
+        mobileOverlay.addEventListener('click', closeMobileMenu);
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
+          closeMobileMenu();
+        }
+      });
+
+      document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
+        link.addEventListener('click', closeMobileMenu);
+      });
+    })();
+
+    // ============================================================
+    // PROFILE DROPDOWN
+    // ============================================================
+    
+    (function setupProfile() {
+      const profileWrapper = document.getElementById('profileWrapper');
+      const avatarBtn = document.getElementById('avatarBtn');
+      let closeTimer = null;
+
+      if (!profileWrapper) return;
+
+      profileWrapper.addEventListener('mouseenter', function() {
+        clearTimeout(closeTimer);
+        this.classList.add('is-open');
+      });
+
+      profileWrapper.addEventListener('mouseleave', function() {
+        closeTimer = setTimeout(function() {
+          profileWrapper.classList.remove('is-open');
+        }, 150);
+      });
+
+      avatarBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        profileWrapper.classList.toggle('is-open');
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!profileWrapper.contains(e.target)) {
+          profileWrapper.classList.remove('is-open');
+        }
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
+          profileWrapper.classList.remove('is-open');
+        }
+      });
+    })();
+
+    // ============================================================
     // GET FILM DATA FROM URL
     // ============================================================
     
@@ -694,7 +1170,6 @@
     
     const filmData = getFilmFromURL();
     
-    // Default film data if none passed from URL
     const defaultFilm = {
       filmTitle: 'The Long Horizon',
       filmYear: '2024',
@@ -709,25 +1184,12 @@
     
     const currentFilm = filmData || defaultFilm;
     
-    // ============================================================
-    // UPDATE UI WITH FILM DATA - TITLE IS SET HERE
-    // ============================================================
-    
-    // Set the film title in the h1
     document.getElementById('filmTitle').textContent = currentFilm.filmTitle;
-    
-    // Set the film details in the subtitle
     document.getElementById('filmDetails').textContent = 
       `${currentFilm.cinema} · ${currentFilm.screen} · ${currentFilm.showtime}`;
-    
-    // Set the sidebar film title
     document.getElementById('sidebarFilm').textContent = currentFilm.filmTitle;
-    
-    // Set the sidebar details
     document.getElementById('sidebarDetails').textContent = 
       `${currentFilm.cinema} · ${currentFilm.screen} · ${currentFilm.showtime}`;
-    
-    // Update page title
     document.title = `Savannah Cinemas — ${currentFilm.filmTitle}`;
 
     // ============================================================
@@ -743,10 +1205,6 @@
     var seatMap = document.getElementById('seatMap');
     var selectedSeats = {};
 
-    // ============================================================
-    // BUILD SEAT MAP
-    // ============================================================
-    
     rows.forEach(function(rowLetter){
       var rowEl = document.createElement('div');
       rowEl.className = 'seat-row';
@@ -834,7 +1292,7 @@
       } else {
         seatIds.sort().forEach(function(id){
           var li = document.createElement('li');
-          li.innerHTML = '<span>Seat ' + id + '</span><span>' + selectedSeats[id].toFixed(2) + '</span>';
+          li.innerHTML = '<span>Seat ' + id + '</span><span>¢' + selectedSeats[id].toFixed(2) + '</span>';
           seatList.appendChild(li);
         });
       }

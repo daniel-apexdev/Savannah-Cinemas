@@ -16,7 +16,7 @@
     --stub-hole: #14141C;
     --success: #4C9A6A;
 
-    /* Typography */
+    /* Typography - Thinner weights matching movie details */
     --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
     --font-body: 'Inter', 'Public Sans', -apple-system, sans-serif;
     --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
@@ -51,6 +51,7 @@ body {
     background: var(--ink);
     color: var(--paper);
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
 }
 
 /* ============================================================
@@ -75,7 +76,7 @@ body {
 .nav-brand {
     font-family: var(--font-display);
     font-size: clamp(20px, 3vw, 28px);
-    font-weight: 700;
+    font-weight: 800;
     color: var(--paper);
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -99,7 +100,7 @@ body {
     color: var(--paper-dim);
     text-decoration: none;
     font-size: clamp(13px, 1.2vw, 15px);
-    font-weight: 500;
+    font-weight: 400;
     transition: 0.3s ease;
     letter-spacing: 0.02em;
     position: relative;
@@ -169,7 +170,7 @@ body {
 }
 
 /* ============================================================
-   MOBILE MENU - SLIDE IN FROM RIGHT
+   MOBILE MENU - SLIDE IN FROM LEFT
    ============================================================ */
 
 /* Overlay */
@@ -264,7 +265,7 @@ body {
 
 .mobile-menu-links li {
     padding: 0 24px;
-    margin: 14px 0;
+    margin: 4px 0;
 }
 
 .mobile-menu-links a {
@@ -362,7 +363,7 @@ body {
     align-items: center;
     justify-content: center;
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 500;
     font-size: 15px;
     cursor: pointer;
     border: 2px solid transparent;
@@ -401,7 +402,7 @@ body {
 }
 
 .profile-menu .who .name {
-    font-weight: 600;
+    font-weight: 500;
     font-size: 14px;
 }
 
@@ -416,6 +417,7 @@ body {
     display: block;
     padding: 12px 16px;
     font-size: 14px;
+    font-weight: 400;
     color: var(--paper-dim);
     text-decoration: none;
     border-bottom: 1px solid var(--ink-line);
@@ -483,7 +485,7 @@ body {
 .hero-slide-content .label {
     font-family: var(--font-mono);
     font-size: clamp(10px, 1vw, 12px);
-    font-weight: 600;
+    font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--gold);
@@ -493,7 +495,7 @@ body {
 .hero-slide-content .movie-title {
     font-family: var(--font-display);
     font-size: clamp(32px, 6vw, 58px);
-    font-weight: 700;
+    font-weight: 500;
     line-height: 1.05;
     color: var(--paper);
     margin-bottom: 4px;
@@ -507,7 +509,7 @@ body {
 .hero-slide-content .movie-year {
     font-family: var(--font-body);
     font-size: clamp(14px, 1.2vw, 18px);
-    font-weight: 400;
+    font-weight: 300;
     color: var(--paper-dim);
     margin-bottom: 12px;
 }
@@ -517,11 +519,13 @@ body {
     font-size: clamp(15px, 1.4vw, 20px);
     font-style: italic;
     color: var(--paper-dim);
+    font-weight: 300;
     margin-bottom: 12px;
 }
 
 .hero-slide-content .description {
     font-size: clamp(14px, 1.2vw, 16px);
+    font-weight: 300;
     line-height: 1.7;
     color: rgba(255, 255, 255, 0.7);
     max-width: 480px;
@@ -548,13 +552,14 @@ body {
 
 .hero-slide-content .rating-row .rating-number {
     color: var(--paper);
-    font-weight: 700;
+    font-weight: 400;
     font-size: clamp(14px, 1.2vw, 16px);
 }
 
 .hero-slide-content .rating-row .rating-label {
     color: var(--paper-dim);
     font-size: clamp(11px, 1vw, 13px);
+    font-weight: 300;
 }
 
 .btn-row {
@@ -571,7 +576,7 @@ body {
     border: none;
     border-radius: var(--radius-sm);
     font-family: var(--font-body);
-    font-weight: 600;
+    font-weight: 500;
     font-size: clamp(13px, 1.2vw, 15px);
     cursor: pointer;
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -690,13 +695,14 @@ body {
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--gold);
+    font-weight: 400;
     margin-bottom: 8px;
 }
 
 .section-title {
     font-family: var(--font-display);
     font-size: clamp(22px, 3vw, 32px);
-    font-weight: 600;
+    font-weight: 500;
     color: var(--paper);
     margin-bottom: 8px;
 }
@@ -752,12 +758,15 @@ body {
     display: none;
 }
 
+/* Carousel Card - FIXED: Removed underline from links */
 .carousel-card {
     flex: none;
     width: clamp(140px, 18vw, 200px);
     scroll-snap-align: start;
     cursor: pointer;
     transition: 0.3s ease;
+    text-decoration: none !important; /* Remove underline */
+    color: inherit !important; /* Keep text color */
 }
 
 .carousel-card:hover {
@@ -791,7 +800,7 @@ body {
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 400;
     color: var(--gold);
     border: 1px solid rgba(232, 179, 76, 0.15);
 }
@@ -799,7 +808,7 @@ body {
 .c-title {
     font-family: var(--font-display);
     font-size: clamp(13px, 1.2vw, 15px);
-    font-weight: 600;
+    font-weight: 400;
     margin: 10px 0 2px;
     color: var(--paper);
     white-space: nowrap;
@@ -810,7 +819,9 @@ body {
 .c-meta {
     font-family: var(--font-mono);
     font-size: clamp(10px, 0.9vw, 12px);
+    font-weight: 300;
     color: var(--paper-dim);
+    text-decoration: none !important; /* Remove underline from meta too */
 }
 
 /* ============================================================
@@ -840,6 +851,7 @@ body {
 .footer-brand p {
     color: var(--paper-dim);
     font-size: clamp(13px, 1vw, 15px);
+    font-weight: 300;
     max-width: 280px;
     line-height: 1.6;
 }
@@ -857,7 +869,7 @@ body {
     text-transform: uppercase;
     color: var(--gold);
     margin-bottom: 16px;
-    font-weight: 500;
+    font-weight: 400;
 }
 
 .footer-col a {
@@ -865,6 +877,7 @@ body {
     color: var(--paper-dim);
     text-decoration: none;
     font-size: clamp(13px, 1vw, 15px);
+    font-weight: 300;
     margin-bottom: 12px;
     transition: 0.3s ease;
 }
@@ -907,6 +920,7 @@ body {
     padding: 20px 0 28px;
     font-family: var(--font-mono);
     font-size: clamp(11px, 0.9vw, 13px);
+    font-weight: 300;
     color: var(--paper-dim);
 }
 
@@ -952,6 +966,7 @@ body {
 
     .hero-slide-content {
         max-width: 100%;
+        width: 70%;
         padding: 0 4px;
     }
 
@@ -1147,4 +1162,26 @@ body {
     .section {
         padding: 80px clamp(40px, 8vw, 100px);
     }
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--ink);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gold-dim);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gold);
 }
