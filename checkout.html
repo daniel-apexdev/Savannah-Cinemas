@@ -9,7 +9,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    
     <style>
+        /* ... (keep all existing styles) ... */
         :root {
             --ink: #14141C;
             --ink-raised: #1D1D28;
@@ -520,6 +524,10 @@
             color: var(--success);
         }
 
+        .email-overlay .email-modal .email-icon.error {
+            color: var(--rust);
+        }
+
         .email-overlay .email-modal h2 {
             font-family: var(--font-display);
             font-size: clamp(22px, 2.5vw, 28px);
@@ -863,6 +871,24 @@
         document.addEventListener('DOMContentLoaded', function() {
 
             // ============================================================
+            // EMAILJS CONFIGURATION
+            // ============================================================
+            
+            // Initialize EmailJS with your public key
+            // Get your public key from: https://dashboard.emailjs.com/admin/account
+            (function initEmailJS() {
+                try {
+                    emailjs.init('cOvd1hfVAfHE41BoP');
+                    console.log('✅ EmailJS initialized successfully');
+                } catch (error) {
+                    console.error('❌ EmailJS initialization failed:', error);
+                }
+            })();
+
+            const EMAILJS_SERVICE_ID = 'service_06oupn7';
+            const EMAILJS_TEMPLATE_ID = 'template_0ccnpzh';
+
+            // ============================================================
             // PROFILE DROPDOWN
             // ============================================================
             
@@ -1014,11 +1040,11 @@
             }
 
             // ============================================================
-            // EMAIL SENDING SIMULATION
+            // EMAIL SENDING VIA EMAILJS WITH DEBUGGING
             // ============================================================
             
-            function simulateEmailSending(email, bookingData) {
-                return new Promise((resolve) => {
+            function sendEmailViaEmailJS(email, bookingData) {
+                return new Promise((resolve, reject) => {
                     const overlay = document.getElementById('emailOverlay');
                     const icon = document.getElementById('emailIcon');
                     const title = document.getElementById('emailTitle');
@@ -1037,58 +1063,101 @@
                     progressText.textContent = '0%';
                     closeBtn.style.display = 'none';
 
-                    const steps = [
-                        { progress: 20, text: 'Generating your tickets...' },
-                        { progress: 45, text: 'Creating QR codes...' },
-                        { progress: 70, text: 'Attaching ticket PDF...' },
-                        { progress: 90, text: 'Sending email to ' + email + '...' },
-                        { progress: 100, text: '✅ Email sent successfully!' }
-                    ];
+                    // Prepare email template parameters
+                    const templateParams = {
+                        to_email: email,
+                        customer_name: bookingData.customerName || 'Valued Customer',
+                        booking_ref: bookingData.bookingRef,
+                        film_title: bookingData.film,
+                        screen_showtime: bookingData.screen + ' · ' + bookingData.showtime,
+                        tickets: bookingData.tickets + ' × $' + bookingData.ticketPrice,
+                        seats: bookingData.seats,
+                        snacks: bookingData.snacks || 'None',
+                        total: bookingData.total,
+                        venue: bookingData.venue || 'Savannah Mall, Accra, Ghana',
+                        booking_date: bookingData.timestamp || new Date().toLocaleString()
+                    };
 
-                    let stepIndex = 0;
+                    console.log('📧 Sending email with params:', templateParams);
 
-                    function updateProgress() {
-                        if (stepIndex < steps.length) {
-                            const step = steps[stepIndex];
-                            progressFill.style.width = step.progress + '%';
-                            progressText.textContent = step.progress + '%';
-                            message.textContent = step.text;
+                    // Update progress to 30% (preparing email)
+                    progressFill.style.width = '30%';
+                    progressText.textContent = '30%';
+                    message.textContent = 'Preparing your ticket details...';
+
+                    // Send email via EmailJS
+                    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+                        .then(function(response) {
+                            console.log('✅ Email sent successfully!', response);
                             
-                            // Update message for final step
-                            if (step.progress === 100) {
-                                icon.className = 'email-icon success';
-                                icon.textContent = '✅';
-                                title.textContent = 'Tickets Sent! 🎉';
-                                message.innerHTML = `Your tickets have been sent to <strong>${email}</strong><br>Booking Reference: <strong>${bookingData.bookingRef}</strong>`;
-                                closeBtn.style.display = 'inline-block';
-                                
-                                // Log the email details to console for demo
-                                console.log('📧 Email Sent to:', email);
-                                console.log('📋 Booking Details:', bookingData);
-                                console.log('🎫 Ticket Details:', {
-                                    film: data.filmTitle,
-                                    screen: data.screen,
-                                    showtime: data.showtime,
-                                    seats: seatString,
-                                    tickets: data.ticketQuantity,
-                                    total: '$' + grandTotal.toFixed(2)
-                                });
-                                
-                                resolve({ success: true, email: email });
+                            // Success - update overlay
+                            progressFill.style.width = '100%';
+                            progressText.textContent = '100%';
+                            icon.className = 'email-icon success';
+                            icon.textContent = '✅';
+                            title.textContent = 'Tickets Sent! 🎉';
+                            message.innerHTML = `
+                                Your tickets have been sent to <strong>${email}</strong>
+                                <br>Booking Reference: <strong>${bookingData.bookingRef}</strong>
+                                <br><br>
+                                <span style="font-size:13px;color:var(--paper-dim);">
+                                    Check your inbox (and spam folder) for the confirmation email.
+                                </span>
+                            `;
+                            closeBtn.style.display = 'inline-block';
+                            
+                            resolve({ success: true, email: email, response: response });
+                        })
+                        .catch(function(error) {
+                            console.error('❌ Email sending failed:', error);
+                            console.error('Error details:', {
+                                text: error.text || 'No error text',
+                                status: error.status || 'No status',
+                                message: error.message || 'No message'
+                            });
+                            
+                            // Error - update overlay
+                            progressFill.style.width = '100%';
+                            progressText.textContent = 'Failed';
+                            icon.className = 'email-icon error';
+                            icon.textContent = '❌';
+                            title.textContent = 'Something Went Wrong';
+                            
+                            // Show specific error message
+                            let errorMessage = '';
+                            if (error.text && error.text.includes('template')) {
+                                errorMessage = 'Email template not found. Please check your template ID.';
+                            } else if (error.text && error.text.includes('service')) {
+                                errorMessage = 'Email service not found. Please check your service ID.';
+                            } else if (error.text && error.text.includes('invalid')) {
+                                errorMessage = 'Invalid email address. Please enter a valid email.';
+                            } else if (error.status === 403) {
+                                errorMessage = 'Authentication failed. Please check your public key.';
+                            } else {
+                                errorMessage = error.text || 'Please check your email address and try again.';
                             }
                             
-                            stepIndex++;
-                            setTimeout(updateProgress, 800);
-                        }
-                    }
-
-                    // Start the progress
-                    setTimeout(updateProgress, 600);
+                            message.innerHTML = `
+                                We couldn't send the email to <strong>${email}</strong>.
+                                <br><br>
+                                <span style="font-size:13px;color:var(--paper-dim);">
+                                    <strong>Error:</strong> ${errorMessage}
+                                    <br><br>
+                                    Please check your email address and try again.
+                                    <br>
+                                    You can also contact our support team for assistance.
+                                </span>
+                            `;
+                            closeBtn.style.display = 'inline-block';
+                            closeBtn.textContent = 'Try Again';
+                            
+                            reject({ success: false, error: error });
+                        });
                 });
             }
 
             // ============================================================
-            // CHECKOUT BUTTON - WITH EMAIL SIMULATION
+            // CHECKOUT BUTTON - WITH EMAILJS INTEGRATION
             // ============================================================
             
             document.getElementById('checkoutBtn').addEventListener('click', function() {
@@ -1114,33 +1183,48 @@
                 const bookingRef = 'SC-' + Date.now().toString().slice(-6);
 
                 // Prepare booking data for email
-                const bookingData = {
+                const bookingDataForEmail = {
                     bookingRef: bookingRef,
+                    customerName: 'Daniel Asamoah', // This would come from user profile
                     film: data.filmTitle,
                     screen: data.screen,
                     showtime: data.showtime,
                     seats: seatString,
                     tickets: data.ticketQuantity,
+                    ticketPrice: data.ticketPrice.toFixed(2),
                     snacks: snackString,
                     total: '$' + grandTotal.toFixed(2),
-                    email: email,
+                    venue: 'Savannah Mall, Accra, Ghana',
                     timestamp: new Date().toLocaleString()
                 };
 
+                // Show toast
+                showToast('Processing payment and sending tickets...', 'info');
+
                 // Simulate payment processing then send email
                 setTimeout(() => {
-                    // Show success toast
-                    showToast(`Payment successful! Sending tickets to ${email}`, 'success');
-                    
-                    // Simulate email sending
-                    simulateEmailSending(email, bookingData).then((result) => {
-                        // Reset button
-                        document.getElementById('checkoutBtn').disabled = false;
-                        document.getElementById('checkoutBtn').innerHTML = `
-                            <i class="fas fa-lock"></i> 
-                            Proceed to Payment · <span id="checkoutTotal">$${grandTotal.toFixed(2)}</span>
-                        `;
-                    });
+                    // Send email via EmailJS
+                    sendEmailViaEmailJS(email, bookingDataForEmail)
+                        .then((result) => {
+                            showToast('✅ Tickets sent to ' + email, 'success');
+                            
+                            // Reset button
+                            document.getElementById('checkoutBtn').disabled = false;
+                            document.getElementById('checkoutBtn').innerHTML = `
+                                <i class="fas fa-lock"></i> 
+                                Proceed to Payment · <span id="checkoutTotal">$${grandTotal.toFixed(2)}</span>
+                            `;
+                        })
+                        .catch((error) => {
+                            showToast('❌ Failed to send email. Please try again.', 'error');
+                            
+                            // Reset button
+                            document.getElementById('checkoutBtn').disabled = false;
+                            document.getElementById('checkoutBtn').innerHTML = `
+                                <i class="fas fa-lock"></i> 
+                                Proceed to Payment · <span id="checkoutTotal">$${grandTotal.toFixed(2)}</span>
+                            `;
+                        });
                     
                 }, 1500);
             });
@@ -1151,8 +1235,15 @@
             
             document.getElementById('closeOverlayBtn').addEventListener('click', function() {
                 document.getElementById('emailOverlay').classList.remove('active');
-                // Redirect to home or profile
-                window.location.href = 'index.html';
+                // Check if it was a success or error
+                const icon = document.getElementById('emailIcon');
+                if (icon.classList.contains('success')) {
+                    // Redirect to home on success
+                    window.location.href = 'index.html';
+                } else {
+                    // Stay on page on error
+                    document.getElementById('emailOverlay').classList.remove('active');
+                }
             });
 
             // ============================================================
@@ -1195,6 +1286,15 @@
                     document.getElementById('checkoutBtn').click();
                 }
             });
+
+            // ============================================================
+            // CHECK EMAILJS CONFIGURATION ON LOAD
+            // ============================================================
+            
+            console.log('🔧 EmailJS Configuration:');
+            console.log('📧 Service ID:', EMAILJS_SERVICE_ID);
+            console.log('📋 Template ID:', EMAILJS_TEMPLATE_ID);
+            console.log('🔑 Public Key: cOvd1hfVAfHE41BoP');
 
         });
     </script>
