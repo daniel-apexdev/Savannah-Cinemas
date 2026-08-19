@@ -179,7 +179,7 @@
         .auth-form {
             display: none;
             flex-direction: column;
-            gap: 16px;
+            gap: 18px;
         }
 
         .auth-form.active {
@@ -190,6 +190,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+            width: 100%;
         }
 
         .auth-form .form-group label {
@@ -197,6 +198,42 @@
             color: var(--paper-dim);
             font-weight: 300;
             letter-spacing: 0.02em;
+            display: block;
+        }
+
+        .auth-form .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--ink);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-sm);
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 1vw, 16px);
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+        }
+
+        .auth-form .form-group input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(232, 179, 76, 0.1);
+        }
+
+        .auth-form .form-group input::placeholder {
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .auth-form .form-group .input-hint {
+            font-size: clamp(11px, 0.7vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+            margin-top: 4px;
+        }
+
+        .auth-form .form-group .input-hint i {
+            margin-right: 4px;
         }
 
         /* Password Input with Toggle */
@@ -204,6 +241,7 @@
             position: relative;
             display: flex;
             align-items: center;
+            width: 100%;
         }
 
         .password-input-wrapper input {
@@ -255,16 +293,6 @@
 
         .password-toggle:active {
             transform: scale(0.9);
-        }
-
-        .auth-form .form-group .input-hint {
-            font-size: clamp(11px, 0.7vw, 13px);
-            color: var(--paper-dim);
-            font-weight: 300;
-        }
-
-        .auth-form .form-group .input-hint i {
-            margin-right: 4px;
         }
 
         .auth-form .form-options {
@@ -475,13 +503,16 @@
             background: var(--gold);
         }
 
-        /* Server Status Indicator */
+        /* Server Status */
         .server-status {
             text-align: center;
             font-size: 12px;
             color: var(--paper-dim);
-            margin-top: 8px;
+            margin-top: 12px;
             font-family: var(--font-mono);
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            background: var(--ink);
         }
 
         .server-status .status-dot {
@@ -490,6 +521,7 @@
             height: 8px;
             border-radius: 50%;
             margin-right: 6px;
+            animation: pulse 2s infinite;
         }
 
         .server-status .status-dot.online {
@@ -498,17 +530,16 @@
 
         .server-status .status-dot.offline {
             background: var(--rust);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
-
-    <!-- ============================================================
-    NAVIGATION
-    ============================================================ -->
-    <nav class="nav">
-        <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
-    </nav>
 
     <!-- ============================================================
     TOAST NOTIFICATION
@@ -618,50 +649,37 @@
             </div>
 
             <!-- Server Status -->
-            <div class="server-status">
+            <div class="server-status" id="serverStatus">
                 <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Checking server connection...</span>
+                <span id="statusText">Checking connection...</span>
             </div>
 
         </div>
     </div>
 
-    <!-- ============================================================
-    FOOTER
-    ============================================================ -->
-    <footer class="footer" style="background:var(--ink-raised);border-top:1px solid var(--ink-line);padding:clamp(24px,3vh,40px) var(--container-padding) 0;">
-        <div class="footer-bottom" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:16px 0 24px;font-family:var(--font-mono);font-size:clamp(11px,0.8vw,13px);color:var(--paper-dim);font-weight:300;">
-            <span>© 2026 Savannah Cinemas</span>
-            <span class="legal">
-                <a href="privacy.html" style="color:var(--paper-dim);text-decoration:none;margin-left:20px;transition:0.3s ease;">Privacy</a>
-                <a href="terms.html" style="color:var(--paper-dim);text-decoration:none;margin-left:20px;transition:0.3s ease;">Terms</a>
-                <a href="accessibility.html" style="color:var(--paper-dim);text-decoration:none;margin-left:20px;transition:0.3s ease;">Accessibility</a>
-            </span>
-        </div>
-    </footer>
 
     <!-- ============================================================
     JAVASCRIPT
     ============================================================ -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-
-            // ============================================================
-            // PASSWORD VISIBILITY TOGGLE
-            // ============================================================
+        // ============================================================
+        // PASSWORD VISIBILITY TOGGLE
+        // ============================================================
+        
+        window.togglePasswordVisibility = function(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
             
-            window.togglePasswordVisibility = function(inputId, button) {
-                const input = document.getElementById(inputId);
-                const icon = button.querySelector('i');
-                
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.className = 'fas fa-eye-slash';
-                } else {
-                    input.type = 'password';
-                    icon.className = 'fas fa-eye';
-                }
-            };
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
 
             // ============================================================
             // API CONFIGURATION
@@ -685,15 +703,14 @@
                     
                     if (response.ok) {
                         dot.className = 'status-dot online';
-                        text.textContent = 'Server online';
+                        text.textContent = '✅ Server online';
                     } else {
                         dot.className = 'status-dot offline';
-                        text.textContent = 'Server error';
+                        text.textContent = '⚠️ Server error';
                     }
                 } catch (error) {
                     dot.className = 'status-dot offline';
-                    text.textContent = 'Server offline - Please start the backend server';
-                    console.warn('Backend server not running on port 5000');
+                    text.textContent = '❌ Server offline - Please start the backend server';
                 }
             }
 
@@ -826,10 +843,9 @@
                         body: JSON.stringify({ email, password })
                     });
 
-                    // Check if response is JSON
                     const contentType = response.headers.get('content-type');
                     if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Server returned non-JSON response. Please make sure the backend is running.');
+                        throw new Error('Server error. Please make sure the backend is running.');
                     }
 
                     const data = await response.json();
@@ -838,6 +854,7 @@
                         throw new Error(data.message || 'Login failed');
                     }
 
+                    // Save to localStorage
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
                     
@@ -871,6 +888,7 @@
                 const password = signupPassword.value;
                 const confirm = signupConfirm.value;
 
+                // Validation
                 if (!name || !email || !password || !confirm) {
                     showToast('Please fill in all fields', 'error');
                     if (!name) showFieldError(signupName);
@@ -917,7 +935,7 @@
 
                     const contentType = response.headers.get('content-type');
                     if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Server returned non-JSON response. Please make sure the backend is running.');
+                        throw new Error('Server error. Please make sure the backend is running.');
                     }
 
                     const data = await response.json();
@@ -926,6 +944,7 @@
                         throw new Error(data.message || 'Registration failed');
                     }
 
+                    // Save to localStorage
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
 
@@ -979,11 +998,23 @@
             });
 
             // ============================================================
+            // CHECK IF ALREADY LOGGED IN
+            // ============================================================
+            
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (token && user) {
+                // User is already logged in
+                console.log('User already logged in:', JSON.parse(user).name);
+            }
+
+            // ============================================================
             // CHECK SERVER STATUS ON LOAD
             // ============================================================
             
             checkServerStatus();
-
+            
             // Check server status every 10 seconds
             setInterval(checkServerStatus, 10000);
 

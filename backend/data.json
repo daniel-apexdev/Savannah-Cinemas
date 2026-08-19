@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "id": "1787176697637",
+      "name": "Daniel Asamoah",
+      "email": "nkdanielasamoah@gmail.com",
+      "password": "$2a$10$F169T9vLOPrsSf/LOGD4N.1WULspndW6AOzeN69ZLOTgANBNel81.",
+      "memberSince": "2026-08-19T21:58:17.647Z",
+      "preferences": {
+        "notifications": true,
+        "newsletter": true,
+        "language": "en"
+      }
+    }
+  ],
+  "watchlists": {
+    "1787176697637": [
+      {
+        "title": "Spider-Man: Brand New Day",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/iPOn6DinuVyLY17YM9mKuPofV08.jpg",
+        "rating": 7.884,
+        "addedDate": "2026-08-19T22:22:00.059Z",
+        "watched": false,
+        "favorite": false
+      }
+    ]
+  },
+  "bookings": {
+    "1787176697637": []
+  }
+}

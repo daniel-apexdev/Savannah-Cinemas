@@ -5,7 +5,8 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 
@@ -15,108 +16,76 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
 // ============================================================
-// MONGODB CONNECTION
+// FILE-BASED STORAGE
 // ============================================================
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/savannah_cinemas', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log('✅ MongoDB connected'))
-.catch(err => console.error('❌ MongoDB connection error:', err));
+const DATA_FILE = path.join(__dirname, 'data.json');
 
-// ============================================================
-// USER SCHEMA
-// ============================================================
+if (!fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify({
+        users: [],
+        watchlists: {},
+        bookings: {}
+    }, null, 2));
+}
 
-const UserSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    memberSince: {
-        type: Date,
-        default: Date.now
-    },
-    watchlist: [{
-        movieId: {
-            type: Number,
-            required: true
-        },
-        title: String,
-        year: String,
-        poster: String,
-        rating: Number,
-        addedDate: {
-            type: Date,
-            default: Date.now
-        },
-        watched: {
-            type: Boolean,
-            default: false
-        },
-        favorite: {
-            type: Boolean,
-            default: false
-        },
-        watchedDate: Date
-    }],
-    bookingHistory: [{
-        bookingRef: String,
-        filmTitle: String,
-        screen: String,
-        showtime: String,
-        seats: [String],
-        ticketQuantity: Number,
-        ticketPrice: Number,
-        snacks: [{
-            name: String,
-            flavor: String,
-            qty: Number,
-            price: Number
-        }],
-        total: Number,
-        bookingDate: {
-            type: Date,
-            default: Date.now
-        },
-        status: {
-            type: String,
-            enum: ['confirmed', 'cancelled', 'completed'],
-            default: 'confirmed'
-        }
-    }],
-    preferences: {
-        notifications: {
-            type: Boolean,
-            default: true
-        },
-        newsletter: {
-            type: Boolean,
-            default: true
-        },
-        language: {
-            type: String,
-            default: 'en'
-        }
+function readData() {
+    try {
+        const data = fs.readFileSync(DATA_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        return { users: [], watchlists: {}, bookings: {} };
     }
-}, {
-    timestamps: true
-});
+}
 
-const User = mongoose.model('User', UserSchema);
+function writeData(data) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+// ============================================================
+// GMAIL SMTP TRANSPORTER - WITH BETTER CONFIG
+// ============================================================
+
+// Check if Gmail credentials are set
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+
+// Create transporter only if credentials are provided
+let transporter = null;
+
+if (GMAIL_USER && GMAIL_APP_PASSWORD) {
+    transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // Use SSL
+        auth: {
+            user: GMAIL_USER,
+            pass: GMAIL_APP_PASSWORD
+        },
+        tls: {
+            rejectUnauthorized: false // Accept self-signed certificates
+        },
+        logger: true, // Enable logging
+        debug: true // Enable debug output
+    });
+
+    // Verify connection
+    transporter.verify()
+        .then(() => {
+            console.log('✅ Gmail SMTP connection successful');
+            console.log(`📧 Using account: ${GMAIL_USER}`);
+        })
+        .catch((error) => {
+            console.error('❌ Gmail SMTP connection failed:', error.message);
+            console.log('📝 Please check your Gmail credentials in the .env file');
+            console.log('💡 Make sure you are using an App Password, not your regular password');
+            transporter = null;
+        });
+} else {
+    console.warn('⚠️ Gmail credentials not configured. Email sending will be disabled.');
+    console.log('📝 Add GMAIL_USER and GMAIL_APP_PASSWORD to your .env file');
+    console.log('💡 Get an App Password at: https://myaccount.google.com/apppasswords');
+}
 
 // ============================================================
 // JWT MIDDLEWARE
@@ -148,116 +117,6 @@ function authenticateToken(req, res, next) {
 }
 
 // ============================================================
-// GMAIL SMTP TRANSPORTER
-// ============================================================
-
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    },
-    requireTLS: true
-});
-
-transporter.verify()
-    .then(() => console.log('✅ Gmail SMTP connection successful'))
-    .catch((error) => console.error('❌ Gmail SMTP connection failed:', error));
-
-// ============================================================
-// WELCOME EMAIL TEMPLATE
-// ============================================================
-
-function getWelcomeEmailHTML(name, email) {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                body { background: #14141C; font-family: 'Inter', Arial, sans-serif; color: #F2EFE9; padding: 30px; }
-                .container { max-width: 600px; margin: auto; background: #1D1D28; padding: 30px; border-radius: 14px; border: 1px solid #2C2C3A; }
-                .logo { font-family: 'Oswald', sans-serif; font-size: 28px; color: #F2EFE9; text-align: center; }
-                .logo span { color: #E8B34C; }
-                .tagline { text-align: center; color: #B9B6AC; font-size: 13px; margin-bottom: 20px; }
-                .badge { display: inline-block; background: rgba(232,179,76,0.1); border: 1px solid #E8B34C; color: #E8B34C; padding: 4px 16px; border-radius: 20px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
-                .title { font-family: 'Oswald', sans-serif; font-size: 24px; color: #F2EFE9; margin: 20px 0 10px; }
-                .text { color: #B9B6AC; line-height: 1.6; }
-                .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
-                .feature { background: #14141C; border: 1px solid #2C2C3A; border-radius: 8px; padding: 16px; text-align: center; }
-                .feature .icon { font-size: 28px; display: block; margin-bottom: 4px; }
-                .feature .name { font-family: 'Oswald', sans-serif; font-size: 14px; color: #F2EFE9; }
-                .feature .desc { font-size: 12px; color: #B9B6AC; }
-                .button { display: inline-block; background: #E8B34C; color: #14141C; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500; margin-top: 16px; }
-                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #2C2C3A; }
-                .footer-text { font-size: 11px; color: #6B6A6A; }
-                .footer-links { display: flex; justify-content: center; gap: 20px; margin-bottom: 12px; }
-                .footer-links a { color: #B9B6AC; text-decoration: none; font-size: 12px; }
-                @media (max-width: 480px) {
-                    .feature-grid { grid-template-columns: 1fr; }
-                    .container { padding: 20px; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">SAVANNAH <span>CINEMAS</span></div>
-                <div class="tagline">Book the seat, keep the stub.</div>
-                <div style="text-align:center;">
-                    <span class="badge">👋 Welcome!</span>
-                </div>
-
-                <div class="title">Hello ${name},</div>
-                <p class="text">Welcome to Savannah Cinemas! We're thrilled to have you join our community of film lovers.</p>
-
-                <div class="feature-grid">
-                    <div class="feature">
-                        <span class="icon">🎟️</span>
-                        <div class="name">Easy Booking</div>
-                        <div class="desc">Book tickets in seconds</div>
-                    </div>
-                    <div class="feature">
-                        <span class="icon">📱</span>
-                        <div class="name">Mobile Ready</div>
-                        <div class="desc">Access anytime, anywhere</div>
-                    </div>
-                    <div class="feature">
-                        <span class="icon">❤️</span>
-                        <div class="name">Watchlist</div>
-                        <div class="desc">Save films to watch later</div>
-                    </div>
-                    <div class="feature">
-                        <span class="icon">⭐</span>
-                        <div class="name">Personalized</div>
-                        <div class="desc">Recommendations just for you</div>
-                    </div>
-                </div>
-
-                <div style="text-align:center;">
-                    <a href="http://localhost:3000" class="button">Browse Movies →</a>
-                </div>
-
-                <div class="footer">
-                    <div class="footer-links">
-                        <a href="#">Browse Movies</a>
-                        <a href="#">My Profile</a>
-                        <a href="#">Help Center</a>
-                    </div>
-                    <div class="footer-text">
-                        <strong>Savannah Cinemas</strong> · Book the seat, keep the stub.
-                        <br>© 2026 Savannah Cinemas. All rights reserved.
-                        <br>This email was sent to <strong style="color:#B9B6AC;">${email}</strong>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-}
-
-// ============================================================
 // AUTHENTICATION ROUTES
 // ============================================================
 
@@ -265,49 +124,64 @@ function getWelcomeEmailHTML(name, email) {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
+        const data = readData();
 
-        // Check if user exists
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
-        if (existingUser) {
+        if (data.users.find(u => u.email === email.toLowerCase())) {
             return res.status(400).json({
                 success: false,
                 message: 'User already exists with this email'
             });
         }
 
-        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create user
-        const user = new User({
+        const user = {
+            id: Date.now().toString(),
             name,
             email: email.toLowerCase(),
             password: hashedPassword,
-            memberSince: new Date()
-        });
+            memberSince: new Date(),
+            preferences: {
+                notifications: true,
+                newsletter: true,
+                language: 'en'
+            }
+        };
 
-        await user.save();
+        data.users.push(user);
+        data.watchlists[user.id] = [];
+        data.bookings[user.id] = [];
+        writeData(data);
 
-        // Generate JWT
         const token = jwt.sign(
-            { id: user._id, email: user.email, name: user.name },
+            { id: user.id, email: user.email, name: user.name },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
 
-        // Send welcome email
-        try {
-            const mailOptions = {
-                from: `"Savannah Cinemas" <${process.env.GMAIL_USER}>`,
-                to: user.email,
-                subject: 'Welcome to Savannah Cinemas! 🎬',
-                html: getWelcomeEmailHTML(user.name, user.email)
-            };
-            await transporter.sendMail(mailOptions);
-            console.log('✅ Welcome email sent to:', user.email);
-        } catch (emailError) {
-            console.error('❌ Welcome email failed:', emailError);
+        // Send welcome email (if transporter is configured)
+        if (transporter) {
+            try {
+                // Simple welcome email
+                const welcomeMail = {
+                    from: `"Savannah Cinemas" <${GMAIL_USER}>`,
+                    to: user.email,
+                    subject: 'Welcome to Savannah Cinemas! 🎬',
+                    html: `
+                        <h1>Welcome to Savannah Cinemas!</h1>
+                        <p>Hello ${user.name},</p>
+                        <p>Thank you for joining Savannah Cinemas. We're excited to have you!</p>
+                        <p>Start exploring our collection of films and book your first ticket today.</p>
+                        <br>
+                        <p>🎬 The Savannah Cinemas Team</p>
+                    `
+                };
+                await transporter.sendMail(welcomeMail);
+                console.log('✅ Welcome email sent to:', user.email);
+            } catch (emailError) {
+                console.error('❌ Welcome email failed:', emailError.message);
+            }
         }
 
         res.status(201).json({
@@ -315,7 +189,7 @@ app.post('/api/auth/register', async (req, res) => {
             message: 'User registered successfully',
             token,
             user: {
-                id: user._id,
+                id: user.id,
                 name: user.name,
                 email: user.email,
                 memberSince: user.memberSince
@@ -335,9 +209,9 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        const data = readData();
 
-        // Find user
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = data.users.find(u => u.email === email.toLowerCase());
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -345,7 +219,6 @@ app.post('/api/auth/login', async (req, res) => {
             });
         }
 
-        // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({
@@ -354,9 +227,8 @@ app.post('/api/auth/login', async (req, res) => {
             });
         }
 
-        // Generate JWT
         const token = jwt.sign(
-            { id: user._id, email: user.email, name: user.name },
+            { id: user.id, email: user.email, name: user.name },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -366,7 +238,7 @@ app.post('/api/auth/login', async (req, res) => {
             message: 'Login successful',
             token,
             user: {
-                id: user._id,
+                id: user.id,
                 name: user.name,
                 email: user.email,
                 memberSince: user.memberSince,
@@ -386,134 +258,27 @@ app.post('/api/auth/login', async (req, res) => {
 // GET CURRENT USER
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        const data = readData();
+        const user = data.users.find(u => u.id === req.user.id);
+        
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
             });
         }
+
+        const { password, ...userWithoutPassword } = user;
         res.json({
             success: true,
-            user
+            user: userWithoutPassword
         });
+
     } catch (error) {
         console.error('Get user error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'
-        });
-    }
-});
-
-// ============================================================
-// USER PROFILE ROUTES
-// ============================================================
-
-// UPDATE USER PROFILE
-app.put('/api/user/profile', authenticateToken, async (req, res) => {
-    try {
-        const { name, preferences } = req.body;
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        if (name) user.name = name;
-        if (preferences) {
-            user.preferences = { ...user.preferences, ...preferences };
-        }
-
-        await user.save();
-
-        res.json({
-            success: true,
-            message: 'Profile updated successfully',
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                preferences: user.preferences
-            }
-        });
-
-    } catch (error) {
-        console.error('Update profile error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error updating profile'
-        });
-    }
-});
-
-// CHANGE PASSWORD
-app.put('/api/user/password', authenticateToken, async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        // Verify current password
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: 'Current password is incorrect'
-            });
-        }
-
-        // Hash new password
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        await user.save();
-
-        res.json({
-            success: true,
-            message: 'Password updated successfully'
-        });
-
-    } catch (error) {
-        console.error('Change password error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error changing password'
-        });
-    }
-});
-
-// DELETE ACCOUNT
-app.delete('/api/user/account', authenticateToken, async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        await user.deleteOne();
-
-        res.json({
-            success: true,
-            message: 'Account deleted successfully'
-        });
-
-    } catch (error) {
-        console.error('Delete account error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error deleting account'
         });
     }
 });
@@ -525,17 +290,12 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
 // GET WATCHLIST
 app.get('/api/watchlist', authenticateToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
+        const data = readData();
+        const watchlist = data.watchlists[req.user.id] || [];
+        
         res.json({
             success: true,
-            watchlist: user.watchlist
+            watchlist
         });
 
     } catch (error) {
@@ -551,17 +311,13 @@ app.get('/api/watchlist', authenticateToken, async (req, res) => {
 app.post('/api/watchlist', authenticateToken, async (req, res) => {
     try {
         const { movieId, title, year, poster, rating } = req.body;
-        const user = await User.findById(req.user.id);
+        const data = readData();
 
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+        if (!data.watchlists[req.user.id]) {
+            data.watchlists[req.user.id] = [];
         }
 
-        // Check if already in watchlist
-        const exists = user.watchlist.some(item => item.movieId === movieId);
+        const exists = data.watchlists[req.user.id].some(item => item.movieId === movieId);
         if (exists) {
             return res.status(400).json({
                 success: false,
@@ -569,7 +325,7 @@ app.post('/api/watchlist', authenticateToken, async (req, res) => {
             });
         }
 
-        user.watchlist.push({
+        const movieItem = {
             movieId,
             title,
             year,
@@ -578,14 +334,15 @@ app.post('/api/watchlist', authenticateToken, async (req, res) => {
             addedDate: new Date(),
             watched: false,
             favorite: false
-        });
+        };
 
-        await user.save();
+        data.watchlists[req.user.id].push(movieItem);
+        writeData(data);
 
         res.json({
             success: true,
             message: 'Movie added to watchlist',
-            watchlist: user.watchlist
+            watchlist: data.watchlists[req.user.id]
         });
 
     } catch (error) {
@@ -601,22 +358,19 @@ app.post('/api/watchlist', authenticateToken, async (req, res) => {
 app.delete('/api/watchlist/:movieId', authenticateToken, async (req, res) => {
     try {
         const movieId = parseInt(req.params.movieId);
-        const user = await User.findById(req.user.id);
+        const data = readData();
 
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+        if (data.watchlists[req.user.id]) {
+            data.watchlists[req.user.id] = data.watchlists[req.user.id].filter(
+                item => item.movieId !== movieId
+            );
+            writeData(data);
         }
-
-        user.watchlist = user.watchlist.filter(item => item.movieId !== movieId);
-        await user.save();
 
         res.json({
             success: true,
             message: 'Movie removed from watchlist',
-            watchlist: user.watchlist
+            watchlist: data.watchlists[req.user.id] || []
         });
 
     } catch (error) {
@@ -628,112 +382,19 @@ app.delete('/api/watchlist/:movieId', authenticateToken, async (req, res) => {
     }
 });
 
-// TOGGLE WATCHED STATUS
-app.put('/api/watchlist/:movieId/watched', authenticateToken, async (req, res) => {
-    try {
-        const movieId = parseInt(req.params.movieId);
-        const { watched } = req.body;
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const movie = user.watchlist.find(item => item.movieId === movieId);
-        if (!movie) {
-            return res.status(404).json({
-                success: false,
-                message: 'Movie not found in watchlist'
-            });
-        }
-
-        movie.watched = watched;
-        movie.watchedDate = watched ? new Date() : null;
-
-        await user.save();
-
-        res.json({
-            success: true,
-            message: watched ? 'Movie marked as watched' : 'Movie marked as unwatched',
-            watchlist: user.watchlist
-        });
-
-    } catch (error) {
-        console.error('Toggle watched error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error updating watch status'
-        });
-    }
-});
-
-// TOGGLE FAVORITE
-app.put('/api/watchlist/:movieId/favorite', authenticateToken, async (req, res) => {
-    try {
-        const movieId = parseInt(req.params.movieId);
-        const { favorite } = req.body;
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const movie = user.watchlist.find(item => item.movieId === movieId);
-        if (!movie) {
-            return res.status(404).json({
-                success: false,
-                message: 'Movie not found in watchlist'
-            });
-        }
-
-        movie.favorite = favorite;
-
-        await user.save();
-
-        res.json({
-            success: true,
-            message: favorite ? 'Movie added to favorites' : 'Movie removed from favorites',
-            watchlist: user.watchlist
-        });
-
-    } catch (error) {
-        console.error('Toggle favorite error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error updating favorite status'
-        });
-    }
-});
-
 // ============================================================
-// BOOKING HISTORY ROUTES
+// BOOKING ROUTES
 // ============================================================
 
-// GET BOOKING HISTORY
+// GET BOOKINGS
 app.get('/api/bookings', authenticateToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        // Sort bookings by date (newest first)
-        const bookings = user.bookingHistory.sort((a, b) => 
-            new Date(b.bookingDate) - new Date(a.bookingDate)
-        );
-
+        const data = readData();
+        const bookings = data.bookings[req.user.id] || [];
+        
         res.json({
             success: true,
-            bookings
+            bookings: bookings.sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate))
         });
 
     } catch (error) {
@@ -759,16 +420,14 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
             total
         } = req.body;
 
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+        const data = readData();
+
+        if (!data.bookings[req.user.id]) {
+            data.bookings[req.user.id] = [];
         }
 
-        // Generate booking reference
-        const bookingRef = 'SC-' + Date.now().toString().slice(-6) + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const bookingRef = 'SC-' + Date.now().toString().slice(-6) + '-' + 
+                          Math.random().toString(36).substring(2, 6).toUpperCase();
 
         const booking = {
             bookingRef,
@@ -784,8 +443,8 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
             status: 'confirmed'
         };
 
-        user.bookingHistory.push(booking);
-        await user.save();
+        data.bookings[req.user.id].push(booking);
+        writeData(data);
 
         res.json({
             success: true,
@@ -803,52 +462,19 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
     }
 });
 
-// UPDATE BOOKING STATUS
-app.put('/api/bookings/:bookingRef', authenticateToken, async (req, res) => {
-    try {
-        const { bookingRef } = req.params;
-        const { status } = req.body;
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const booking = user.bookingHistory.find(b => b.bookingRef === bookingRef);
-        if (!booking) {
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found'
-            });
-        }
-
-        booking.status = status;
-        await user.save();
-
-        res.json({
-            success: true,
-            message: 'Booking status updated',
-            booking
-        });
-
-    } catch (error) {
-        console.error('Update booking error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error updating booking'
-        });
-    }
-});
-
 // ============================================================
-// EMAIL SENDING ROUTE
+// EMAIL ROUTE
 // ============================================================
 
 app.post('/api/send-booking-email', async (req, res) => {
     try {
+        if (!transporter) {
+            return res.status(503).json({
+                success: false,
+                message: 'Email service is not configured. Please check Gmail credentials.'
+            });
+        }
+
         const {
             to,
             customerName,
@@ -873,106 +499,26 @@ app.post('/api/send-booking-email', async (req, res) => {
         }
 
         const mailOptions = {
-            from: `"Savannah Cinemas" <${process.env.GMAIL_USER}>`,
+            from: `"Savannah Cinemas" <${GMAIL_USER}>`,
             to: to,
             subject: `Booking Confirmation — ${bookingRef}`,
             html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { background: #14141C; font-family: 'Inter', Arial, sans-serif; color: #F2EFE9; padding: 30px; }
-                        .container { max-width: 600px; margin: auto; background: #1D1D28; padding: 30px; border-radius: 14px; border: 1px solid #2C2C3A; }
-                        .logo { font-family: 'Oswald', sans-serif; font-size: 28px; color: #F2EFE9; text-align: center; }
-                        .logo span { color: #E8B34C; }
-                        .tagline { text-align: center; color: #B9B6AC; font-size: 13px; margin-bottom: 20px; }
-                        .badge { display: inline-block; background: rgba(232,179,76,0.1); border: 1px solid #E8B34C; color: #E8B34C; padding: 4px 16px; border-radius: 20px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
-                        .title { font-family: 'Oswald', sans-serif; font-size: 20px; color: #F2EFE9; margin: 20px 0 10px; }
-                        .text { color: #B9B6AC; line-height: 1.6; }
-                        .summary { background: #14141C; border: 1px solid #2C2C3A; border-radius: 8px; padding: 16px; margin: 16px 0; }
-                        .summary-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #2C2C3A; font-size: 14px; }
-                        .summary-item:last-child { border-bottom: none; }
-                        .summary-item .label { color: #B9B6AC; }
-                        .summary-item .value { color: #F2EFE9; }
-                        .summary-item .value.gold { color: #E8B34C; }
-                        .total { display: flex; justify-content: space-between; padding-top: 12px; margin-top: 8px; border-top: 2px solid #E8B34C; font-size: 18px; font-weight: 500; }
-                        .total .label { color: #F2EFE9; }
-                        .total .value { color: #E8B34C; }
-                        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #2C2C3A; }
-                        .footer-text { font-size: 11px; color: #6B6A6A; }
-                        @media (max-width: 480px) { .container { padding: 20px; } .summary-item { font-size: 13px; flex-wrap: wrap; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="logo">SAVANNAH <span>CINEMAS</span></div>
-                        <div class="tagline">Book the seat, keep the stub.</div>
-                        <div style="text-align:center;">
-                            <span class="badge">✓ Booking Confirmed</span>
-                        </div>
-
-                        <div class="title">Hello ${customerName || 'Valued Customer'},</div>
-                        <p class="text">Your booking for <strong style="color:#E8B34C;">${film}</strong> has been confirmed.</p>
-
-                        <div style="background:#14141C;border:1px solid #2C2C3A;border-radius:8px;padding:10px 16px;margin:12px 0;">
-                            <span style="color:#B9B6AC;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Booking Reference</span>
-                            <br>
-                            <span style="color:#E8B34C;font-size:16px;font-weight:500;font-family:'IBM Plex Mono',monospace;">${bookingRef}</span>
-                        </div>
-
-                        <div class="summary">
-                            <div class="summary-item">
-                                <span class="label">Film</span>
-                                <span class="value">${film}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="label">Screen / Showtime</span>
-                                <span class="value">${screen} · ${showtime}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="label">Tickets</span>
-                                <span class="value">${tickets}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="label">Seats</span>
-                                <span class="value">${seats}</span>
-                            </div>
-                            ${snacks && snacks !== 'None' ? `
-                            <div class="summary-item">
-                                <span class="label">Snacks</span>
-                                <span class="value">${snacks}</span>
-                            </div>` : ''}
-                            <div class="summary-item">
-                                <span class="label">Venue</span>
-                                <span class="value">${venue || 'Savannah Mall, Accra, Ghana'}</span>
-                            </div>
-                            <div class="total">
-                                <span class="label">Total</span>
-                                <span class="value">${total}</span>
-                            </div>
-                        </div>
-
-                        <p class="text" style="font-size:13px;">
-                            <strong style="color:#E8B34C;">📌 Important:</strong> Please arrive at least 15 minutes before showtime.
-                            <br>Present your booking reference at the ticket counter.
-                        </p>
-
-                        <div class="footer">
-                            <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:12px;">
-                                <a href="#" style="color:#B9B6AC;text-decoration:none;font-size:12px;">View Booking</a>
-                                <a href="#" style="color:#B9B6AC;text-decoration:none;font-size:12px;">Contact Us</a>
-                                <a href="#" style="color:#B9B6AC;text-decoration:none;font-size:12px;">Help Center</a>
-                            </div>
-                            <div class="footer-text">
-                                <strong>Savannah Cinemas</strong> · Book the seat, keep the stub.
-                                <br>© 2026 Savannah Cinemas. All rights reserved.
-                                <br>This email was sent to <strong style="color:#B9B6AC;">${to}</strong>
-                            </div>
-                        </div>
-                    </div>
-                </body>
-                </html>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1D1D28; color: #F2EFE9; padding: 30px; border-radius: 14px;">
+                    <h1 style="font-family: Oswald, sans-serif; color: #E8B34C;">SAVANNAH CINEMAS</h1>
+                    <h2 style="color: #E8B34C;">Booking Confirmed ✅</h2>
+                    <p>Hello ${customerName || 'Valued Customer'},</p>
+                    <p>Your booking for <strong style="color: #E8B34C;">${film}</strong> has been confirmed.</p>
+                    <hr style="border-color: #2C2C3A;">
+                    <p><strong>Booking Reference:</strong> <span style="color: #E8B34C;">${bookingRef}</span></p>
+                    <p><strong>Film:</strong> ${film}</p>
+                    <p><strong>Screen:</strong> ${screen}</p>
+                    <p><strong>Showtime:</strong> ${showtime}</p>
+                    <p><strong>Seats:</strong> ${seats}</p>
+                    <p><strong>Tickets:</strong> ${tickets}</p>
+                    <p><strong>Total:</strong> ${total}</p>
+                    <hr style="border-color: #2C2C3A;">
+                    <p style="color: #B9B6AC;">Thank you for choosing Savannah Cinemas! 🎬</p>
+                </div>
             `
         };
 
@@ -986,10 +532,10 @@ app.post('/api/send-booking-email', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Email sending error:', error);
+        console.error('❌ Email sending error:', error.message);
         res.status(500).json({
             success: false,
-            message: 'Failed to send booking confirmation'
+            message: 'Failed to send booking confirmation: ' + error.message
         });
     }
 });
@@ -998,6 +544,20 @@ app.post('/api/send-booking-email', async (req, res) => {
 // SERVER START
 // ============================================================
 
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Savannah Cinemas Server is running',
+        storage: 'File-based (No MongoDB required)',
+        emailConfigured: !!transporter
+    });
+});
+
 app.listen(PORT, () => {
-    console.log(`🚀 Email server running on port ${PORT}`);
+    console.log(`\n🚀 Server running on port ${PORT}`);
+    console.log(`📁 Data stored in: ${DATA_FILE}`);
+    console.log(`📧 Email service: ${transporter ? '✅ Configured' : '❌ Not configured'}`);
+    console.log(`🔑 JWT Secret: ${JWT_SECRET ? '✅ Set' : '❌ Not set'}`);
+    console.log(`\n📍 API URL: http://localhost:${PORT}/api`);
+    console.log(`📍 Health Check: http://localhost:${PORT}/\n`);
 });
