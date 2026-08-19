@@ -234,7 +234,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: column;
   }
 
   .mobile-menu-links li {
@@ -723,7 +723,7 @@
 }
 
   .seat-map-wrap{
-    position:relative;   /* wrapper needed for the edge-fade hints below */
+    position:relative;
   }
   
   .seat-row{
@@ -733,7 +733,7 @@
     width:max-content;
   }
   
-  row-label{
+  .row-label{
     width:clamp(18px, 2vw, 24px);
     font-family:var(--font-mono);
     font-size:clamp(12px, 1vw, 14px);
@@ -779,7 +779,6 @@
 .seat.premium{ border-color:var(--gold-dim); color:var(--gold); }
 .seat.selected{ background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:500; transform:scale(1.05); }
 .seat.taken{ background:var(--ink-line); border-color:var(--ink-line); color:#8a7862; cursor:not-allowed; opacity:0.6; }
-
 
   .seat-legend{
     display:flex; 
@@ -831,7 +830,7 @@
   width:44px;
   height:44px;
   border-radius:8px;
-  overflow:hidden;              /* clips the image to the rounded corners */
+  overflow:hidden;
   background:var(--ink-raised);
   border:1px solid var(--ink-line);
   flex:none;
@@ -866,7 +865,7 @@
 
 .qty-stepper{
   grid-column:3;
-  grid-row:1 / span 2;      /* spans both rows, stays vertically centered */
+  grid-row:1 / span 2;
   display:flex;
   align-items:center;
   gap:2px;
@@ -901,10 +900,9 @@
   text-align:center;
 }
 
-/* Stack of cards */
 .snack-grid{
   display:grid;
-  grid-template-columns:repeat(4, 1fr);
+  grid-template-columns:repeat(3, 1fr);
   gap:12px;
 }
 
@@ -1103,41 +1101,39 @@
     .seat-row{ gap:10px !important; }
     .seat-map{ gap:14px; padding:8px 28px; scroll-padding:28px; }
 
-    /* ---------- EDGE FADE — hints there's more to scroll ---------- */
-  .seat-map-wrap::before,
-  .seat-map-wrap::after{
-    content:"";
-    position:absolute; top:0; bottom:24px; width:28px;
-    z-index:2; pointer-events:none;
-  }
-  .seat-map-wrap::before{
-    left:0;
-    background:linear-gradient(90deg, var(--ink-raised), transparent);
-  }
-  .seat-map-wrap::after{
-    right:0;
-    background:linear-gradient(270deg, var(--ink-raised), transparent);
-  }
+    .seat-map-wrap::before,
+    .seat-map-wrap::after{
+      content:"";
+      position:absolute; top:0; bottom:24px; width:28px;
+      z-index:2; pointer-events:none;
+    }
+    .seat-map-wrap::before{
+      left:0;
+      background:linear-gradient(90deg, var(--ink-raised), transparent);
+    }
+    .seat-map-wrap::after{
+      right:0;
+      background:linear-gradient(270deg, var(--ink-raised), transparent);
+    }
 
-    /* ---------- LEGEND (unchanged from your version) ---------- */
-  .seat-legend{
-    display:flex; gap:clamp(16px, 2vw, 28px); justify-content:center; flex-wrap:wrap;
-    font-size:clamp(12px, 0.9vw, 14px); color:var(--paper-dim); padding-top:16px;
-    border-top:1px solid var(--ink-line); font-weight:300;
-  }
-  .legend-item{ display:flex; align-items:center; gap:10px; padding:4px 0; }
-  .legend-swatch{
-    width:clamp(18px, 1.5vw, 24px); height:clamp(18px, 1.5vw, 24px);
-    border-radius:clamp(4px, 0.4vw, 8px) clamp(4px, 0.4vw, 8px) clamp(3px, 0.3vw, 5px) clamp(3px, 0.3vw, 5px);
-    border:2px solid var(--ink-line); flex-shrink:0;
-  }
-  .legend-swatch.available{ background:transparent; }
-  .legend-swatch.selected{ background:var(--gold); border-color:var(--gold); }
-  .legend-swatch.taken{ background:var(--ink-line); }
-  .legend-swatch.premium{ border-color:var(--gold-dim); }
+    .seat-legend{
+      display:flex; gap:clamp(16px, 2vw, 28px); justify-content:center; flex-wrap:wrap;
+      font-size:clamp(12px, 0.9vw, 14px); color:var(--paper-dim); padding-top:16px;
+      border-top:1px solid var(--ink-line); font-weight:300;
+    }
+    .legend-item{ display:flex; align-items:center; gap:10px; padding:4px 0; }
+    .legend-swatch{
+      width:clamp(18px, 1.5vw, 24px); height:clamp(18px, 1.5vw, 24px);
+      border-radius:clamp(4px, 0.4vw, 8px) clamp(4px, 0.4vw, 8px) clamp(3px, 0.3vw, 5px) clamp(3px, 0.3vw, 5px);
+      border:2px solid var(--ink-line); flex-shrink:0;
+    }
+    .legend-swatch.available{ background:transparent; }
+    .legend-swatch.selected{ background:var(--gold); border-color:var(--gold); }
+    .legend-swatch.taken{ background:var(--ink-line); }
+    .legend-swatch.premium{ border-color:var(--gold-dim); }
 
     .snack-grid{
-      grid-template-columns:repeat(1, 1fr);
+      grid-template-columns:repeat(2, 1fr);
       gap:10px;
     }
     
@@ -1202,9 +1198,7 @@
 
   @media (max-width:480px){
     .snack-card{ gap:10px; padding:9px 12px; }
-    .snack-options{ display:none; }  /* size picker collapses out on
-                                          very small screens — see note
-                                          below on where it should go */
+    .snack-options{ display:none; }
     .snack-name{ font-size:13.5px; }
   }
 
@@ -1498,7 +1492,6 @@
       </button>
     </div>
     <ul class="mobile-menu-links">
-      <li><a href="index.html" class="active">Now Showing</a></li>
       <li><a href="coming-soon.html">Coming soon</a></li>
       <li><a href="events.html">Events</a></li>
       <li><a href="discovery.html">Discovery</a></li>
@@ -1577,13 +1570,13 @@
         </div>
       </div>
 
-      <!-- SNACKS -->
+      <!-- SNACKS - FIXED WITH INDIVIDUAL ITEMS -->
       <div class="panel">
         <h2>Add snacks &amp; drinks</h2>
         <div class="snack-grid" id="snackGrid">
           
-          <!-- Popcorn Card -->
-          <div class="snack-card" data-name="Popcorn" data-price="5.50">
+          <!-- Sugar Popcorn -->
+          <div class="snack-card" data-name="Sugar Popcorn" data-price="15.00">
             <div class="snack-thumb"><img src="images/popcorn-image.jpg" alt="Sugar Popcorn" loading="lazy"></div>
             <p class="snack-name">Sugar Popcorn</p>
             <p class="snack-price">¢15.00</p>
@@ -1594,7 +1587,8 @@
             </div>
           </div>
 
-          <div class="snack-card" data-name="Popcorn" data-price="5.50">
+          <!-- Salt Popcorn -->
+          <div class="snack-card" data-name="Salt Popcorn" data-price="15.00">
             <div class="snack-thumb"><img src="images/popcorn-image.jpg" alt="Salt Popcorn" loading="lazy"></div>
             <p class="snack-name">Salt Popcorn</p>
             <p class="snack-price">¢15.00</p>
@@ -1605,7 +1599,8 @@
             </div>
           </div>
 
-          <div class="snack-card" data-name="Popcorn" data-price="5.50">
+          <!-- Butter Popcorn -->
+          <div class="snack-card" data-name="Butter Popcorn" data-price="15.00">
             <div class="snack-thumb"><img src="images/popcorn-image.jpg" alt="Butter Popcorn" loading="lazy"></div>
             <p class="snack-name">Butter Popcorn</p>
             <p class="snack-price">¢15.00</p>
@@ -1616,7 +1611,8 @@
             </div>
           </div>
 
-          <div class="snack-card" data-name="Popcorn" data-price="5.50">
+          <!-- Caramel Popcorn -->
+          <div class="snack-card" data-name="Caramel Popcorn" data-price="15.00">
             <div class="snack-thumb"><img src="images/popcorn-image.jpg" alt="Caramel Popcorn" loading="lazy"></div>
             <p class="snack-name">Caramel Popcorn</p>
             <p class="snack-price">¢15.00</p>
@@ -1627,8 +1623,8 @@
             </div>
           </div>
 
-          <!-- Soft Drink Card -->
-          <div class="snack-card" data-name="Soft Drink" data-price="4.00">
+          <!-- Coca Cola -->
+          <div class="snack-card" data-name="Coca Cola" data-price="4.00">
             <div class="snack-thumb"><img src="images/coke-image.jpg" alt="Coca Cola" loading="lazy"></div>
             <p class="snack-name">Coca Cola</p>
             <p class="snack-price">¢4.00</p>
@@ -1639,7 +1635,8 @@
             </div>
           </div>
 
-          <div class="snack-card" data-name="Soft Drink" data-price="4.00">
+          <!-- Malt -->
+          <div class="snack-card" data-name="Malt" data-price="4.00">
             <div class="snack-thumb"><img src="images/malta-guinness.jpg" alt="Malt" loading="lazy"></div>
             <p class="snack-name">Malt</p>
             <p class="snack-price">¢4.00</p>
@@ -1650,7 +1647,8 @@
             </div>
           </div>
 
-          <div class="snack-card" data-name="Soft Drink" data-price="4.00">
+          <!-- Fanta Orange -->
+          <div class="snack-card" data-name="Fanta Orange" data-price="4.00">
             <div class="snack-thumb"><img src="images/fanta-image.jpg" alt="Fanta Orange" loading="lazy"></div>
             <p class="snack-name">Fanta Orange</p>
             <p class="snack-price">¢4.00</p>
@@ -1661,6 +1659,17 @@
             </div>
           </div>
 
+          <!-- Sprite -->
+          <div class="snack-card" data-name="Sprite" data-price="4.00">
+            <div class="snack-thumb"><img src="images/sprite-image.jpg" alt="Sprite" loading="lazy"></div>
+            <p class="snack-name">Sprite</p>
+            <p class="snack-price">¢4.00</p>
+            <div class="qty-stepper">
+              <button class="qty-minus">−</button>
+              <span class="qty-value">0</span>
+              <button class="qty-plus">+</button>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -1827,7 +1836,7 @@
       cinema: 'Savannah Mall',
       screen: 'Screen 1',
       showtime: 'Today, 7:45 PM',
-      priceStandard: 9.00
+      priceStandard: 10.00
     };
     
     const currentFilm = filmData || defaultFilm;
@@ -1851,7 +1860,7 @@
         time: '10:30 AM', 
         format: 'Standard', 
         type: 'standard',
-        price: 9.00
+        price: 10.00
       },
       { 
         id: 2, 
@@ -1859,7 +1868,7 @@
         time: '1:45 PM', 
         format: 'Standard', 
         type: 'standard',
-        price: 9.00
+        price: 10.00
       },
       { 
         id: 3, 
@@ -1883,14 +1892,14 @@
         time: '9:45 PM', 
         format: 'Standard', 
         type: 'standard',
-        price: 9.00
+        price: 10.00
       }
     ];
 
     let selectedScreen = null;
     let ticketQuantity = 1;
     let maxTickets = 10;
-    let ticketPrice = currentFilm.priceStandard || 9.00;
+    let ticketPrice = currentFilm.priceStandard || 10.00;
 
     function renderScreenOptions() {
       const grid = document.getElementById('screenGrid');
@@ -2046,68 +2055,45 @@
     }
 
     // ============================================================
-    // SNACK QUANTITY HANDLERS - NO FLAVOR PRICING
+    // SNACK QUANTITY HANDLERS - EACH ITEM INDEPENDENT
     // ============================================================
     
     var snackQuantities = {};
 
     document.querySelectorAll('.snack-card').forEach(function(card){
-      var baseName = card.dataset.name;
-      var basePrice = parseFloat(card.dataset.price);
+      var snackName = card.dataset.name;
+      var snackPrice = parseFloat(card.dataset.price);
       var valueEl = card.querySelector('.qty-value');
-      var flavorSelect = card.querySelector('.snack-flavor');
 
-      function getSnackKey() {
-        var flavor = flavorSelect ? flavorSelect.options[flavorSelect.selectedIndex].text : 'Regular';
-        return baseName + ' - ' + flavor;
-      }
-
-      function getFlavorName() {
-        return flavorSelect ? flavorSelect.options[flavorSelect.selectedIndex].text : 'Regular';
-      }
-
+      // Plus button
       card.querySelector('.qty-plus').addEventListener('click', function(){
-        var key = getSnackKey();
-        var qty = (snackQuantities[key] ? snackQuantities[key].qty : 0) + 1;
-        snackQuantities[key] = { 
-          qty: qty, 
-          price: basePrice,
-          name: baseName,
-          flavor: getFlavorName()
+        var currentQty = snackQuantities[snackName] ? snackQuantities[snackName].qty : 0;
+        var newQty = currentQty + 1;
+        snackQuantities[snackName] = {
+          qty: newQty,
+          price: snackPrice,
+          name: snackName
         };
-        valueEl.textContent = qty;
+        valueEl.textContent = newQty;
         updateSummary();
       });
       
+      // Minus button
       card.querySelector('.qty-minus').addEventListener('click', function(){
-        var key = getSnackKey();
-        var current = snackQuantities[key] ? snackQuantities[key].qty : 0;
-        var qty = Math.max(0, current - 1);
-        if (qty === 0) delete snackQuantities[key];
-        else snackQuantities[key].qty = qty;
-        valueEl.textContent = qty;
+        var currentQty = snackQuantities[snackName] ? snackQuantities[snackName].qty : 0;
+        var newQty = Math.max(0, currentQty - 1);
+        if (newQty === 0) {
+          delete snackQuantities[snackName];
+        } else {
+          snackQuantities[snackName] = {
+            qty: newQty,
+            price: snackPrice,
+            name: snackName
+          };
+        }
+        valueEl.textContent = newQty;
         updateSummary();
       });
-
-      if (flavorSelect) {
-        flavorSelect.addEventListener('change', function(){
-          var key = Object.keys(snackQuantities).find(function(k) {
-            return k.startsWith(baseName + ' - ');
-          });
-          if (key) {
-            var qty = snackQuantities[key].qty;
-            delete snackQuantities[key];
-            var newKey = getSnackKey();
-            snackQuantities[newKey] = {
-              qty: qty,
-              price: basePrice,
-              name: baseName,
-              flavor: getFlavorName()
-            };
-            updateSummary();
-          }
-        });
-      }
     });
 
     // ============================================================
@@ -2132,30 +2118,35 @@
 
       document.getElementById('selectedSeatCount').textContent = selectedSeats.length;
 
-      // Update snack list
+      // Update snack list - show all items with quantities
       var snackList = document.getElementById('snackSummaryList');
       snackList.innerHTML = '';
       
-      Object.keys(snackQuantities).forEach(function(key){
-        var item = snackQuantities[key];
-        var li = document.createElement('li');
-        var displayName = item.flavor ? item.name + ' (' + item.flavor + ')' : item.name;
-        li.innerHTML = '<span>' + displayName + ' × ' + item.qty + '</span><span>¢' + (item.price * item.qty).toFixed(2) + '</span>';
-        snackList.appendChild(li);
-      });
+      var snackTotal = 0;
+      var snackNames = Object.keys(snackQuantities);
+      
+      if (snackNames.length === 0) {
+        snackList.innerHTML = '<li class="summary-empty" style="border-bottom:none;padding:4px 0;">No snacks selected</li>';
+      } else {
+        snackNames.forEach(function(name){
+          var item = snackQuantities[name];
+          var subtotal = item.qty * item.price;
+          snackTotal += subtotal;
+          var li = document.createElement('li');
+          li.innerHTML = '<span>' + name + ' × ' + item.qty + '</span><span>¢' + subtotal.toFixed(2) + '</span>';
+          snackList.appendChild(li);
+        });
+      }
 
       // Calculate totals
       var ticketTotal = ticketQuantity * ticketPrice;
-      var snackTotal = Object.keys(snackQuantities).reduce(function(sum, key){
-        var item = snackQuantities[key];
-        return sum + (item.price * item.qty);
-      }, 0);
+      var seatTotal = 0; // Seats are free (no price)
       var grandTotal = ticketTotal + snackTotal;
 
       var grandTotalFormatted = '¢' + grandTotal.toFixed(2);
       document.getElementById('grandTotal').textContent = grandTotalFormatted;
 
-      // Update pay button - Redirect to checkout.html
+      // Update pay button
       var payBtn = document.getElementById('payBtn');
       
       var isReady = false;
@@ -2165,7 +2156,6 @@
         btnText = 'Select a showtime first';
         isReady = false;
       } else if (selectedSeats.length === ticketQuantity && ticketQuantity > 0) {
-        // ✅ All seats selected - redirect to checkout
         btnText = 'Proceed to Checkout · ' + grandTotalFormatted;
         isReady = true;
       } else if (selectedSeats.length > 0 && selectedSeats.length < ticketQuantity) {
@@ -2187,7 +2177,25 @@
     document.getElementById('payBtn').addEventListener('click', function() {
       if (this.disabled) return;
       
-      // Build checkout data
+      // Build checkout data with all snack items
+      var snackItems = Object.keys(snackQuantities).map(function(name) {
+        var item = snackQuantities[name];
+        return {
+          name: item.name,
+          flavor: 'Regular',
+          qty: item.qty,
+          price: item.price
+        };
+      });
+
+      // Calculate totals
+      var ticketTotal = ticketQuantity * ticketPrice;
+      var snackTotal = Object.keys(snackQuantities).reduce(function(sum, name) {
+        var item = snackQuantities[name];
+        return sum + (item.qty * item.price);
+      }, 0);
+      var grandTotal = ticketTotal + snackTotal;
+
       var checkoutData = {
         filmTitle: currentFilm.filmTitle,
         filmYear: currentFilm.filmYear || '2024',
@@ -2198,16 +2206,8 @@
         ticketQuantity: ticketQuantity,
         ticketPrice: ticketPrice,
         selectedSeats: selectedSeats,
-        snacks: Object.keys(snackQuantities).map(function(key) {
-          var item = snackQuantities[key];
-          return {
-            name: item.name,
-            flavor: item.flavor || 'Regular',
-            qty: item.qty,
-            price: item.price
-          };
-        }),
-        total: parseFloat(document.getElementById('grandTotal').textContent.replace('¢', ''))
+        snacks: snackItems,
+        total: grandTotal
       };
 
       // Redirect to checkout page with data

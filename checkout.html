@@ -59,7 +59,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            gap: 16px;
+            gap: 10px;
         }
 
         .nav-left {
@@ -89,8 +89,8 @@
         }
 
         .avatar {
-            width: var(--touch-target);
-            height: var(--touch-target);
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             background: var(--gold);
             color: var(--ink);
@@ -818,14 +818,6 @@
                     <span class="total-value" id="receiptTotal">¢0.00</span>
                 </div>
             </div>
-
-            <!-- Payment Methods -->
-            <div class="payment-methods">
-                <span class="payment-badge"><i class="fas fa-credit-card"></i> Card</span>
-                <span class="payment-badge"><i class="fas fa-mobile-alt"></i> Mobile Money</span>
-                <span class="payment-badge"><i class="fas fa-university"></i> Bank Transfer</span>
-                <span class="payment-badge"><i class="fas fa-wallet"></i> Wallet</span>
-            </div>
         </div>
 
         <!-- RIGHT COLUMN -->
@@ -1235,7 +1227,7 @@
                     tickets: data.ticketQuantity,
                     ticketPrice: data.ticketPrice.toFixed(2),
                     snacks: snackString,
-                    total: '¢' + grandTotal.toFixed(2),
+                    total: '$' + grandTotal.toFixed(2),
                     venue: 'Savannah Mall, Accra, Ghana',
                     timestamp: new Date().toLocaleString()
                 };
