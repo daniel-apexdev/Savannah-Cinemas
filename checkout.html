@@ -9,11 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     
-    <!-- EmailJS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    
     <style>
-        /* ... (keep all existing styles) ... */
         :root {
             --ink: #14141C;
             --ink-raised: #1D1D28;
@@ -804,7 +800,7 @@
 
                 <div class="receipt-item">
                     <span class="item-label">Tickets</span>
-                    <span class="item-value" id="receiptTickets">1 × $9.00</span>
+                    <span class="item-value" id="receiptTickets">1 × ¢9.00</span>
                 </div>
 
                 <div class="receipt-item" id="receiptSeatsRow">
@@ -819,7 +815,7 @@
 
                 <div class="receipt-total">
                     <span class="total-label">Total</span>
-                    <span class="total-value" id="receiptTotal">$0.00</span>
+                    <span class="total-value" id="receiptTotal">¢0.00</span>
                 </div>
             </div>
 
@@ -859,7 +855,7 @@
             <!-- Checkout Button -->
             <button class="btn-checkout" id="checkoutBtn">
                 <i class="fas fa-lock"></i> 
-                Proceed to Payment · <span id="checkoutTotal">$0.00</span>
+                Proceed to Payment · <span id="checkoutTotal">¢0.00</span>
             </button>
         </div>
     </div>
@@ -869,24 +865,6 @@
     ============================================================ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-
-            // ============================================================
-            // EMAILJS CONFIGURATION
-            // ============================================================
-            
-            // Initialize EmailJS with your public key
-            // Get your public key from: https://dashboard.emailjs.com/admin/account
-            (function initEmailJS() {
-                try {
-                    emailjs.init('cOvd1hfVAfHE41BoP');
-                    console.log('✅ EmailJS initialized successfully');
-                } catch (error) {
-                    console.error('❌ EmailJS initialization failed:', error);
-                }
-            })();
-
-            const EMAILJS_SERVICE_ID = 'service_06oupn7';
-            const EMAILJS_TEMPLATE_ID = 'template_0ccnpzh';
 
             // ============================================================
             // PROFILE DROPDOWN
@@ -990,7 +968,7 @@
             
             document.getElementById('receiptFilm').textContent = data.filmTitle;
             document.getElementById('receiptShowtime').textContent = `${data.screen} · ${data.showtime}`;
-            document.getElementById('receiptTickets').textContent = `${data.ticketQuantity} × $${data.ticketPrice.toFixed(2)}`;
+            document.getElementById('receiptTickets').textContent = `${data.ticketQuantity} × ¢${data.ticketPrice.toFixed(2)}`;
             document.getElementById('receiptSeats').textContent = seatString;
             
             // Show/hide seats row based on whether there are seats
@@ -1011,8 +989,8 @@
                 snacksRow.style.display = 'none';
             }
             
-            document.getElementById('receiptTotal').textContent = `$${grandTotal.toFixed(2)}`;
-            document.getElementById('checkoutTotal').textContent = `$${grandTotal.toFixed(2)}`;
+            document.getElementById('receiptTotal').textContent = `¢${grandTotal.toFixed(2)}`;
+            document.getElementById('checkoutTotal').textContent = `¢${grandTotal.toFixed(2)}`;
 
             // ============================================================
             // TOAST SYSTEM
@@ -1040,124 +1018,188 @@
             }
 
             // ============================================================
-            // EMAIL SENDING VIA EMAILJS WITH DEBUGGING
+            // EMAIL SENDING VIA LOCAL API - PORT 5000
             // ============================================================
             
-            function sendEmailViaEmailJS(email, bookingData) {
-                return new Promise((resolve, reject) => {
-                    const overlay = document.getElementById('emailOverlay');
-                    const icon = document.getElementById('emailIcon');
-                    const title = document.getElementById('emailTitle');
-                    const message = document.getElementById('emailMessage');
-                    const progressFill = document.getElementById('progressFill');
-                    const progressText = document.getElementById('progressText');
-                    const closeBtn = document.getElementById('closeOverlayBtn');
+            // API URL - Backend running on port 5000
+            const API_URL = 'http://localhost:5000/api/send-booking-email';
+            
+            async function sendEmailViaAPI(email, bookingData) {
+                const overlay = document.getElementById('emailOverlay');
+                const icon = document.getElementById('emailIcon');
+                const title = document.getElementById('emailTitle');
+                const message = document.getElementById('emailMessage');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                const closeBtn = document.getElementById('closeOverlayBtn');
 
-                    // Reset overlay
-                    overlay.classList.add('active');
-                    icon.className = 'email-icon sending';
-                    icon.textContent = '✉️';
-                    title.textContent = 'Sending Your Tickets';
-                    message.textContent = 'Preparing your tickets and sending them to your email...';
-                    progressFill.style.width = '0%';
-                    progressText.textContent = '0%';
-                    closeBtn.style.display = 'none';
+                // Reset overlay
+                overlay.classList.add('active');
+                icon.className = 'email-icon sending';
+                icon.textContent = '✉️';
+                title.textContent = 'Sending Your Tickets';
+                message.textContent = 'Preparing your tickets and sending them to your email...';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+                closeBtn.style.display = 'none';
 
-                    // Prepare email template parameters
-                    const templateParams = {
-                        to_email: email,
-                        customer_name: bookingData.customerName || 'Valued Customer',
-                        booking_ref: bookingData.bookingRef,
-                        film_title: bookingData.film,
-                        screen_showtime: bookingData.screen + ' · ' + bookingData.showtime,
-                        tickets: bookingData.tickets + ' × $' + bookingData.ticketPrice,
+                // Update progress to 30%
+                progressFill.style.width = '30%';
+                progressText.textContent = '30%';
+                message.textContent = 'Connecting to ticket service...';
+
+                try {
+                    // Prepare the request body
+                    const requestBody = {
+                        to: email,
+                        customerName: bookingData.customerName || 'Valued Customer',
+                        bookingRef: bookingData.bookingRef,
+                        film: bookingData.film,
+                        screen: bookingData.screen,
+                        showtime: bookingData.showtime,
                         seats: bookingData.seats,
+                        tickets: bookingData.tickets,
+                        ticketPrice: bookingData.ticketPrice,
                         snacks: bookingData.snacks || 'None',
                         total: bookingData.total,
                         venue: bookingData.venue || 'Savannah Mall, Accra, Ghana',
-                        booking_date: bookingData.timestamp || new Date().toLocaleString()
+                        timestamp: bookingData.timestamp || new Date().toLocaleString()
                     };
 
-                    console.log('📧 Sending email with params:', templateParams);
+                    console.log('📧 Sending email via API with data:', requestBody);
 
-                    // Update progress to 30% (preparing email)
-                    progressFill.style.width = '30%';
-                    progressText.textContent = '30%';
-                    message.textContent = 'Preparing your ticket details...';
+                    // Update progress to 60%
+                    progressFill.style.width = '60%';
+                    progressText.textContent = '60%';
+                    message.textContent = 'Generating your tickets...';
 
-                    // Send email via EmailJS
-                    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
-                        .then(function(response) {
-                            console.log('✅ Email sent successfully!', response);
-                            
-                            // Success - update overlay
-                            progressFill.style.width = '100%';
-                            progressText.textContent = '100%';
-                            icon.className = 'email-icon success';
-                            icon.textContent = '✅';
-                            title.textContent = 'Tickets Sent! 🎉';
-                            message.innerHTML = `
-                                Your tickets have been sent to <strong>${email}</strong>
-                                <br>Booking Reference: <strong>${bookingData.bookingRef}</strong>
-                                <br><br>
-                                <span style="font-size:13px;color:var(--paper-dim);">
-                                    Check your inbox (and spam folder) for the confirmation email.
-                                </span>
-                            `;
-                            closeBtn.style.display = 'inline-block';
-                            
-                            resolve({ success: true, email: email, response: response });
-                        })
-                        .catch(function(error) {
-                            console.error('❌ Email sending failed:', error);
-                            console.error('Error details:', {
-                                text: error.text || 'No error text',
-                                status: error.status || 'No status',
-                                message: error.message || 'No message'
-                            });
-                            
-                            // Error - update overlay
-                            progressFill.style.width = '100%';
-                            progressText.textContent = 'Failed';
-                            icon.className = 'email-icon error';
-                            icon.textContent = '❌';
-                            title.textContent = 'Something Went Wrong';
-                            
-                            // Show specific error message
-                            let errorMessage = '';
-                            if (error.text && error.text.includes('template')) {
-                                errorMessage = 'Email template not found. Please check your template ID.';
-                            } else if (error.text && error.text.includes('service')) {
-                                errorMessage = 'Email service not found. Please check your service ID.';
-                            } else if (error.text && error.text.includes('invalid')) {
-                                errorMessage = 'Invalid email address. Please enter a valid email.';
-                            } else if (error.status === 403) {
-                                errorMessage = 'Authentication failed. Please check your public key.';
-                            } else {
-                                errorMessage = error.text || 'Please check your email address and try again.';
-                            }
-                            
-                            message.innerHTML = `
-                                We couldn't send the email to <strong>${email}</strong>.
-                                <br><br>
-                                <span style="font-size:13px;color:var(--paper-dim);">
-                                    <strong>Error:</strong> ${errorMessage}
-                                    <br><br>
-                                    Please check your email address and try again.
-                                    <br>
-                                    You can also contact our support team for assistance.
-                                </span>
-                            `;
-                            closeBtn.style.display = 'inline-block';
-                            closeBtn.textContent = 'Try Again';
-                            
-                            reject({ success: false, error: error });
+                    // Send the request with timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(requestBody),
+                            signal: controller.signal
                         });
-                });
+
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) {
+                            const text = await response.text();
+                            console.error('Server response:', text);
+                            
+                            let errorMessage = `Server error: ${response.status}`;
+                            try {
+                                const json = JSON.parse(text);
+                                errorMessage = json.message || errorMessage;
+                            } catch (e) {
+                                if (text.includes('<html') || text.includes('<!DOCTYPE')) {
+                                    errorMessage = 'The server returned an error page. Please make sure the backend server is running correctly.';
+                                } else if (text) {
+                                    errorMessage = text.substring(0, 100);
+                                }
+                            }
+                            throw new Error(errorMessage);
+                        }
+
+                        const result = await response.json();
+
+                        // Update progress to 90%
+                        progressFill.style.width = '90%';
+                        progressText.textContent = '90%';
+                        message.textContent = 'Finalizing your booking...';
+
+                        if (!result.success) {
+                            throw new Error(result.message || 'Email sending failed');
+                        }
+
+                        // Success
+                        progressFill.style.width = '100%';
+                        progressText.textContent = '100%';
+                        icon.className = 'email-icon success';
+                        icon.textContent = '✅';
+                        title.textContent = 'Tickets Sent! 🎉';
+                        message.innerHTML = `
+                            Your tickets have been sent to <strong>${email}</strong>
+                            <br>Booking Reference: <strong>${bookingData.bookingRef}</strong>
+                            <br><br>
+                            <span style="font-size:13px;color:var(--paper-dim);">
+                                Check your inbox (and spam folder) for the confirmation email.
+                                <br>
+                                <strong>Ticket Email:</strong> ${result.message || 'Confirmation sent'}
+                            </span>
+                        `;
+                        closeBtn.style.display = 'inline-block';
+                        
+                        console.log('✅ Email sent successfully!', result);
+                        return { success: true, result: result };
+
+                    } catch (fetchError) {
+                        clearTimeout(timeoutId);
+                        throw fetchError;
+                    }
+
+                } catch (error) {
+                    console.error('❌ Email sending failed:', error);
+                    
+                    let errorMessage = error.message || 'Unknown error occurred';
+                    let userFriendlyMessage = '';
+                    
+                    if (error.name === 'AbortError') {
+                        userFriendlyMessage = 'The request timed out. The server might be slow or not responding.';
+                    } else if (error.message.includes('Failed to fetch')) {
+                        userFriendlyMessage = 'Could not connect to the ticket service. Please make sure the backend server is running on port 5000.';
+                    } else if (error.message.includes('ECONNREFUSED')) {
+                        userFriendlyMessage = 'The server is not running on port 5000. Please start the backend server.';
+                    } else if (error.message.includes('404')) {
+                        userFriendlyMessage = 'The API endpoint was not found. Please check the server configuration.';
+                    } else if (error.message.includes('500')) {
+                        userFriendlyMessage = 'The server encountered an error. Please check the server logs.';
+                    } else if (error.message.includes('Unexpected token')) {
+                        userFriendlyMessage = 'The server returned an invalid response. Make sure the API is returning JSON.';
+                    } else {
+                        userFriendlyMessage = errorMessage;
+                    }
+                    
+                    progressFill.style.width = '100%';
+                    progressText.textContent = 'Failed';
+                    icon.className = 'email-icon error';
+                    icon.textContent = '❌';
+                    title.textContent = 'Something Went Wrong';
+                    
+                    message.innerHTML = `
+                        We couldn't send the email to <strong>${email}</strong>.
+                        <br><br>
+                        <span style="font-size:13px;color:var(--paper-dim);">
+                            <strong>Error:</strong> ${userFriendlyMessage}
+                            <br><br>
+                            <strong>💡 Troubleshooting Tips:</strong>
+                            <br>
+                            • Make sure your backend server is running on <code style="background:var(--ink);padding:2px 6px;border-radius:4px;">http://localhost:5000</code>
+                            <br>
+                            • Run: <code style="background:var(--ink);padding:2px 6px;border-radius:4px;">node server.js</code> in your backend folder
+                            <br>
+                            • Check that the API endpoint is <code style="background:var(--ink);padding:2px 6px;border-radius:4px;">/api/send-booking-email</code>
+                            <br>
+                            • Verify your Gmail credentials in the .env file
+                            <br><br>
+                            You can also contact our support team for assistance.
+                        </span>
+                    `;
+                    closeBtn.style.display = 'inline-block';
+                    closeBtn.textContent = 'Try Again';
+                    
+                    throw error;
+                }
             }
 
             // ============================================================
-            // CHECKOUT BUTTON - WITH EMAILJS INTEGRATION
+            // CHECKOUT BUTTON - WITH LOCAL API INTEGRATION
             // ============================================================
             
             document.getElementById('checkoutBtn').addEventListener('click', function() {
@@ -1193,7 +1235,7 @@
                     tickets: data.ticketQuantity,
                     ticketPrice: data.ticketPrice.toFixed(2),
                     snacks: snackString,
-                    total: '$' + grandTotal.toFixed(2),
+                    total: '¢' + grandTotal.toFixed(2),
                     venue: 'Savannah Mall, Accra, Ghana',
                     timestamp: new Date().toLocaleString()
                 };
@@ -1201,32 +1243,28 @@
                 // Show toast
                 showToast('Processing payment and sending tickets...', 'info');
 
-                // Simulate payment processing then send email
-                setTimeout(() => {
-                    // Send email via EmailJS
-                    sendEmailViaEmailJS(email, bookingDataForEmail)
-                        .then((result) => {
-                            showToast('✅ Tickets sent to ' + email, 'success');
-                            
-                            // Reset button
-                            document.getElementById('checkoutBtn').disabled = false;
-                            document.getElementById('checkoutBtn').innerHTML = `
-                                <i class="fas fa-lock"></i> 
-                                Proceed to Payment · <span id="checkoutTotal">$${grandTotal.toFixed(2)}</span>
-                            `;
-                        })
-                        .catch((error) => {
-                            showToast('❌ Failed to send email. Please try again.', 'error');
-                            
-                            // Reset button
-                            document.getElementById('checkoutBtn').disabled = false;
-                            document.getElementById('checkoutBtn').innerHTML = `
-                                <i class="fas fa-lock"></i> 
-                                Proceed to Payment · <span id="checkoutTotal">$${grandTotal.toFixed(2)}</span>
-                            `;
-                        });
-                    
-                }, 1500);
+                // Send email via local API
+                sendEmailViaAPI(email, bookingDataForEmail)
+                    .then((result) => {
+                        showToast('✅ Tickets sent to ' + email, 'success');
+                        
+                        // Reset button
+                        document.getElementById('checkoutBtn').disabled = false;
+                        document.getElementById('checkoutBtn').innerHTML = `
+                            <i class="fas fa-lock"></i> 
+                            Proceed to Payment · <span id="checkoutTotal">¢${grandTotal.toFixed(2)}</span>
+                        `;
+                    })
+                    .catch((error) => {
+                        showToast('❌ Failed to send email. Please try again.', 'error');
+                        
+                        // Reset button
+                        document.getElementById('checkoutBtn').disabled = false;
+                        document.getElementById('checkoutBtn').innerHTML = `
+                            <i class="fas fa-lock"></i> 
+                            Proceed to Payment · <span id="checkoutTotal">¢${grandTotal.toFixed(2)}</span>
+                        `;
+                    });
             });
 
             // ============================================================
@@ -1286,15 +1324,6 @@
                     document.getElementById('checkoutBtn').click();
                 }
             });
-
-            // ============================================================
-            // CHECK EMAILJS CONFIGURATION ON LOAD
-            // ============================================================
-            
-            console.log('🔧 EmailJS Configuration:');
-            console.log('📧 Service ID:', EMAILJS_SERVICE_ID);
-            console.log('📋 Template ID:', EMAILJS_TEMPLATE_ID);
-            console.log('🔑 Public Key: cOvd1hfVAfHE41BoP');
 
         });
     </script>
