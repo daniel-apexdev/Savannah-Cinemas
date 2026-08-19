@@ -555,7 +555,6 @@
                 dropdownName.textContent = user.name;
                 settingsName.textContent = user.name;
                 settingsEmail.textContent = user.email;
-                // Use the createdAt date from the user object
                 const joinYear = user.createdAt ? new Date(user.createdAt).getFullYear() : new Date().getFullYear();
                 document.getElementById('profileMemberSince').textContent = `Member since ${joinYear} · Savannah Cinemas`;
             }
@@ -566,27 +565,105 @@
 
             async function fetchWatchlist() {
                 try {
+                    console.log('🔍 Fetching watchlist from:', `${API_BASE}/watchlist`);
+                    console.log('🔑 Token:', token);
+                    
                     const res = await fetch(`${API_BASE}/watchlist`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
                     });
-                    if (!res.ok) throw new Error('Failed to fetch watchlist');
+                    
+                    console.log('📡 Response status:', res.status);
+                    
+                    if (!res.ok) {
+                        console.error('❌ Failed to fetch watchlist:', res.status);
+                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    }
+                    
                     const data = await res.json();
-                    watchlist = data.map(item => ({
-                        id: item.filmId,
-                        title: item.title || 'Untitled',
-                        year: item.year || '',
-                        rating: item.rating || 0,
-                        poster: item.poster || 'https://via.placeholder.com/200x300?text=No+Poster',
-                        watched: item.watched || false,
-                        favorite: item.favorite || false,
-                        watchedDate: item.watchedDate || null,
-                        addedDate: item.addedDate || new Date().toISOString()
-                    }));
+                    console.log('📦 Raw watchlist data:', data);
+                    console.log('📊 Data type:', typeof data);
+                    
+                    // Handle different response formats
+                    let watchlistData = [];
+                    
+                    // Check if data is an array
+                    if (Array.isArray(data)) {
+                        watchlistData = data;
+                        console.log('✅ Data is an array with', data.length, 'items');
+                    } 
+                    // Check if data has a 'watchlist' property that is an array
+                    else if (data && data.watchlist && Array.isArray(data.watchlist)) {
+                        watchlistData = data.watchlist;
+                        console.log('✅ Data has watchlist array with', data.watchlist.length, 'items');
+                    }
+                    // Check if data has a 'data' property that is an array
+                    else if (data && data.data && Array.isArray(data.data)) {
+                        watchlistData = data.data;
+                        console.log('✅ Data has data array with', data.data.length, 'items');
+                    }
+                    // Check if data has a 'films' property that is an array
+                    else if (data && data.films && Array.isArray(data.films)) {
+                        watchlistData = data.films;
+                        console.log('✅ Data has films array with', data.films.length, 'items');
+                    }
+                    // If data is an object with numeric keys, convert to array
+                    else if (data && typeof data === 'object' && !Array.isArray(data)) {
+                        const values = Object.values(data);
+                        // Check if values are objects that look like watchlist items
+                        if (values.length > 0 && values.every(v => typeof v === 'object' && v !== null)) {
+                            watchlistData = values;
+                            console.log('✅ Converted object to array with', values.length, 'items');
+                        } else {
+                            console.warn('⚠️ Data is an object but values are not watchlist items');
+                            // Try to find any array property
+                            for (const key in data) {
+                                if (Array.isArray(data[key])) {
+                                    watchlistData = data[key];
+                                    console.log(`✅ Found array in property "${key}" with`, data[key].length, 'items');
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log('📊 Final watchlist data:', watchlistData);
+                    console.log('📊 Number of items:', watchlistData.length);
+                    
+                    // Map the data to the expected format
+                    watchlist = watchlistData.map(item => {
+                        console.log('🔄 Processing item:', item);
+                        return {
+                            id: item.filmId || item.id || item._id,
+                            title: item.title || 'Untitled',
+                            year: item.year || '',
+                            rating: item.rating || 0,
+                            poster: item.poster || 'https://via.placeholder.com/200x300?text=No+Poster',
+                            watched: item.watched || false,
+                            favorite: item.favorite || false,
+                            watchedDate: item.watchedDate || null,
+                            addedDate: item.addedDate || new Date().toISOString()
+                        };
+                    });
+                    
+                    console.log('✅ Mapped watchlist:', watchlist);
+                    console.log('📊 Final watchlist length:', watchlist.length);
+                    
                     renderWatchlist();
                     updateStats();
                 } catch (err) {
-                    console.error(err);
-                    watchlistGrid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Could not load watchlist. Try adding some films.</p></div>`;
+                    console.error('❌ Fetch watchlist error:', err);
+                    watchlistGrid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Could not load watchlist. Error: ${err.message}</p>
+                            <p style="font-size:12px;margin-top:8px;color:var(--paper-dim);">
+                                Make sure the backend server is running at ${API_BASE}
+                            </p>
+                        </div>
+                    `;
                 }
             }
 
@@ -595,6 +672,8 @@
 
             function getFilteredAndSorted() {
                 let films = [...watchlist];
+                console.log('🔍 Filtering films, total:', films.length);
+                
                 if (currentFilter.status === 'watched') films = films.filter(f => f.watched);
                 else if (currentFilter.status === 'unwatched') films = films.filter(f => !f.watched);
                 else if (currentFilter.status === 'favorites') films = films.filter(f => f.favorite);
@@ -611,15 +690,26 @@
 
             function renderWatchlist() {
                 const films = getFilteredAndSorted();
+                console.log('🎬 Rendering films, count:', films.length);
+                
                 if (!films.length) {
-                    watchlistGrid.innerHTML = `<div class="empty-state"><i class="fas fa-list"></i><p>Your watchlist is empty. Add films from the discovery page!</p></div>`;
+                    watchlistGrid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-list"></i>
+                            <p>Your watchlist is empty. Add films from the movie details page!</p>
+                        </div>
+                    `;
                     return;
                 }
+                
+                console.log('🎬 First film:', films[0]);
+                
                 watchlistGrid.innerHTML = films.map(film => {
                     const watchedClass = film.watched ? 'watched' : '';
                     const favoritedClass = film.favorite ? 'favorited' : '';
                     const statusBadge = film.watched ? `<span class="status-badge watched">✓</span>` : `<span class="status-badge watchlist">⏳</span>`;
                     const favoriteIcon = film.favorite ? 'fas fa-heart' : 'far fa-heart';
+                    
                     return `
                         <div class="watchlist-card ${watchedClass} ${favoritedClass}" data-id="${film.id}">
                             <div class="poster" style="background-image: url('${film.poster}');">
@@ -698,11 +788,14 @@
             // ===================== FETCH BOOKINGS =====================
             async function fetchBookings() {
                 try {
+                    console.log('🔍 Fetching bookings from:', `${API_BASE}/bookings`);
                     const res = await fetch(`${API_BASE}/bookings`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (!res.ok) throw new Error('Failed to fetch bookings');
                     const bookings = await res.json();
+                    console.log('📦 Bookings data:', bookings);
+                    
                     if (!bookings.length) {
                         bookingList.innerHTML = `<div class="empty-state"><i class="fas fa-ticket-alt"></i><p>You haven't made any bookings yet. Book your first ticket!</p></div>`;
                         return;
@@ -730,9 +823,8 @@
                 const favorites = watchlist.filter(f => f.favorite).length;
                 
                 statWatched.textContent = watched;
-                statWatchlist.textContent = total - watched;
+                statWatchlist.textContent = total;
                 statFavorites.textContent = favorites;
-                // Placeholder for genres (could be fetched from backend)
                 statGenres.textContent = '0';
                 dropdownStat.textContent = `${watched} films watched`;
 
@@ -749,8 +841,8 @@
                         <div class="stat-card"><div class="stat-number">${watched}</div><div class="stat-label">Films Watched</div></div>
                         <div class="stat-card"><div class="stat-number">${total - watched}</div><div class="stat-label">To Watch</div></div>
                         <div class="stat-card"><div class="stat-number">${favorites}</div><div class="stat-label">Favorites</div></div>
+                        <div class="stat-card"><div class="stat-number">${total}</div><div class="stat-label">Total in Watchlist</div></div>
                         <div class="stat-card"><div class="stat-number">0</div><div class="stat-label">Genres Explored</div></div>
-                        <div class="stat-card"><div class="stat-number">0</div><div class="stat-label">Countries</div></div>
                         <div class="stat-card"><div class="stat-number">0</div><div class="stat-label">Avg Rating</div></div>
                     `;
                 }
@@ -835,6 +927,7 @@
             });
 
             // ===================== INIT =====================
+            console.log('🚀 Profile page initialized');
             fetchWatchlist();
             fetchBookings();
         });
