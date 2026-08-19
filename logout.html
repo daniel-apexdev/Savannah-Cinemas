@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Out — Savannah Cinemas</title>
+    <title>Sign In — Savannah Cinemas</title>
     
     <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -77,8 +77,8 @@
             color: var(--gold);
         }
 
-        /* ---------- LOGOUT CONTAINER ---------- */
-        .logout-container {
+        /* ---------- AUTH CONTAINER ---------- */
+        .auth-container {
             flex: 1;
             display: flex;
             align-items: center;
@@ -87,7 +87,7 @@
             min-height: calc(100vh - 80px);
         }
 
-        .logout-card {
+        .auth-card {
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-md);
@@ -108,17 +108,13 @@
             }
         }
 
-        .logout-card .logout-icon {
+        .auth-card .auth-icon {
             text-align: center;
             font-size: clamp(48px, 5vw, 64px);
             margin-bottom: 8px;
         }
 
-        .logout-card .logout-icon.logged-out {
-            color: var(--gold);
-        }
-
-        .logout-card .logout-title {
+        .auth-card .auth-title {
             font-family: var(--font-display);
             font-size: clamp(24px, 3vw, 32px);
             font-weight: 500;
@@ -127,33 +123,12 @@
             margin-bottom: 4px;
         }
 
-        .logout-card .logout-subtitle {
+        .auth-card .auth-subtitle {
             font-size: clamp(14px, 1vw, 16px);
             color: var(--paper-dim);
             font-weight: 300;
             text-align: center;
             margin-bottom: 24px;
-        }
-
-        .logout-card .logout-message {
-            background: var(--ink);
-            border: 1px solid var(--ink-line);
-            border-radius: var(--radius-sm);
-            padding: 16px 20px;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .logout-card .logout-message p {
-            font-size: clamp(14px, 1vw, 16px);
-            color: var(--paper-dim);
-            font-weight: 300;
-            line-height: 1.6;
-        }
-
-        .logout-card .logout-message p strong {
-            color: var(--gold);
-            font-weight: 500;
         }
 
         /* ---------- TABS ---------- */
@@ -321,6 +296,14 @@
             transform: scale(0.97);
         }
 
+        .auth-btn:disabled {
+            background: var(--ink-line);
+            color: var(--paper-dim);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .auth-btn.google-btn {
             background: transparent;
             border: 1px solid var(--ink-line);
@@ -377,94 +360,55 @@
             color: #f0c369;
         }
 
-        /* ---------- SUCCESS MESSAGE ---------- */
-        .success-message {
-            display: none;
-            text-align: center;
-            padding: 20px 0;
-        }
-
-        .success-message.show {
-            display: block;
-            animation: fadeInUp 0.5s ease;
-        }
-
-        .success-message .success-icon {
-            font-size: clamp(48px, 5vw, 64px);
-            color: var(--success);
-            margin-bottom: 8px;
-        }
-
-        .success-message .success-title {
-            font-family: var(--font-display);
-            font-size: clamp(20px, 2vw, 28px);
-            font-weight: 500;
-            color: var(--paper);
-            margin-bottom: 4px;
-        }
-
-        .success-message .success-desc {
-            font-size: clamp(14px, 1vw, 16px);
-            color: var(--paper-dim);
-            font-weight: 300;
-            margin-bottom: 20px;
-        }
-
-        .success-message .btn-continue {
-            padding: 12px 32px;
-            background: var(--gold);
-            color: var(--ink);
-            border: none;
-            border-radius: var(--radius-sm);
-            font-family: var(--font-body);
-            font-size: clamp(14px, 1vw, 16px);
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            min-height: var(--touch-target);
-        }
-
-        .success-message .btn-continue:hover {
-            background: #f0c369;
-            transform: translateY(-2px);
-        }
-
-        /* ---------- FOOTER ---------- */
-        .footer {
+        /* ---------- TOAST ---------- */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
             background: var(--ink-raised);
-            border-top: 1px solid var(--ink-line);
-            padding: clamp(24px, 3vh, 40px) var(--container-padding) 0;
-        }
-
-        .footer-bottom {
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: 14px 24px;
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 0.9vw, 16px);
+            font-weight: 400;
+            z-index: 3000;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
             gap: 12px;
-            padding: 16px 0 24px;
-            font-family: var(--font-mono);
-            font-size: clamp(11px, 0.8vw, 13px);
-            color: var(--paper-dim);
-            font-weight: 300;
+            max-width: 90%;
         }
 
-        .footer-bottom .legal a {
-            color: var(--paper-dim);
-            text-decoration: none;
-            margin-left: 20px;
-            transition: 0.3s ease;
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
 
-        .footer-bottom .legal a:hover {
+        .toast .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast .toast-icon.success {
+            color: var(--success);
+        }
+
+        .toast .toast-icon.error {
+            color: var(--rust);
+        }
+
+        .toast .toast-icon.info {
             color: var(--gold);
         }
 
         /* ---------- RESPONSIVE ---------- */
         @media (max-width: 480px) {
-            .logout-card {
+            .auth-card {
                 padding: 24px;
             }
 
@@ -475,15 +419,6 @@
 
             .auth-btn.google-btn {
                 font-size: 13px;
-            }
-
-            .footer-bottom {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .footer-bottom .legal a {
-                margin: 0 10px;
             }
         }
 
@@ -510,30 +445,24 @@
 <body>
 
     <!-- ============================================================
-    NAVIGATION
+    TOAST NOTIFICATION
     ============================================================ -->
-    <nav class="nav">
-        <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
-    </nav>
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✅</span>
+        <span id="toastMessage">Success!</span>
+    </div>
 
     <!-- ============================================================
-    LOGOUT / AUTH CONTAINER
+    AUTH CONTAINER
     ============================================================ -->
-    <div class="logout-container">
-        <div class="logout-card" id="authCard">
+    <div class="auth-container">
+        <div class="auth-card" id="authCard">
 
-            <!-- Logged Out State -->
-            <div id="loggedOutState">
-                <div class="logout-icon logged-out">👋</div>
-                <h1 class="logout-title">You're Signed Out</h1>
-                <p class="logout-subtitle">Sign back in to access your account</p>
+            <!-- Header -->
+            <h1 class="auth-title">Welcome</h1>
+            <p class="auth-subtitle">Sign in to continue your cinema experience</p>
 
-                <div class="logout-message">
-                    <p>You have been successfully signed out of <strong>Savannah Cinemas</strong>.</p>
-                </div>
-            </div>
-
-            <!-- Auth Tabs -->
+            <!-- Tabs -->
             <div class="auth-tabs">
                 <button class="tab-btn active" data-tab="signin" id="tabSignin">Sign In</button>
                 <button class="tab-btn" data-tab="signup" id="tabSignup">Sign Up</button>
@@ -551,15 +480,15 @@
                 </div>
                 <div class="form-options">
                     <label>
-                        <input type="checkbox" checked> Remember me
+                        <input type="checkbox" id="rememberMe" checked> Remember me
                     </label>
-                    <a href="#">Forgot password?</a>
+                    <a href="#" id="forgotPassword">Forgot password?</a>
                 </div>
                 <button class="auth-btn" id="signinBtn">Sign In</button>
 
                 <div class="auth-divider">or continue with</div>
 
-                <button class="auth-btn google-btn">
+                <button class="auth-btn google-btn" id="googleSignin">
                     <i class="fab fa-google"></i> Sign in with Google
                 </button>
 
@@ -590,14 +519,14 @@
                 </div>
                 <div class="form-options">
                     <label>
-                        <input type="checkbox" required> I agree to the <a href="#" style="color:var(--gold);">Terms & Conditions</a>
+                        <input type="checkbox" id="termsCheck" required> I agree to the <a href="#" style="color:var(--gold);">Terms & Conditions</a>
                     </label>
                 </div>
                 <button class="auth-btn" id="signupBtn">Create Account</button>
 
                 <div class="auth-divider">or continue with</div>
 
-                <button class="auth-btn google-btn">
+                <button class="auth-btn google-btn" id="googleSignup">
                     <i class="fab fa-google"></i> Sign up with Google
                 </button>
 
@@ -606,27 +535,19 @@
                 </div>
             </div>
 
-            <!-- Success Message -->
-            <div class="success-message" id="successMessage">
-                <div class="success-icon">✅</div>
-                <div class="success-title" id="successTitle">Welcome back!</div>
-                <div class="success-desc" id="successDesc">You have successfully signed in to Savannah Cinemas.</div>
-                <a href="index.html" class="btn-continue">Continue to Home</a>
-            </div>
-
         </div>
     </div>
 
     <!-- ============================================================
     FOOTER
     ============================================================ -->
-    <footer class="footer">
-        <div class="footer-bottom">
+    <footer class="footer" style="background:var(--ink-raised);border-top:1px solid var(--ink-line);padding:clamp(24px,3vh,40px) var(--container-padding) 0;">
+        <div class="footer-bottom" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:16px 0 24px;font-family:var(--font-mono);font-size:clamp(11px,0.8vw,13px);color:var(--paper-dim);font-weight:300;">
             <span>© 2026 Savannah Cinemas</span>
             <span class="legal">
-                <a href="privacy.html">Privacy</a>
-                <a href="terms.html">Terms</a>
-                <a href="accessibility.html">Accessibility</a>
+                <a href="privacy.html" style="color:var(--paper-dim);text-decoration:none;margin-left:20px;transition:0.3s ease;">Privacy</a>
+                <a href="terms.html" style="color:var(--paper-dim);text-decoration:none;margin-left:20px;transition:0.3s ease;">Terms</a>
+                <a href="accessibility.html" style="color:var(--paper-dim);text-decoration:none;margin-left:20px;transition:0.3s ease;">Accessibility</a>
             </span>
         </div>
     </footer>
@@ -636,6 +557,12 @@
     ============================================================ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+
+            // ============================================================
+            // API CONFIGURATION
+            // ============================================================
+            
+            const API_URL = 'http://localhost:5000/api';
 
             // ============================================================
             // DOM REFS
@@ -649,17 +576,48 @@
             const switchToSignin = document.getElementById('switchToSignin');
             const signinBtn = document.getElementById('signinBtn');
             const signupBtn = document.getElementById('signupBtn');
-            const successMessage = document.getElementById('successMessage');
-            const successTitle = document.getElementById('successTitle');
-            const successDesc = document.getElementById('successDesc');
-            const authCard = document.getElementById('authCard');
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+            const signinEmail = document.getElementById('signinEmail');
+            const signinPassword = document.getElementById('signinPassword');
+            const signupName = document.getElementById('signupName');
+            const signupEmail = document.getElementById('signupEmail');
+            const signupPassword = document.getElementById('signupPassword');
+            const signupConfirm = document.getElementById('signupConfirm');
+            const termsCheck = document.getElementById('termsCheck');
+            const rememberMe = document.getElementById('rememberMe');
+
+            // ============================================================
+            // TOAST SYSTEM
+            // ============================================================
+            
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                const iconMap = {
+                    success: '✅',
+                    error: '❌',
+                    info: 'ℹ️'
+                };
+                
+                toastIcon.textContent = iconMap[type] || 'ℹ️';
+                toastIcon.className = `toast-icon ${type}`;
+                toastMessage.textContent = message;
+                
+                toast.classList.add('show');
+                
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            }
 
             // ============================================================
             // TAB SWITCHING
             // ============================================================
             
             function switchTab(tab) {
-                // Update tabs
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
@@ -674,108 +632,180 @@
                     signinForm.classList.remove('active');
                 }
                 
-                // Hide success message if visible
-                successMessage.classList.remove('show');
-                
-                // Show forms
-                document.querySelectorAll('.auth-form').forEach(form => {
-                    form.style.display = '';
+                // Clear any previous errors
+                document.querySelectorAll('.form-group input').forEach(input => {
+                    input.style.borderColor = '';
                 });
             }
 
-            tabSignin.addEventListener('click', function() {
-                switchTab('signin');
-            });
+            tabSignin.addEventListener('click', () => switchTab('signin'));
+            tabSignup.addEventListener('click', () => switchTab('signup'));
+            switchToSignup.addEventListener('click', (e) => { e.preventDefault(); switchTab('signup'); });
+            switchToSignin.addEventListener('click', (e) => { e.preventDefault(); switchTab('signin'); });
 
-            tabSignup.addEventListener('click', function() {
-                switchTab('signup');
-            });
+            // ============================================================
+            // VALIDATION HELPERS
+            // ============================================================
+            
+            function isValidEmail(email) {
+                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return re.test(email);
+            }
 
-            switchToSignup.addEventListener('click', function(e) {
-                e.preventDefault();
-                switchTab('signup');
-            });
-
-            switchToSignin.addEventListener('click', function(e) {
-                e.preventDefault();
-                switchTab('signin');
-            });
+            function showFieldError(input) {
+                input.style.borderColor = 'var(--rust)';
+                setTimeout(() => {
+                    input.style.borderColor = '';
+                }, 3000);
+            }
 
             // ============================================================
             // SIGN IN
             // ============================================================
             
-            signinBtn.addEventListener('click', function(e) {
+            signinBtn.addEventListener('click', async function(e) {
                 e.preventDefault();
-                const email = document.getElementById('signinEmail').value.trim();
-                const password = document.getElementById('signinPassword').value.trim();
+                
+                const email = signinEmail.value.trim();
+                const password = signinPassword.value.trim();
 
                 if (!email || !password) {
-                    alert('Please fill in all fields.');
+                    showToast('Please fill in all fields', 'error');
+                    if (!email) showFieldError(signinEmail);
+                    if (!password) showFieldError(signinPassword);
                     return;
                 }
 
-                // Simulate sign in
-                showSuccess('Welcome back!', 'You have successfully signed in to Savannah Cinemas.');
+                if (!isValidEmail(email)) {
+                    showToast('Please enter a valid email address', 'error');
+                    showFieldError(signinEmail);
+                    return;
+                }
+
+                // Disable button
+                this.disabled = true;
+                this.textContent = 'Signing in...';
+
+                try {
+                    const response = await fetch(`${API_URL}/auth/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Login failed');
+                    }
+
+                    // Save token and user data
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    if (rememberMe.checked) {
+                        localStorage.setItem('rememberMe', 'true');
+                    }
+
+                    showToast('Welcome back! Redirecting...', 'success');
+
+                    // Redirect to home after short delay
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showToast(error.message || 'Login failed. Please try again.', 'error');
+                    this.disabled = false;
+                    this.textContent = 'Sign In';
+                }
             });
 
             // ============================================================
             // SIGN UP
             // ============================================================
             
-            signupBtn.addEventListener('click', function(e) {
+            signupBtn.addEventListener('click', async function(e) {
                 e.preventDefault();
-                const name = document.getElementById('signupName').value.trim();
-                const email = document.getElementById('signupEmail').value.trim();
-                const password = document.getElementById('signupPassword').value;
-                const confirm = document.getElementById('signupConfirm').value;
-                const terms = document.querySelector('#signupForm input[type="checkbox"]');
+                
+                const name = signupName.value.trim();
+                const email = signupEmail.value.trim();
+                const password = signupPassword.value;
+                const confirm = signupConfirm.value;
 
+                // Validation
                 if (!name || !email || !password || !confirm) {
-                    alert('Please fill in all fields.');
+                    showToast('Please fill in all fields', 'error');
+                    if (!name) showFieldError(signupName);
+                    if (!email) showFieldError(signupEmail);
+                    if (!password) showFieldError(signupPassword);
+                    if (!confirm) showFieldError(signupConfirm);
+                    return;
+                }
+
+                if (!isValidEmail(email)) {
+                    showToast('Please enter a valid email address', 'error');
+                    showFieldError(signupEmail);
                     return;
                 }
 
                 if (password.length < 8) {
-                    alert('Password must be at least 8 characters long.');
+                    showToast('Password must be at least 8 characters', 'error');
+                    showFieldError(signupPassword);
                     return;
                 }
 
                 if (password !== confirm) {
-                    alert('Passwords do not match.');
+                    showToast('Passwords do not match', 'error');
+                    showFieldError(signupConfirm);
                     return;
                 }
 
-                if (!terms.checked) {
-                    alert('Please agree to the Terms & Conditions.');
+                if (!termsCheck.checked) {
+                    showToast('Please agree to the Terms & Conditions', 'error');
                     return;
                 }
 
-                // Simulate sign up
-                showSuccess('Account Created!', 'Welcome to Savannah Cinemas! Your account has been successfully created.');
+                // Disable button
+                this.disabled = true;
+                this.textContent = 'Creating account...';
+
+                try {
+                    const response = await fetch(`${API_URL}/auth/register`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ name, email, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Registration failed');
+                    }
+
+                    // Save token and user data
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+
+                    showToast('Account created successfully! 🎉', 'success');
+
+                    // Redirect to home after short delay
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    showToast(error.message || 'Registration failed. Please try again.', 'error');
+                    this.disabled = false;
+                    this.textContent = 'Create Account';
+                }
             });
-
-            // ============================================================
-            // SUCCESS MESSAGE
-            // ============================================================
-            
-            function showSuccess(title, desc) {
-                // Hide forms and tabs
-                document.querySelectorAll('.auth-form').forEach(form => {
-                    form.style.display = 'none';
-                });
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.style.display = 'none';
-                });
-                
-                // Hide logged out state
-                document.getElementById('loggedOutState').style.display = 'none';
-                
-                // Show success
-                successTitle.textContent = title;
-                successDesc.textContent = desc;
-                successMessage.classList.add('show');
-            }
 
             // ============================================================
             // ENTER KEY SUPPORT
@@ -795,20 +825,45 @@
             // GOOGLE BUTTONS
             // ============================================================
             
-            document.querySelectorAll('.google-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    alert('Google authentication would be handled here.');
-                });
+            document.getElementById('googleSignin').addEventListener('click', function() {
+                showToast('Google authentication coming soon!', 'info');
+            });
+
+            document.getElementById('googleSignup').addEventListener('click', function() {
+                showToast('Google authentication coming soon!', 'info');
             });
 
             // ============================================================
             // FORGOT PASSWORD
             // ============================================================
             
-            document.querySelector('.form-options a[href="#"]').addEventListener('click', function(e) {
+            document.getElementById('forgotPassword').addEventListener('click', function(e) {
                 e.preventDefault();
-                alert('Password reset link would be sent to your email.');
+                showToast('Password reset link will be sent to your email.', 'info');
             });
+
+            // ============================================================
+            // AUTO-FILL REMEMBER ME
+            // ============================================================
+            
+            // Check if user was previously logged in
+            const remembered = localStorage.getItem('rememberMe');
+            if (remembered === 'true') {
+                // You could auto-fill the email if you stored it
+                // This is a security decision - we'll leave it empty for security
+            }
+
+            // ============================================================
+            // CHECK IF ALREADY LOGGED IN
+            // ============================================================
+            
+            const token = localStorage.getItem('token');
+            if (token) {
+                // User is already logged in, redirect to home
+                // But we'll let them stay on the page if they want to switch accounts
+                // You can uncomment the line below to auto-redirect
+                // window.location.href = 'index.html';
+            }
 
         });
     </script>
