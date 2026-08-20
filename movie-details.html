@@ -1607,7 +1607,7 @@
                 API_KEY: 'a0b31df2c8c2865ebe236c9e1eb7cbd9',
                 IMAGE_BASE: 'https://image.tmdb.org/t/p/w500',
                 BACKDROP_BASE: 'https://image.tmdb.org/t/p/original',
-                BACKEND_API: 'http://10.20.10.150:5000/api'
+                BACKEND_API: `http://${SERVER_IP}:${SERVER_PORT}/api`
             };
 
             const token = localStorage.getItem('token');
@@ -2413,6 +2413,6 @@
 
         })();
     </script>
-
+    <script src="backend/config.js"></script>
 </body>
 </html>

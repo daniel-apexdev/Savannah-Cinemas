@@ -778,7 +778,7 @@
 </div>
 
 <script>
-    const API_URL = 'http://10.20.10.150:5000/api';
+    const API_URL = `http://${SERVER_IP}:${SERVER_PORT}/api`;
     const AUTH_TOKEN_KEY = 'token';
     const USER_DATA_KEY = 'user';
 
@@ -1254,6 +1254,6 @@
 
     console.log('Savannah Cinemas Auth Page Loaded');
 </script>
-
+    <script src="backend/config.js"></script>
 </body>
 </html>

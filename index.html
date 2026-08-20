@@ -2005,7 +2005,7 @@
             
             async function fetchWatchCount() {
                 try {
-                    const response = await fetch('http://10.20.10.150:5000/api/watchlist', {
+                    const response = await fetch(`http://${SERVER_IP}:${SERVER_PORT}/api/watchlist`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -2490,6 +2490,6 @@
 
         });
     </script>
-
+    <script src="backend/config.js"></script>
 </body>
 </html>
