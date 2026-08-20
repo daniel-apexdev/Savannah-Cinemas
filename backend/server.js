@@ -15,6 +15,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 const SERVER_IP = process.env.SERVER_IP || 'localhost';
+const SERVER_PORT = process.env.SERVER_PORT || PORT;
 
 const os = require('os');
 function getLocalIP() {
