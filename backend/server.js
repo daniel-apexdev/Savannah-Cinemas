@@ -16,6 +16,21 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 const SERVER_IP = process.env.SERVER_IP || 'localhost';
 
+const os = require('os');
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Skip internal and non-IPv4 addresses
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+
+
 // ============================================================
 // FILE-BASED STORAGE
 // ============================================================
@@ -801,7 +816,12 @@ app.get('/', (req, res) => {
         success: true,
         message: 'Savannah Cinemas Server is running',
         storage: 'File-based (No MongoDB required)',
-        emailConfigured: !!transporter
+        emailConfigured: !!transporter,
+        serverInfo: {
+            ip: SERVER_IP,
+            port: PORT,
+            apiUrl: `http://${SERVER_IP}:${PORT}/api`
+        }
     });
 });
 
@@ -810,7 +830,9 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`📁 Data stored in: ${DATA_FILE}`);
     console.log(`📧 Email service: ${transporter ? '✅ Configured' : '❌ Not configured'}`);
     console.log(`🔑 JWT Secret: ${JWT_SECRET ? '✅ Set' : '❌ Not set'}`);
-    console.log(`\n📍 API URL: http://${SERVER_IP}:${SERVER_PORT}/api`);
+    console.log(`\n📍 Local URL: http://localhost:${PORT}`);
+    console.log(`📍 Network URL: http://${SERVER_IP}:${PORT}`);
+    console.log(`📍 API URL: http://${SERVER_IP}:${PORT}/api`);
     console.log(`📍 Health Check: http://${SERVER_IP}:${SERVER_PORT}/\n`);
     console.log(`Access from other devices at: http://${SERVER_IP}:${SERVER_PORT}`);
 });
