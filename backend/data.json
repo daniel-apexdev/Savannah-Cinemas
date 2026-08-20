@@ -58,6 +58,16 @@
         "addedDate": "2026-08-20T10:47:43.372Z",
         "watched": false,
         "favorite": false
+      },
+      {
+        "filmId": 1003596,
+        "title": "Avengers: Doomsday",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/jzPwsojjFStf5lR5Nm07w2hH56G.jpg",
+        "rating": 0,
+        "addedDate": "2026-08-20T17:34:50.706Z",
+        "watched": false,
+        "favorite": false
       }
     ]
   },

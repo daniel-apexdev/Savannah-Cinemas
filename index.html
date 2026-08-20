@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Savannah Cinemas</title>
     
     <!-- Fonts & Icons -->
@@ -54,7 +54,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 16px var(--container-padding);
+            padding: 12px var(--container-padding);
             border-bottom: 1px solid var(--ink-line);
             background: rgba(20, 20, 28, 0.92);
             backdrop-filter: blur(12px);
@@ -63,17 +63,25 @@
             top: 0;
             z-index: 100;
             gap: 12px;
+            min-height: 60px;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .nav-brand {
             font-family: var(--font-display);
-            font-size: clamp(20px, 3vw, 28px);
+            font-size: clamp(18px, 2.5vw, 28px);
             font-weight: 500;
             color: var(--paper);
             letter-spacing: 0.04em;
             text-transform: uppercase;
             text-decoration: none;
             flex-shrink: 0;
+            line-height: 1.1;
         }
 
         .nav-brand span {
@@ -82,7 +90,7 @@
 
         .nav-links {
             display: flex;
-            gap: clamp(16px, 2vw, 32px);
+            gap: clamp(12px, 2vw, 32px);
             list-style: none;
             margin: 0;
             padding: 0;
@@ -91,12 +99,13 @@
         .nav-links a {
             color: var(--paper-dim);
             text-decoration: none;
-            font-size: clamp(13px, 1vw, 15px);
+            font-size: clamp(12px, 0.9vw, 15px);
             font-weight: 400;
             transition: 0.3s ease;
             letter-spacing: 0.02em;
             position: relative;
             padding: 4px 0;
+            white-space: nowrap;
         }
 
         .nav-links a:hover,
@@ -118,7 +127,7 @@
         .nav-right {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             z-index: 1001;
             position: relative;
         }
@@ -131,7 +140,7 @@
             background: none;
             border: none;
             cursor: pointer;
-            padding: 10px 8px;
+            padding: 8px 6px;
             z-index: 1001;
             position: relative;
             flex-shrink: 0;
@@ -149,7 +158,7 @@
 
         .menu-toggle span {
             display: block;
-            width: 28px;
+            width: 26px;
             height: 2.5px;
             background: var(--paper);
             transition: 0.3s ease;
@@ -215,7 +224,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 20px 24px;
+            padding: 16px 20px;
             border-bottom: 1px solid var(--ink-line);
             background: var(--ink-raised);
             flex-shrink: 0;
@@ -224,7 +233,7 @@
 
         .mobile-menu-brand {
             font-family: var(--font-display);
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 500;
             color: var(--paper);
             letter-spacing: 0.04em;
@@ -239,9 +248,9 @@
             background: none;
             border: none;
             color: var(--paper);
-            font-size: 24px;
+            font-size: 22px;
             cursor: pointer;
-            padding: 12px;
+            padding: 10px;
             transition: 0.3s ease;
             line-height: 1;
             min-width: var(--touch-target);
@@ -276,11 +285,11 @@
         .mobile-menu-links a {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 14px 16px;
+            gap: 14px;
+            padding: 12px 14px;
             color: var(--paper);
             text-decoration: none;
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 400;
             transition: 0.2s ease;
             border-radius: 10px;
@@ -291,17 +300,17 @@
         }
 
         .mobile-menu-links a i {
-            width: 28px;
+            width: 24px;
             text-align: center;
             color: var(--paper-dim);
-            font-size: 20px;
+            font-size: 18px;
             transition: 0.2s ease;
         }
 
         .mobile-menu-links a:hover {
             color: var(--gold);
             background: rgba(232,179,76,0.06);
-            padding-left: 22px;
+            padding-left: 20px;
         }
 
         .mobile-menu-links a:hover i {
@@ -311,7 +320,7 @@
         .mobile-divider {
             height: 1px;
             background: var(--ink-line);
-            margin: 8px 24px;
+            margin: 8px 20px;
         }
 
         .mobile-logout {
@@ -332,11 +341,11 @@
         }
 
         .mobile-menu-footer {
-            padding: 16px 24px;
+            padding: 14px 20px;
             border-top: 1px solid var(--ink-line);
             text-align: center;
             font-family: var(--font-mono);
-            font-size: 12px;
+            font-size: 11px;
             color: var(--paper-dim);
             flex-shrink: 0;
             margin-top: auto;
@@ -348,8 +357,8 @@
         }
 
         .avatar {
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: var(--gold);
             color: var(--ink);
@@ -358,7 +367,7 @@
             justify-content: center;
             font-family: var(--font-display);
             font-weight: 500;
-            font-size: 15px;
+            font-size: 14px;
             cursor: pointer;
             border: 2px solid transparent;
             transition: 0.3s ease;
@@ -376,7 +385,7 @@
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-md);
-            width: 220px;
+            width: 200px;
             overflow: hidden;
             opacity: 0;
             visibility: hidden;
@@ -393,7 +402,7 @@
         }
 
         .profile-menu .who {
-            padding: 16px;
+            padding: 14px 16px;
             border-bottom: 1px solid var(--ink-line);
         }
 
@@ -401,19 +410,20 @@
             font-weight: 500;
             font-size: 14px;
             color: var(--paper);
+            word-break: break-word;
         }
 
         .profile-menu .who .stat {
             color: var(--gold);
-            font-size: 12px;
+            font-size: 11px;
             font-family: var(--font-mono);
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .profile-menu a {
             display: block;
-            padding: 12px 16px;
-            font-size: 14px;
+            padding: 10px 16px;
+            font-size: 13px;
             font-weight: 400;
             color: var(--paper-dim);
             text-decoration: none;
@@ -439,22 +449,23 @@
 
         /* ---------- SIGN IN BUTTON ---------- */
         .btn-signin {
-            padding: 8px 20px;
+            padding: 6px 16px;
             background: var(--gold);
             color: var(--ink);
             border: none;
             border-radius: var(--radius-sm);
             font-family: var(--font-body);
-            font-size: clamp(13px, 0.9vw, 15px);
+            font-size: clamp(12px, 0.8vw, 14px);
             font-weight: 500;
             cursor: pointer;
             transition: 0.3s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             min-height: var(--touch-target);
             touch-action: manipulation;
+            white-space: nowrap;
         }
 
         .btn-signin:hover {
@@ -464,15 +475,15 @@
         }
 
         .btn-signin i {
-            font-size: 14px;
+            font-size: 12px;
         }
 
-        /* ---------- HERO ---------- */
+        /* ---------- HERO - ALIGNED WITH SECTIONS ---------- */
         .hero-section-wrapper {
             max-width: var(--container-max-width);
             margin: 0 auto;
             padding: 0 var(--container-padding);
-            margin-top: 20px;
+            margin-top: 16px;
         }
 
         .hero-carousel-container {
@@ -480,10 +491,11 @@
             border-radius: var(--radius-md);
             overflow: hidden;
             aspect-ratio: 21/9;
-            min-height: 300px;
-            max-height: 600px;
+            min-height: 200px;
+            max-height: 500px;
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
+            width: 100%;
         }
 
         .hero-carousel-slides {
@@ -501,7 +513,7 @@
             position: relative;
             display: flex;
             align-items: flex-end;
-            padding: 40px 50px;
+            padding: clamp(20px, 3vw, 40px) clamp(20px, 4vw, 50px);
         }
 
         .hero-slide::before {
@@ -515,34 +527,34 @@
         .hero-slide .hero-content {
             position: relative;
             z-index: 2;
-            max-width: 60%;
+            max-width: 65%;
             color: var(--paper);
         }
 
         .hero-slide .hero-content .hero-eyebrow {
             font-family: var(--font-mono);
-            font-size: clamp(10px, 0.8vw, 13px);
+            font-size: clamp(9px, 0.7vw, 12px);
             letter-spacing: 0.1em;
             text-transform: uppercase;
             color: var(--gold);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .hero-slide .hero-content h2 {
             font-family: var(--font-display);
-            font-size: clamp(28px, 4vw, 52px);
+            font-size: clamp(20px, 3.5vw, 44px);
             font-weight: 500;
             line-height: 1.05;
             color: var(--paper);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .hero-slide .hero-content p {
-            font-size: clamp(13px, 1vw, 18px);
+            font-size: clamp(11px, 0.8vw, 16px);
             font-weight: 300;
             color: rgba(255, 255, 255, 0.7);
             max-width: 500px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -550,21 +562,21 @@
         }
 
         .hero-slide .hero-content .btn-hero {
-            padding: 10px 28px;
+            padding: 8px 20px;
             background: var(--gold);
             color: var(--ink);
             border: none;
             border-radius: var(--radius-sm);
             font-family: var(--font-body);
-            font-size: clamp(13px, 0.9vw, 15px);
+            font-size: clamp(12px, 0.8vw, 14px);
             font-weight: 500;
             cursor: pointer;
             transition: 0.3s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            min-height: var(--touch-target);
+            gap: 6px;
+            min-height: 40px;
             touch-action: manipulation;
         }
 
@@ -573,13 +585,17 @@
             transform: translateY(-2px);
         }
 
+        .hero-slide .hero-content .btn-hero i {
+            font-size: 12px;
+        }
+
         /* Hero Controls */
         .hero-carousel-controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 12px;
             left: 0;
             right: 0;
-            padding: 0 30px;
+            padding: 0 clamp(12px, 2vw, 30px);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -589,13 +605,13 @@
 
         .hero-carousel-dots {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             pointer-events: auto;
         }
 
         .hero-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
             border: none;
@@ -616,18 +632,18 @@
 
         .hero-carousel-arrows {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             pointer-events: auto;
         }
 
         .hero-arrow {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: rgba(20, 20, 28, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--paper);
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
             transition: 0.3s ease;
             backdrop-filter: blur(4px);
@@ -647,21 +663,21 @@
         .section {
             max-width: var(--container-max-width);
             margin: 0 auto;
-            padding: 40px var(--container-padding) 20px;
+            padding: 32px var(--container-padding) 16px;
         }
 
         .carousel-head {
             display: flex;
             align-items: flex-end;
             justify-content: space-between;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
         }
 
         .eyebrow {
             font-family: var(--font-mono);
-            font-size: clamp(10px, 0.8vw, 13px);
+            font-size: clamp(9px, 0.7vw, 12px);
             letter-spacing: 0.1em;
             text-transform: uppercase;
             color: var(--gold);
@@ -670,7 +686,7 @@
 
         .section-title {
             font-family: var(--font-display);
-            font-size: clamp(24px, 2.5vw, 36px);
+            font-size: clamp(20px, 2.2vw, 32px);
             font-weight: 500;
             color: var(--paper);
             line-height: 1.1;
@@ -678,17 +694,17 @@
 
         .carousel-arrows {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
 
         .carousel-arrow {
-            width: 40px;
-            height: 40px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             color: var(--paper-dim);
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
             transition: 0.3s ease;
             display: flex;
@@ -705,9 +721,9 @@
         /* ---------- CAROUSEL TRACK ---------- */
         .carousel-track {
             display: flex;
-            gap: 16px;
+            gap: 14px;
             overflow-x: auto;
-            padding: 8px 4px 16px;
+            padding: 6px 2px 14px;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
@@ -732,8 +748,8 @@
         }
 
         .movie-card {
-            flex: 0 0 clamp(160px, 18vw, 260px);
-            min-width: 160px;
+            flex: 0 0 clamp(140px, 15vw, 220px);
+            min-width: 140px;
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-md);
@@ -758,12 +774,12 @@
 
         .movie-card .poster .rating-badge {
             position: absolute;
-            bottom: 8px;
-            left: 8px;
+            bottom: 6px;
+            left: 6px;
             font-family: var(--font-mono);
-            font-size: 10px;
-            padding: 2px 10px;
-            border-radius: 12px;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 10px;
             background: rgba(0, 0, 0, 0.7);
             color: var(--gold);
             border: 1px solid var(--gold-dim);
@@ -771,12 +787,12 @@
         }
 
         .movie-card .card-body {
-            padding: 12px 14px 14px;
+            padding: 10px 12px 12px;
         }
 
         .movie-card .card-body .title {
             font-family: var(--font-display);
-            font-size: clamp(14px, 1vw, 17px);
+            font-size: clamp(12px, 0.9vw, 15px);
             font-weight: 500;
             color: var(--paper);
             margin-bottom: 2px;
@@ -786,7 +802,7 @@
         }
 
         .movie-card .card-body .year {
-            font-size: clamp(11px, 0.7vw, 13px);
+            font-size: clamp(10px, 0.6vw, 12px);
             color: var(--paper-dim);
             font-weight: 300;
         }
@@ -794,9 +810,9 @@
         /* ---------- UPCOMING FILMS ---------- */
         .upcoming-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 18vw, 260px), 1fr));
-            gap: 20px;
-            margin-top: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(clamp(180px, 16vw, 240px), 1fr));
+            gap: 16px;
+            margin-top: 12px;
         }
 
         .upcoming-card {
@@ -814,7 +830,7 @@
         }
 
         .upcoming-card .upcoming-poster {
-            height: 200px;
+            height: 160px;
             background-size: cover;
             background-position: center;
             position: relative;
@@ -823,12 +839,12 @@
 
         .upcoming-card .upcoming-poster .upcoming-date {
             position: absolute;
-            bottom: 12px;
-            right: 12px;
+            bottom: 10px;
+            right: 10px;
             font-family: var(--font-mono);
-            font-size: clamp(10px, 0.7vw, 12px);
-            padding: 4px 12px;
-            border-radius: 12px;
+            font-size: clamp(9px, 0.6vw, 11px);
+            padding: 3px 10px;
+            border-radius: 10px;
             background: rgba(20, 20, 28, 0.85);
             color: var(--gold);
             border: 1px solid var(--gold-dim);
@@ -836,29 +852,29 @@
         }
 
         .upcoming-card .upcoming-body {
-            padding: 14px;
+            padding: 12px;
         }
 
         .upcoming-card .upcoming-body .upcoming-title {
             font-family: var(--font-display);
-            font-size: clamp(14px, 1.1vw, 18px);
+            font-size: clamp(13px, 1vw, 16px);
             font-weight: 500;
             color: var(--paper);
             margin-bottom: 2px;
         }
 
         .upcoming-card .upcoming-body .upcoming-meta {
-            font-size: clamp(11px, 0.7vw, 13px);
+            font-size: clamp(10px, 0.6vw, 12px);
             color: var(--paper-dim);
             font-weight: 300;
         }
 
         .upcoming-card .upcoming-body .upcoming-desc {
-            font-size: clamp(12px, 0.8vw, 14px);
+            font-size: clamp(11px, 0.7vw, 13px);
             color: rgba(255, 255, 255, 0.6);
             font-weight: 300;
             line-height: 1.5;
-            margin-top: 6px;
+            margin-top: 4px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -866,14 +882,14 @@
         }
 
         .upcoming-card .upcoming-body .btn-notify {
-            margin-top: 10px;
-            padding: 6px 18px;
+            margin-top: 8px;
+            padding: 5px 16px;
             background: transparent;
             color: var(--paper-dim);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-sm);
             font-family: var(--font-body);
-            font-size: clamp(11px, 0.7vw, 13px);
+            font-size: clamp(10px, 0.6vw, 12px);
             font-weight: 300;
             cursor: pointer;
             transition: 0.3s ease;
@@ -893,43 +909,43 @@
         .upcoming-loading {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 40px 0;
+            padding: 30px 0;
             color: var(--paper-dim);
             font-family: var(--font-mono);
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .upcoming-loading i {
             color: var(--gold);
-            margin-right: 12px;
-            font-size: 20px;
+            margin-right: 10px;
+            font-size: 18px;
         }
 
         .upcoming-empty {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 40px 0;
+            padding: 30px 0;
             color: var(--paper-dim);
             font-family: var(--font-body);
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 300;
         }
 
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: clamp(10px, 1vw, 14px) clamp(24px, 2.5vw, 36px);
+            gap: 6px;
+            padding: clamp(8px, 0.8vw, 12px) clamp(18px, 2vw, 28px);
             border: none;
             border-radius: var(--radius-sm);
             font-family: var(--font-body);
             font-weight: 500;
-            font-size: clamp(13px, 1vw, 15px);
+            font-size: clamp(12px, 0.8vw, 14px);
             cursor: pointer;
             transition: 0.3s ease;
             text-decoration: none;
             touch-action: manipulation;
-            min-height: var(--touch-target);
+            min-height: 40px;
         }
 
         .btn-ghost {
@@ -947,9 +963,9 @@
         /* ---------- EVENTS ---------- */
         .events-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(clamp(250px, 22vw, 320px), 1fr));
-            gap: 20px;
-            margin-top: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 20vw, 300px), 1fr));
+            gap: 16px;
+            margin-top: 12px;
         }
 
         .event-card {
@@ -967,7 +983,7 @@
         }
 
         .event-card .event-image {
-            height: 160px;
+            height: 130px;
             background-size: cover;
             background-position: center;
             position: relative;
@@ -975,15 +991,15 @@
 
         .event-card .event-image .event-badge {
             position: absolute;
-            top: 12px;
-            left: 12px;
+            top: 10px;
+            left: 10px;
             font-family: var(--font-mono);
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 400;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            padding: 4px 12px;
-            border-radius: 12px;
+            padding: 3px 10px;
+            border-radius: 10px;
             background: var(--gold);
             color: var(--ink);
         }
@@ -994,49 +1010,50 @@
         }
 
         .event-card .event-body {
-            padding: 16px;
+            padding: 12px 14px 14px;
         }
 
         .event-card .event-body .event-title {
             font-family: var(--font-display);
-            font-size: clamp(16px, 1.2vw, 20px);
+            font-size: clamp(14px, 1.1vw, 18px);
             font-weight: 500;
             color: var(--paper);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .event-card .event-body .event-meta {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: clamp(11px, 0.8vw, 13px);
+            gap: 10px;
+            font-size: clamp(10px, 0.7vw, 12px);
             color: var(--paper-dim);
             font-weight: 300;
             flex-wrap: wrap;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .event-card .event-body .event-meta i {
             color: var(--gold);
-            width: 14px;
+            width: 12px;
+            font-size: 11px;
         }
 
         .event-card .event-body .event-desc {
-            font-size: clamp(12px, 0.9vw, 14px);
+            font-size: clamp(11px, 0.8vw, 13px);
             color: rgba(255, 255, 255, 0.7);
             font-weight: 300;
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
         .event-card .event-body .btn-event {
-            margin-top: 12px;
-            padding: 6px 20px;
+            margin-top: 10px;
+            padding: 5px 16px;
             background: transparent;
             color: var(--gold);
             border: 1px solid var(--gold-dim);
             border-radius: var(--radius-sm);
             font-family: var(--font-body);
-            font-size: clamp(12px, 0.8vw, 14px);
+            font-size: clamp(11px, 0.7vw, 13px);
             font-weight: 400;
             cursor: pointer;
             transition: 0.3s ease;
@@ -1051,44 +1068,44 @@
         .footer {
             max-width: var(--container-max-width);
             margin: 0 auto;
-            padding: 40px var(--container-padding) 0;
+            padding: 32px var(--container-padding) 0;
             border-top: 1px solid var(--ink-line);
-            margin-top: 40px;
+            margin-top: 32px;
         }
 
         .footer-top {
             display: grid;
             grid-template-columns: 1fr 2fr;
-            gap: 40px;
-            padding-bottom: 30px;
+            gap: 30px;
+            padding-bottom: 24px;
         }
 
         .footer-brand .nav-brand {
-            font-size: clamp(20px, 2vw, 26px);
+            font-size: clamp(18px, 1.8vw, 24px);
             display: inline-block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .footer-brand p {
             color: var(--paper-dim);
-            font-size: clamp(13px, 0.9vw, 15px);
+            font-size: clamp(12px, 0.8vw, 14px);
             font-weight: 300;
-            line-height: 1.7;
+            line-height: 1.6;
             max-width: 400px;
         }
 
         .footer-cols {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            gap: 16px;
         }
 
         .footer-col h4 {
             font-family: var(--font-display);
-            font-size: clamp(14px, 1vw, 16px);
+            font-size: clamp(13px, 0.9vw, 15px);
             font-weight: 500;
             color: var(--paper);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             letter-spacing: 0.02em;
         }
 
@@ -1096,9 +1113,9 @@
             display: block;
             color: var(--paper-dim);
             text-decoration: none;
-            font-size: clamp(13px, 0.9vw, 14px);
+            font-size: clamp(12px, 0.8vw, 13px);
             font-weight: 300;
-            padding: 4px 0;
+            padding: 3px 0;
             transition: 0.3s ease;
         }
 
@@ -1109,7 +1126,7 @@
         .footer-tear {
             height: 1px;
             background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
-            margin: 0 0 20px;
+            margin: 0 0 16px;
         }
 
         .footer-bottom {
@@ -1117,10 +1134,10 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
-            padding: 16px 0 24px;
+            gap: 10px;
+            padding: 12px 0 20px;
             font-family: var(--font-mono);
-            font-size: clamp(11px, 0.8vw, 13px);
+            font-size: clamp(10px, 0.7vw, 12px);
             color: var(--paper-dim);
             font-weight: 300;
         }
@@ -1128,7 +1145,7 @@
         .footer-bottom .legal a {
             color: var(--paper-dim);
             text-decoration: none;
-            margin-left: 20px;
+            margin-left: 16px;
             transition: 0.3s ease;
         }
 
@@ -1136,14 +1153,24 @@
             color: var(--gold);
         }
 
-        /* ---------- RESPONSIVE ---------- */
-        @media (max-width: 992px) {
-            .footer-top {
-                grid-template-columns: 1fr;
-                gap: 24px;
+        /* ---------- RESPONSIVE BREAKPOINTS ---------- */
+
+        /* Tablets and smaller laptops */
+        @media (max-width: 1024px) {
+            .hero-slide .hero-content {
+                max-width: 75%;
+            }
+            
+            .upcoming-grid {
+                grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            }
+            
+            .events-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             }
         }
 
+        /* Tablets */
         @media (max-width: 768px) {
             .menu-toggle {
                 display: flex;
@@ -1158,72 +1185,584 @@
             }
 
             .hero-slide {
-                padding: 30px 24px;
+                padding: 24px 20px;
+            }
+
+            .hero-slide .hero-content h2 {
+                font-size: clamp(22px, 4vw, 32px);
             }
 
             .hero-carousel-controls {
-                padding: 0 16px;
-                bottom: 12px;
+                padding: 0 12px;
+                bottom: 10px;
+            }
+
+            .hero-carousel-container {
+                min-height: 180px;
+                max-height: 350px;
+                aspect-ratio: 16/9;
             }
 
             .events-grid {
                 grid-template-columns: 1fr 1fr;
-                gap: 14px;
+                gap: 12px;
             }
 
             .event-card .event-image {
-                height: 120px;
+                height: 110px;
             }
 
             .upcoming-grid {
                 grid-template-columns: 1fr 1fr;
-                gap: 14px;
-            }
-
-            .upcoming-card .upcoming-poster {
-                height: 150px;
-            }
-
-            .footer-cols {
-                grid-template-columns: 1fr 1fr;
-                gap: 16px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .events-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .upcoming-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .event-card .event-image {
-                height: 100px;
+                gap: 12px;
             }
 
             .upcoming-card .upcoming-poster {
                 height: 130px;
             }
 
-            .footer-cols {
+            .footer-top {
                 grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+
+            .nav-brand {
+                font-size: clamp(16px, 2vw, 22px);
+            }
+
+            .avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 12px;
+            }
+
+            .btn-signin {
+                padding: 5px 14px;
+                font-size: 12px;
+            }
+
+            .section {
+                padding: 24px var(--container-padding) 12px;
+            }
+
+            .movie-card {
+                flex: 0 0 clamp(120px, 20vw, 160px);
+                min-width: 120px;
+            }
+        }
+
+        /* Mobile Landscape */
+        @media (max-width: 600px) {
+            .hero-carousel-container {
+                min-height: 150px;
+                max-height: 280px;
+            }
+
+            .hero-slide .hero-content h2 {
+                font-size: clamp(18px, 3.5vw, 26px);
+            }
+
+            .hero-slide .hero-content p {
+                font-size: 11px;
+                --webkit-line-clamp: 1;
+                margin-bottom: 6px;
+            }
+
+            .hero-slide .hero-content .btn-hero {
+                padding: 6px 16px;
+                font-size: 11px;
+                min-height: 34px;
+            }
+
+            .hero-slide .hero-content .btn-hero i {
+                font-size: 10px;
+            }
+
+            .events-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .event-card .event-image {
+                height: 90px;
+            }
+
+            .upcoming-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .upcoming-card .upcoming-poster {
+                height: 110px;
+            }
+
+            .section-title {
+                font-size: clamp(18px, 2vw, 24px);
+            }
+
+            .movie-card {
+                flex: 0 0 clamp(100px, 18vw, 140px);
+                min-width: 100px;
+            }
+
+            .movie-card .card-body {
+                padding: 8px 10px 10px;
+            }
+
+            .movie-card .card-body .title {
+                font-size: 11px;
+            }
+
+            .movie-card .card-body .year {
+                font-size: 9px;
+            }
+
+            .movie-card .poster .rating-badge {
+                font-size: 8px;
+                padding: 1px 6px;
+                bottom: 4px;
+                left: 4px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+
+            .footer-top {
+                gap: 16px;
+            }
+
+            .hero-arrow {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
+            }
+
+            .hero-dot {
+                width: 7px;
+                height: 7px;
+            }
+        }
+
+        /* Mobile Portrait */
+        @media (max-width: 480px) {
+            .nav {
+                padding: 10px var(--container-padding);
+                min-height: 52px;
+            }
+
+            .nav-brand {
+                font-size: clamp(15px, 1.8vw, 19px);
+            }
+
+            .menu-toggle span {
+                width: 22px;
+                height: 2px;
+            }
+
+            .hero-carousel-container {
+                min-height: 130px;
+                max-height: 220px;
+                border-radius: 10px;
+                margin-top: 0;
+            }
+
+            .hero-slide {
+                padding: 16px 14px;
+            }
+
+            .hero-slide .hero-content h2 {
+                font-size: clamp(16px, 3vw, 22px);
+            }
+
+            .hero-slide .hero-content .hero-eyebrow {
+                font-size: 8px;
+            }
+
+            .hero-slide .hero-content p {
+                font-size: 10px;
+                display: none;
+            }
+
+            .hero-slide .hero-content .btn-hero {
+                padding: 5px 14px;
+                font-size: 10px;
+                min-height: 30px;
+            }
+
+            .hero-carousel-controls {
+                bottom: 8px;
+                padding: 0 8px;
+            }
+
+            .hero-arrow {
+                width: 24px;
+                height: 24px;
+                font-size: 12px;
+            }
+
+            .hero-dot {
+                width: 6px;
+                height: 6px;
+                gap: 4px;
+            }
+
+            .events-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .event-card .event-image {
+                height: 100px;
+            }
+
+            .upcoming-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .upcoming-card .upcoming-poster {
+                height: 100px;
+            }
+
+            .upcoming-card .upcoming-body {
+                padding: 10px;
+            }
+
+            .upcoming-card .upcoming-body .upcoming-title {
+                font-size: 12px;
+            }
+
+            .upcoming-card .upcoming-body .upcoming-desc {
+                font-size: 10px;
+                --webkit-line-clamp: 1;
+            }
+
+            .upcoming-card .upcoming-body .btn-notify {
+                font-size: 9px;
+                padding: 4px 12px;
+            }
+
+            .section {
+                padding: 16px var(--container-padding) 10px;
+            }
+
+            .section-title {
+                font-size: clamp(16px, 1.8vw, 20px);
+            }
+
+            .eyebrow {
+                font-size: 8px;
+            }
+
+            .carousel-head {
+                margin-bottom: 10px;
+            }
+
+            .carousel-arrow {
+                width: 28px;
+                height: 28px;
+                font-size: 13px;
+            }
+
+            .movie-card {
+                flex: 0 0 clamp(85px, 26vw, 120px);
+                min-width: 85px;
+            }
+
+            .movie-card .card-body {
+                padding: 6px 8px 8px;
+            }
+
+            .movie-card .card-body .title {
+                font-size: 10px;
+            }
+
+            .movie-card .card-body .year {
+                font-size: 8px;
+            }
+
+            .movie-card .poster .rating-badge {
+                font-size: 7px;
+                padding: 1px 5px;
+                bottom: 3px;
+                left: 3px;
+            }
+
+            .btn {
+                font-size: 11px;
+                padding: 6px 14px;
+                min-height: 34px;
+            }
+
+            .avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 11px;
+            }
+
+            .btn-signin {
+                padding: 4px 12px;
+                font-size: 11px;
+                min-height: 32px;
+            }
+
+            .btn-signin i {
+                font-size: 10px;
+            }
+
+            .footer {
+                padding: 20px var(--container-padding) 0;
+                margin-top: 20px;
+            }
+
+            .footer-top {
+                gap: 12px;
+                padding-bottom: 16px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .footer-col h4 {
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .footer-col a {
+                font-size: 11px;
+                padding: 2px 0;
             }
 
             .footer-bottom {
                 flex-direction: column;
                 text-align: center;
+                gap: 6px;
+                padding: 8px 0 16px;
             }
 
             .footer-bottom .legal a {
-                margin: 0 10px;
+                margin: 0 8px;
+                font-size: 10px;
             }
 
-            .hero-carousel-container {
-                aspect-ratio: 16/9;
-                min-height: 200px;
+            .mobile-menu {
+                width: 85%;
+                max-width: 320px;
             }
+
+            .mobile-menu-links a {
+                font-size: 15px;
+                padding: 10px 12px;
+            }
+
+            .mobile-menu-links a i {
+                font-size: 16px;
+                width: 20px;
+            }
+
+            .profile-menu {
+                width: 180px;
+                right: -8px;
+            }
+
+            .profile-menu .who .name {
+                font-size: 13px;
+            }
+
+            .profile-menu a {
+                font-size: 12px;
+                padding: 8px 14px;
+            }
+        }
+
+        /* Small Mobile */
+        @media (max-width: 380px) {
+            .hero-carousel-container {
+                min-height: 100px;
+                max-height: 180px;
+            }
+
+            .hero-slide .hero-content h2 {
+                font-size: clamp(14px, 2.5vw, 18px);
+            }
+
+            .hero-slide .hero-content .btn-hero {
+                padding: 4px 10px;
+                font-size: 9px;
+                min-height: 26px;
+            }
+
+            .upcoming-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+
+            .upcoming-card .upcoming-poster {
+                height: 80px;
+            }
+
+            .upcoming-card .upcoming-body .upcoming-title {
+                font-size: 11px;
+            }
+
+            .movie-card {
+                flex: 0 0 clamp(75px, 20vw, 100px);
+                min-width: 75px;
+            }
+
+            .movie-card .card-body .title {
+                font-size: 9px;
+            }
+
+            .movie-card .card-body .year {
+                font-size: 7px;
+            }
+
+            .movie-card .poster .rating-badge {
+                font-size: 6px;
+                padding: 1px 4px;
+            }
+
+            .events-grid {
+                gap: 8px;
+            }
+
+            .event-card .event-image {
+                height: 80px;
+            }
+
+            .event-card .event-body {
+                padding: 10px 12px 12px;
+            }
+
+            .event-card .event-body .event-title {
+                font-size: 13px;
+            }
+
+            .nav-brand {
+                font-size: 14px;
+            }
+
+            .avatar {
+                width: 24px;
+                height: 24px;
+                font-size: 9px;
+            }
+
+            .btn-signin {
+                font-size: 10px;
+                padding: 3px 10px;
+                min-height: 28px;
+            }
+
+            .btn-signin i {
+                font-size: 9px;
+            }
+        }
+
+        /* Extra Small Mobile */
+        @media (max-width: 320px) {
+            .hero-carousel-container {
+                min-height: 80px;
+                max-height: 150px;
+            }
+
+            .hero-slide .hero-content h2 {
+                font-size: 13px;
+            }
+
+            .hero-slide .hero-content .btn-hero {
+                font-size: 8px;
+                padding: 3px 8px;
+                min-height: 22px;
+            }
+
+            .movie-card {
+                flex: 0 0 clamp(65px, 18vw, 85px);
+                min-width: 65px;
+            }
+
+            .upcoming-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .upcoming-card .upcoming-poster {
+                height: 70px;
+            }
+
+            .upcoming-card .upcoming-body .upcoming-title {
+                font-size: 10px;
+            }
+
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ---------- SCROLLBAR ---------- */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
+        }
+
+        /* ---------- UTILITY ---------- */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        /* Touch feedback for interactive elements */
+        .movie-card:active,
+        .upcoming-card:active,
+        .event-card:active,
+        .btn:active,
+        .btn-signin:active,
+        .btn-hero:active {
+            transform: scale(0.97);
+            transition-duration: 0.05s;
+        }
+
+        /* Prevent text selection on interactive elements */
+        .movie-card,
+        .upcoming-card,
+        .event-card,
+        .btn,
+        .btn-signin,
+        .btn-hero {
+            -webkit-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
@@ -1233,12 +1772,14 @@
     NAVIGATION
     ============================================================ -->
     <nav class="nav">
-        <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-        <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+        <div class="nav-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+        </div>
         
         <!-- Desktop Navigation -->
         <ul class="nav-links" id="navLinks">
@@ -1283,8 +1824,8 @@
     <section class="hero-section-wrapper">
         <div class="hero-carousel-container" id="heroCarousel">
             <div class="hero-carousel-slides" id="heroSlides">
-                <div class="hero-loading" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--paper-dim);font-family:var(--font-mono);">
-                    <i class="fas fa-spinner fa-spin" style="color:var(--gold);margin-right:12px;"></i> Loading...
+                <div class="hero-loading" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--paper-dim);font-family:var(--font-mono);font-size:14px;">
+                    <i class="fas fa-spinner fa-spin" style="color:var(--gold);margin-right:10px;"></i> Loading...
                 </div>
             </div>
 
@@ -1335,7 +1876,7 @@
             </div>
         </div>
         <br>
-        <a href="coming-soon.html" class="btn btn-ghost" style="font-size: clamp(12px, 0.9vw, 14px); padding: 8px 20px;">
+        <a href="coming-soon.html" class="btn btn-ghost">
             View All <i class="fas fa-arrow-right"></i>
         </a>
     </section>
@@ -1354,7 +1895,7 @@
             <!-- Populated by JavaScript -->
         </div>
         <br>
-        <a href="events.html" class="btn btn-ghost" style="font-size: clamp(12px, 0.9vw, 14px); padding: 8px 20px;">
+        <a href="events.html" class="btn btn-ghost">
             View All <i class="fas fa-arrow-right"></i>
         </a>
     </section>
@@ -1460,13 +2001,13 @@
                     
                 } else {
                     navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
+                        <a href="auth.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
                     
                     const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     mobileMenuLinks.appendChild(signInLink);
                     
                     if (mobileDivider) mobileDivider.style.display = 'block';
@@ -1534,13 +2075,13 @@
             }
 
             // ============================================================
-            // LOGOUT
+            // LOGOUT - Redirect to auth.html
             // ============================================================
             
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.reload();
+                window.location.href = 'auth.html';
             }
 
             // ============================================================
@@ -1661,9 +2202,9 @@
                 } catch (error) {
                     console.error('Error fetching hero slides:', error);
                     slidesContainer.innerHTML = `
-                        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--paper-dim);font-family:var(--font-body);flex-direction:column;gap:12px;">
-                            <i class="fas fa-exclamation-circle" style="font-size:32px;color:var(--rust);"></i>
-                            <p>Failed to load hero slides. Please refresh.</p>
+                        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--paper-dim);font-family:var(--font-body);flex-direction:column;gap:10px;">
+                            <i class="fas fa-exclamation-circle" style="font-size:28px;color:var(--rust);"></i>
+                            <p style="font-size:14px;">Failed to load hero slides. Please refresh.</p>
                         </div>
                     `;
                 }
@@ -1775,7 +2316,7 @@
                     
                 } catch (error) {
                     console.error('Error fetching popular movies:', error);
-                    track.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--paper-dim);">Failed to load movies. Please refresh.</div>`;
+                    track.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--paper-dim);font-size:14px;">Failed to load movies. Please refresh.</div>`;
                 }
             }
 
@@ -1788,7 +2329,7 @@
                 
                 try {
                     const response = await fetch(
-                        `https://api.themoviedb.org/3/movie/upcoming?api_key=${API_KEY}&language=en-US&page=1`
+                        `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US`
                     );
                     
                     if (!response.ok) throw new Error(`API Error: ${response.status}`);
@@ -1812,7 +2353,7 @@
                     if (displayFilms.length === 0) {
                         grid.innerHTML = `
                             <div class="upcoming-empty">
-                                <i class="fas fa-calendar-alt" style="display:block;font-size:32px;margin-bottom:12px;color:var(--gold);"></i>
+                                <i class="fas fa-calendar-alt" style="display:block;font-size:28px;margin-bottom:10px;color:var(--gold);"></i>
                                 No upcoming films found. Check back soon!
                             </div>
                         `;
@@ -1850,7 +2391,7 @@
                     console.error('Error fetching upcoming films:', error);
                     grid.innerHTML = `
                         <div class="upcoming-empty">
-                            <i class="fas fa-exclamation-circle" style="display:block;font-size:32px;margin-bottom:12px;color:var(--rust);"></i>
+                            <i class="fas fa-exclamation-circle" style="display:block;font-size:28px;margin-bottom:10px;color:var(--rust);"></i>
                             Failed to load upcoming films. Please refresh the page.
                         </div>
                     `;

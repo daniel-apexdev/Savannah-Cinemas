@@ -2013,9 +2013,9 @@
     // ============================================================
 
     function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.reload();
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'logout.html';
     }
 
     // ============================================================
@@ -2469,19 +2469,11 @@
     }
 
     // ============================================================
-    // CHECKOUT REDIRECT
+    // CHECKOUT REDIRECT - AUTH CHECK REMOVED (GUESTS ALLOWED)
     // ============================================================
     
     document.getElementById('payBtn').addEventListener('click', function() {
       if (this.disabled) return;
-      
-      if (!isAuthenticated) {
-        showToast('Please sign in to complete your booking', 'info');
-        setTimeout(() => {
-          window.location.href = 'logout.html';
-        }, 1500);
-        return;
-      }
       
       // Build checkout data with all snack items
       var snackItems = Object.keys(snackQuantities).map(function(name) {

@@ -27,7 +27,7 @@
             --radius-sm: 8px;
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
-            --touch-target: clamp(44px, 5vw, 56px);
+            --touch-target: clamp(44px, 5vw, 38px);
             --max-width: 1400px;
         }
 
@@ -1427,7 +1427,7 @@
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.reload();
+                window.location.href = 'logout.html';
             }
 
             // ============================================================

@@ -950,6 +950,35 @@
             font-weight: 300;
         }
 
+        .status-badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: clamp(10px, 0.7vw, 12px);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 12px;
+            border-radius: 12px;
+            margin-bottom: 4px;
+        }
+
+        .status-badge.now-showing {
+            background: rgba(76, 154, 106, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-badge.coming-soon {
+            background: rgba(232, 179, 76, 0.1);
+            color: var(--gold);
+            border: 1px solid var(--gold-dim);
+        }
+
+        .status-badge.past {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--paper-dim);
+            border: 1px solid var(--ink-line);
+        }
+
         /* ---------- CAST LIST ---------- */
         .cast-grid {
             display: grid;
@@ -1513,7 +1542,7 @@
                     <div class="detail-section">
                         <h3>Showtimes</h3>
                         <div id="showtimesContainer">
-                            <p class="no-showtimes">No showtimes available for this film.</p>
+                            <p class="no-showtimes">Loading showtimes...</p>
                         </div>
                     </div>
                 </div>
@@ -1697,13 +1726,13 @@
                     
                 } else {
                     DOM.navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
+                        <a href="auth.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
                     
                     const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     DOM.mobileMenuLinks.appendChild(signInLink);
                     if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
                 }
@@ -1769,7 +1798,7 @@
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.reload();
+                window.location.href = 'auth.html';
             }
 
             // ============================================================
@@ -1853,7 +1882,7 @@
                 if (!isAuthenticated()) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
-                        window.location.href = 'logout.html';
+                        window.location.href = 'auth.html';
                     }, 2000);
                     return false;
                 }
@@ -1939,7 +1968,7 @@
                 if (!isAuthenticated()) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
-                        window.location.href = 'logout.html';
+                        window.location.href = 'auth.html';
                     }, 2000);
                     return;
                 }
@@ -2087,6 +2116,95 @@
             }
 
             // ============================================================
+            // GENERATE SHOWTIMES
+            // ============================================================
+
+            function generateShowtimes(movie) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const releaseDate = movie.release_date ? new Date(movie.release_date) : null;
+                const yearNum = movie.release_date ? parseInt(movie.release_date.substring(0, 4)) : null;
+                const currentYear = today.getFullYear();
+
+                // If no release date or release date is in the future -> Coming Soon
+                if (!releaseDate || releaseDate > today) {
+                    return {
+                        status: 'coming-soon',
+                        html: `
+                            <div class="coming-soon-message">
+                                <i class="fas fa-calendar-plus"></i>
+                                <div class="year-badge">Coming Soon</div>
+                                <p>This film is coming to Savannah Cinemas</p>
+                                <div class="release-year">${releaseDate ? releaseDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'TBA'}</div>
+                            </div>
+                        `
+                    };
+                }
+
+                // If release date is in the past and year is current year or last year -> Now Showing
+                if (releaseDate <= today && yearNum && yearNum >= currentYear - 1) {
+                    const sampleShowtimes = [
+                        { time: '10:30 AM', screen: 'Screen 1', format: '2D' },
+                        { time: '1:45 PM', screen: 'Screen 2', format: '2D' },
+                        { time: '4:15 PM', screen: 'Screen 1', format: 'IMAX' },
+                        { time: '7:30 PM', screen: 'Screen 3', format: '2D' },
+                        { time: '9:45 PM', screen: 'Screen 1', format: '2D' }
+                    ];
+
+                    let showtimesHtml = `
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                            <span class="status-badge now-showing">🎬 Now Showing</span>
+                            <span style="font-size:clamp(11px,0.8vw,13px);color:var(--paper-dim);font-weight:300;">
+                                Released ${releaseDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                            </span>
+                        </div>
+                        <div class="showtimes-list">
+                    `;
+
+                    sampleShowtimes.forEach(st => {
+                        showtimesHtml += `
+                            <div class="showtime-item">
+                                <span class="time">${st.time}</span>
+                                <div class="info">
+                                    <span>${st.screen}</span>
+                                    <span class="screen">${st.format}</span>
+                                </div>
+                                <button class="btn-sm" onclick="window.bookMovie(${movie.id}, '${movie.title.replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-ticket-alt"></i> Book
+                                </button>
+                            </div>
+                        `;
+                    });
+
+                    showtimesHtml += `</div>`;
+                    return { status: 'now-showing', html: showtimesHtml };
+                }
+
+                // If release date is more than 1 year ago -> Past Film
+                if (releaseDate <= today && yearNum && yearNum < currentYear - 1) {
+                    return {
+                        status: 'past',
+                        html: `
+                            <div class="past-film-message">
+                                <i class="fas fa-film"></i>
+                                <p>This film was released in <strong>${yearNum}</strong>.</p>
+                                <p style="margin-top:4px;font-size:clamp(12px,0.8vw,14px);color:var(--paper-dim);">
+                                    Check out our current lineup for films showing now.
+                                </p>
+                            </div>
+                        `
+                    };
+                }
+
+                // Fallback
+                return {
+                    status: 'unknown',
+                    html: `<p class="no-showtimes">No showtimes available for this film.</p>`
+                };
+            }
+
+            // ============================================================
             // RENDER MOVIE DETAILS
             // ============================================================
 
@@ -2162,73 +2280,40 @@
 
                 DOM.movieOverview.textContent = movie.overview || 'No overview available.';
 
-                // SHOWTIMES
-                const currentYear = new Date().getFullYear();
-                const yearNum = parseInt(movieYear);
+                // ============================================================
+                // SHOWTIMES - Based on release date logic
+                // ============================================================
 
-                const sampleShowtimes = [
-                    { time: '10:30 AM', screen: 'Screen 1', format: '2D' },
-                    { time: '1:45 PM', screen: 'Screen 2', format: '2D' },
-                    { time: '4:15 PM', screen: 'Screen 1', format: 'IMAX' },
-                    { time: '7:30 PM', screen: 'Screen 3', format: '2D' },
-                    { time: '9:45 PM', screen: 'Screen 1', format: '2D' }
-                ];
+                const showtimeResult = generateShowtimes(movie);
+                DOM.showtimesContainer.innerHTML = showtimeResult.html;
 
-                if (yearNum >= currentYear && yearNum !== 'N/A') {
-                    DOM.showtimesContainer.innerHTML = '';
-                    sampleShowtimes.forEach(st => {
-                        const item = document.createElement('div');
-                        item.className = 'showtime-item';
-                        item.innerHTML = `
-                            <span class="time">${st.time}</span>
-                            <div class="info">
-                                <span>${st.screen}</span>
-                                <span class="screen">${st.format}</span>
-                            </div>
-                            <button class="btn-sm" onclick="window.bookMovie(${movie.id}, '${movie.title.replace(/'/g, "\\'")}')">
-                                <i class="fas fa-ticket-alt"></i> Book
-                            </button>
-                        `;
-                        DOM.showtimesContainer.appendChild(item);
-                    });
+                // ============================================================
+                // BOOK BUTTON - Only show if film is now showing
+                // ============================================================
 
-                    if (yearNum === currentYear) {
-                        const indicator = document.createElement('div');
-                        indicator.style.cssText = `
-                            text-align: center;
-                            font-family: var(--font-mono);
-                            font-size: clamp(11px, 0.8vw, 13px);
-                            color: var(--success);
-                            margin-bottom: 10px;
-                            padding: 4px 12px;
-                            border: 1px solid var(--success);
-                            border-radius: 20px;
-                            display: inline-block;
-                            background: rgba(76, 154, 106, 0.1);
-                        `;
-                        indicator.textContent = '🎬 Now Showing';
-                        DOM.showtimesContainer.prepend(indicator);
-                    }
-                } else if (yearNum < currentYear && yearNum !== 'N/A') {
-                    DOM.showtimesContainer.innerHTML = `
-                        <div class="past-film-message">
-                            <i class="fas fa-film"></i>
-                            <p>This film was released in <strong>${movieYear}</strong>.</p>
-                            <p style="margin-top:4px;font-size:clamp(12px,0.8vw,14px);color:var(--paper-dim);">
-                                Check out our current lineup for films showing now.
-                            </p>
-                        </div>
-                    `;
+                if (showtimeResult.status === 'now-showing') {
+                    const today = new Date();
+                    const releaseDate = movie.release_date ? new Date(movie.release_date) : null;
+                    
+                    DOM.bookBtn.href = `booking.html?film=${encodeURIComponent(JSON.stringify({
+                        filmTitle: movie.title,
+                        filmYear: movieYear,
+                        cinema: 'Savannah Mall',
+                        screen: 'Screen 1',
+                        showtime: 'Today, 7:45 PM',
+                        priceStandard: 10.00,
+                        pricePremium: 13.50,
+                        id: movie.id
+                    }))}`;
+                    DOM.bookBtn.style.display = 'inline-flex';
                 } else {
-                    DOM.showtimesContainer.innerHTML = `
-                        <p class="no-showtimes">
-                            <i class="fas fa-clock" style="margin-right:8px;"></i>
-                            No showtimes available for this film.
-                        </p>
-                    `;
+                    DOM.bookBtn.style.display = 'none';
                 }
 
+                // ============================================================
                 // CAST
+                // ============================================================
+
                 DOM.castContainer.innerHTML = '';
                 if (credits.cast && credits.cast.length > 0) {
                     const castList = credits.cast.slice(0, 12);
@@ -2269,24 +2354,10 @@
 
                 document.title = `${movie.title} — Savannah Cinemas`;
 
-                // BOOK BUTTON
-                if (yearNum >= currentYear && yearNum !== 'N/A') {
-                    DOM.bookBtn.href = `booking.html?film=${encodeURIComponent(JSON.stringify({
-                        filmTitle: movie.title,
-                        filmYear: movieYear,
-                        cinema: 'Savannah Mall',
-                        screen: 'Screen 1',
-                        showtime: 'Today, 7:45 PM',
-                        priceStandard: 9.00,
-                        pricePremium: 13.50,
-                        id: movie.id
-                    }))}`;
-                    DOM.bookBtn.style.display = 'inline-flex';
-                } else {
-                    DOM.bookBtn.style.display = 'none';
-                }
-
+                // ============================================================
                 // WATCHLIST BUTTON
+                // ============================================================
+
                 DOM.watchlistBtn.dataset.filmId = movie.id;
                 
                 if (isAuthenticated()) {
@@ -2302,7 +2373,10 @@
                 DOM.watchlistLabel = newBtn.querySelector('span');
                 DOM.watchlistBtn.addEventListener('click', toggleWatchlist);
 
+                // ============================================================
                 // TRAILER BUTTON
+                // ============================================================
+
                 DOM.trailerBtn.addEventListener('click', function() {
                     openTrailerModal(movie.id);
                 });
