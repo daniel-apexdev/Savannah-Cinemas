@@ -1188,7 +1188,6 @@
     TOAST NOTIFICATION
     ============================================================ -->
     <div class="toast" id="toast">
-        <span class="toast-icon" id="toastIcon">✅</span>
         <span id="toastMessage">Added to watchlist</span>
     </div>
 
@@ -1275,6 +1274,7 @@
     <!-- ============================================================
     JAVASCRIPT
     ============================================================ -->
+    <script src="backend/config.js"></script>
     <script>
         (function() {
             'use strict';
@@ -1355,13 +1355,13 @@
                     
                 } else {
                     DOM.navRight.innerHTML = `
-                        <a href="auth.html" class="btn-signin">
+                        <a href="logout.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
                     
                     const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     DOM.mobileMenuLinks.appendChild(signInLink);
                     if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
                 }
@@ -1427,7 +1427,7 @@
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = 'auth.html';
+                window.location.href = 'logout.html';
             }
 
             // ============================================================
@@ -1760,6 +1760,5 @@
 
         })();
     </script>
-    <script src="backend/config.js"></script>
 </body>
 </html>
