@@ -26,7 +26,7 @@
             --radius-sm: 8px;
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
-            --touch-target: clamp(44px, 5vw, 56px);
+            --touch-target: clamp(44px, 5vw, 38px);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -114,6 +114,36 @@
             gap: 16px;
             position: relative;
             z-index: 1001;
+        }
+
+        /* ---------- SIGN IN BUTTON ---------- */
+        .btn-signin {
+            padding: 8px 20px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .btn-signin:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+        }
+
+        .btn-signin i {
+            font-size: 14px;
         }
 
         /* ---------- HAMBURGER MENU TOGGLE ---------- */
@@ -438,30 +468,6 @@
 
         .profile-menu a:last-child:hover {
             color: #ff6b6b;
-        }
-
-        /* ---------- BACK BUTTON ---------- */
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--paper-dim);
-            text-decoration: none;
-            font-size: clamp(13px, 1vw, 15px);
-            font-weight: 400;
-            margin-bottom: 20px;
-            transition: 0.3s ease;
-            padding: 8px 0;
-            min-height: var(--touch-target);
-            touch-action: manipulation;
-        }
-
-        .back-link:hover {
-            color: var(--gold);
-        }
-
-        .back-link i {
-            font-size: 14px;
         }
 
         /* ---------- MOVIE DETAILS HERO ---------- */
@@ -1267,7 +1273,6 @@
             <a href="index.html" class="wordmark">SAVANNAH <span>CINEMAS</span></a>
         </div>
 
-        <!-- Desktop Navigation -->
         <ul class="nav-links" id="navLinks">
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
@@ -1275,23 +1280,13 @@
             <li><a href="extras.html">Extras</a></li>
         </ul>
 
-        <div class="nav-right">
-            <div class="profile-wrapper" id="profileWrapper">
-                <div class="avatar" id="avatarBtn">DA</div>
-                <div class="profile-menu" id="profileMenu">
-                    <div class="who">
-                        <div class="name" id="dropdownName">User</div>
-                        <div class="stat" id="dropdownStat">0 films watched</div>
-                    </div>
-                    <a href="profile.html">My Profile</a>
-                    <a href="#" id="logoutBtn">Sign out</a>
-                </div>
-            </div>
+        <div class="nav-right" id="navRight">
+            <!-- Populated by JavaScript based on auth state -->
         </div>
     </nav>
 
     <!-- ============================================================
-    MOBILE MENU - SLIDE FROM LEFT
+    MOBILE MENU
     ============================================================ -->
     <div class="mobile-menu-overlay" id="mobileOverlay"></div>
     <div class="mobile-menu" id="mobileMenu">
@@ -1301,13 +1296,12 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <ul class="mobile-menu-links">
+        <ul class="mobile-menu-links" id="mobileMenuLinks">
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
             <li><a href="discovery.html">Discovery</a></li>
             <li><a href="extras.html">Extras</a></li>
-            <li class="mobile-divider"></li>
-            <li><a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+            <li class="mobile-divider" id="mobileDivider"></li>
         </ul>
         <div class="mobile-menu-footer">
             <p>© 2026 Savannah Cinemas</p>
@@ -1348,22 +1342,17 @@
     MOVIE DETAILS
     ============================================================ -->
     <div id="movieDetails">
-        <!-- Loading State -->
         <div class="loading" id="loadingState">
             <i class="fas fa-spinner fa-spin"></i> Loading movie details...
         </div>
 
-        <!-- Content (hidden until loaded) -->
         <div id="movieContent" style="display:none;">
-            <!-- Hero Section -->
             <div class="movie-details-hero" id="heroSection">
                 <div class="container">
-                    <!-- Poster -->
                     <div class="movie-poster">
                         <img id="posterImg" src="" alt="Movie Poster">
                     </div>
 
-                    <!-- Movie Info -->
                     <div class="movie-info">
                         <div class="label">Movie Details</div>
                         <h1 id="movieTitle">Movie Title</h1>
@@ -1386,7 +1375,7 @@
                         <div class="btn-row">
                             <a href="#" class="btn btn-primary" id="bookBtn"><i class="fas fa-ticket-alt"></i> Get Tickets</a>
                             <button class="btn btn-ghost" id="trailerBtn"><i class="fas fa-play"></i> Watch Trailer</button>
-                            <button class="btn-watchlist" id="watchlistBtn" data-film-id="">
+                            <button class="btn-watchlist" id="watchlistBtn">
                                 <i class="far fa-heart"></i> <span id="watchlistLabel">Add to Watchlist</span>
                             </button>
                         </div>
@@ -1394,20 +1383,15 @@
                 </div>
             </div>
 
-            <!-- Details Layout -->
             <div class="details-layout">
-                <!-- LEFT COLUMN -->
                 <div class="details-left">
-                    <!-- Overview -->
                     <div class="detail-section">
                         <h3>Overview</h3>
                         <p id="movieOverview">Loading overview...</p>
                     </div>
                 </div>
 
-                <!-- RIGHT COLUMN -->
                 <div class="details-right">
-                    <!-- Showtimes -->
                     <div class="detail-section">
                         <h3>Showtimes</h3>
                         <div id="showtimesContainer">
@@ -1416,12 +1400,9 @@
                     </div>
                 </div>
 
-                <!-- CAST - Full Width -->
                 <div class="detail-section" style="grid-column: 1 / -1;">
                     <h3>Cast</h3>
-                    <div class="cast-grid" id="castContainer">
-                        <!-- Cast populated by JavaScript -->
-                    </div>
+                    <div class="cast-grid" id="castContainer"></div>
                 </div>
             </div>
         </div>
@@ -1434,20 +1415,12 @@
         (function() {
             'use strict';
 
-            // ============================================================
-            // CONFIGURATION
-            // ============================================================
-
             const CONFIG = {
                 API_KEY: 'a0b31df2c8c2865ebe236c9e1eb7cbd9',
                 IMAGE_BASE: 'https://image.tmdb.org/t/p/w500',
                 BACKDROP_BASE: 'https://image.tmdb.org/t/p/original',
                 BACKEND_API: 'http://localhost:5000/api'
             };
-
-            // ============================================================
-            // AUTH & USER
-            // ============================================================
 
             const token = localStorage.getItem('token');
             const userData = JSON.parse(localStorage.getItem('user') || 'null');
@@ -1460,10 +1433,6 @@
                 if (!userData) return 'U';
                 return userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
             }
-
-            // ============================================================
-            // DOM REFS
-            // ============================================================
 
             const DOM = {
                 loadingState: document.getElementById('loadingState'),
@@ -1486,11 +1455,9 @@
                 trailerBtn: document.getElementById('trailerBtn'),
                 watchlistBtn: document.getElementById('watchlistBtn'),
                 watchlistLabel: document.getElementById('watchlistLabel'),
-                profileWrapper: document.getElementById('profileWrapper'),
-                avatarBtn: document.getElementById('avatarBtn'),
-                profileMenu: document.getElementById('profileMenu'),
-                dropdownName: document.getElementById('dropdownName'),
-                dropdownStat: document.getElementById('dropdownStat'),
+                navRight: document.getElementById('navRight'),
+                mobileMenuLinks: document.getElementById('mobileMenuLinks'),
+                mobileDivider: document.getElementById('mobileDivider'),
                 menuToggle: document.getElementById('menuToggle'),
                 mobileMenu: document.getElementById('mobileMenu'),
                 mobileOverlay: document.getElementById('mobileOverlay'),
@@ -1529,39 +1496,120 @@
             }
 
             // ============================================================
+            // NAVIGATION RENDER
+            // ============================================================
+
+            function renderNav() {
+                if (isAuthenticated() && userData) {
+                    const initials = getUserInitials();
+                    
+                    DOM.navRight.innerHTML = `
+                        <div class="profile-wrapper" id="profileWrapper">
+                            <div class="avatar" id="avatarBtn">${initials}</div>
+                            <div class="profile-menu" id="profileMenu">
+                                <div class="who">
+                                    <div class="name">${userData.name}</div>
+                                    <div class="stat" id="navStat">0 films watched</div>
+                                </div>
+                                <a href="profile.html">My Profile</a>
+                                <a href="#" id="logoutBtn">Sign out</a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const logoutLink = document.createElement('li');
+                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
+                    DOM.mobileMenuLinks.appendChild(logoutLink);
+                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
+                    
+                    setupProfileDropdown();
+                    
+                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    
+                    fetchWatchCount();
+                    
+                } else {
+                    DOM.navRight.innerHTML = `
+                        <a href="logout.html" class="btn-signin">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </a>
+                    `;
+                    
+                    const signInLink = document.createElement('li');
+                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    DOM.mobileMenuLinks.appendChild(signInLink);
+                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
+                }
+            }
+
+            // ============================================================
             // PROFILE DROPDOWN
             // ============================================================
 
-            let closeTimer = null;
-
-            function setupProfile() {
-                if (!DOM.profileWrapper) return;
-                if (userData) {
-                    DOM.dropdownName.textContent = userData.name;
-                    DOM.avatarBtn.textContent = getUserInitials();
-                }
-
-                DOM.profileWrapper.addEventListener('mouseenter', function() {
+            function setupProfileDropdown() {
+                const profileWrapper = document.getElementById('profileWrapper');
+                const avatarBtn = document.getElementById('avatarBtn');
+                if (!profileWrapper || !avatarBtn) return;
+                
+                let closeTimer;
+                profileWrapper.addEventListener('mouseenter', function() {
                     clearTimeout(closeTimer);
                     this.classList.add('is-open');
                 });
-
-                DOM.profileWrapper.addEventListener('mouseleave', function() {
+                profileWrapper.addEventListener('mouseleave', function() {
                     closeTimer = setTimeout(() => {
                         this.classList.remove('is-open');
                     }, 150);
                 });
-
-                DOM.avatarBtn.addEventListener('click', function(e) {
+                avatarBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    DOM.profileWrapper.classList.toggle('is-open');
+                    profileWrapper.classList.toggle('is-open');
                 });
-
                 document.addEventListener('click', function(e) {
-                    if (!DOM.profileWrapper.contains(e.target)) {
-                        DOM.profileWrapper.classList.remove('is-open');
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
                     }
                 });
+            }
+
+            // ============================================================
+            // FETCH WATCH COUNT
+            // ============================================================
+
+            async function fetchWatchCount() {
+                try {
+                    const response = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const watchlist = await response.json();
+                        const watchedCount = watchlist.filter(item => item.watched).length;
+                        const statEl = document.getElementById('navStat');
+                        if (statEl) {
+                            statEl.textContent = `${watchedCount} films watched`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching watch count:', error);
+                }
+            }
+
+            // ============================================================
+            // LOGOUT
+            // ============================================================
+
+            function logout() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
             }
 
             // ============================================================
@@ -1576,14 +1624,11 @@
                     DOM.menuToggle.classList.toggle('active');
                     document.body.style.overflow = DOM.mobileMenu.classList.contains('open') ? 'hidden' : '';
                 });
-
                 DOM.mobileMenuClose.addEventListener('click', closeMobileMenu);
                 DOM.mobileOverlay.addEventListener('click', closeMobileMenu);
-
                 DOM.mobileMenu.querySelectorAll('a').forEach(function(link) {
                     link.addEventListener('click', closeMobileMenu);
                 });
-
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape' && DOM.mobileMenu.classList.contains('open')) {
                         closeMobileMenu();
@@ -1599,31 +1644,16 @@
             }
 
             // ============================================================
-            // LOGOUT
-            // ============================================================
-
-            function logout() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = 'auth.html';
-            }
-
-            document.getElementById('logoutBtn').addEventListener('click', (e) => { e.preventDefault(); logout(); });
-            document.getElementById('mobileLogoutBtn').addEventListener('click', (e) => { e.preventDefault(); logout(); });
-
-            // ============================================================
-            // WATCHLIST API - FIXED WITH FLEXIBLE DATA HANDLING
+            // WATCHLIST API - UPDATED
             // ============================================================
 
             let currentMovie = null;
             let isInWatchlist = false;
 
-            // Fetch the user's full watchlist from the backend
+            // Fetch the user's full watchlist
             async function fetchWatchlist() {
                 if (!isAuthenticated()) return [];
                 try {
-                    console.log('🔍 Fetching watchlist from:', `${CONFIG.BACKEND_API}/watchlist`);
-                    
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
                         headers: { 
                             'Authorization': `Bearer ${token}`,
@@ -1632,59 +1662,16 @@
                     });
                     
                     if (!res.ok) {
-                        console.error('❌ Failed to fetch watchlist:', res.status);
+                        console.error('Failed to fetch watchlist:', res.status);
                         return [];
                     }
                     
-                    const data = await res.json();
-                    console.log('📦 Raw watchlist data:', data);
-                    console.log('📊 Data type:', typeof data);
-                    
-                    // Handle different response formats (same as profile page)
-                    let watchlistData = [];
-                    
-                    // Check if data is an array
-                    if (Array.isArray(data)) {
-                        watchlistData = data;
-                        console.log('✅ Data is an array with', data.length, 'items');
-                    } 
-                    // Check if data has a 'watchlist' property that is an array
-                    else if (data && data.watchlist && Array.isArray(data.watchlist)) {
-                        watchlistData = data.watchlist;
-                        console.log('✅ Data has watchlist array with', data.watchlist.length, 'items');
-                    }
-                    // Check if data has a 'data' property that is an array
-                    else if (data && data.data && Array.isArray(data.data)) {
-                        watchlistData = data.data;
-                        console.log('✅ Data has data array with', data.data.length, 'items');
-                    }
-                    // Check if data has a 'films' property that is an array
-                    else if (data && data.films && Array.isArray(data.films)) {
-                        watchlistData = data.films;
-                        console.log('✅ Data has films array with', data.films.length, 'items');
-                    }
-                    // If data is an object with numeric keys, convert to array
-                    else if (data && typeof data === 'object' && !Array.isArray(data)) {
-                        const values = Object.values(data);
-                        if (values.length > 0 && values.every(v => typeof v === 'object' && v !== null)) {
-                            watchlistData = values;
-                            console.log('✅ Converted object to array with', values.length, 'items');
-                        } else {
-                            console.warn('⚠️ Data is an object but values are not watchlist items');
-                            for (const key in data) {
-                                if (Array.isArray(data[key])) {
-                                    watchlistData = data[key];
-                                    console.log(`✅ Found array in property "${key}" with`, data[key].length, 'items');
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
-                    console.log('📊 Final watchlist data:', watchlistData);
-                    return watchlistData || [];
+                    // The server now returns the watchlist array directly
+                    const watchlist = await res.json();
+                    console.log('📦 Watchlist data:', watchlist);
+                    return watchlist || [];
                 } catch (err) {
-                    console.error('❌ Fetch watchlist error:', err);
+                    console.error('Fetch watchlist error:', err);
                     return [];
                 }
             }
@@ -1692,17 +1679,11 @@
             // Check if a film is in the user's watchlist
             async function checkWatchlistStatus(movieId) {
                 if (!isAuthenticated()) {
-                    console.log('Not authenticated, watchlist status false');
                     return false;
                 }
                 try {
                     const watchlist = await fetchWatchlist();
-                    const found = watchlist.some(item => {
-                        const itemId = item.filmId || item.id || item._id;
-                        const match = itemId == movieId;
-                        if (match) console.log(`✅ Found film ${movieId} in watchlist:`, item);
-                        return match;
-                    });
+                    const found = watchlist.some(item => item.filmId == movieId);
                     console.log(`Film ${movieId} in watchlist:`, found);
                     return found;
                 } catch (err) {
@@ -1715,6 +1696,9 @@
             async function addToWatchlist(movieId, movieData) {
                 if (!isAuthenticated()) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'logout.html';
+                    }, 2000);
                     return false;
                 }
                 try {
@@ -1723,12 +1707,8 @@
                         title: movieData.title,
                         poster: movieData.poster_path ? `${CONFIG.IMAGE_BASE}${movieData.poster_path}` : '',
                         year: movieData.release_date ? movieData.release_date.substring(0, 4) : 'N/A',
-                        rating: movieData.vote_average || 0,
-                        watched: false,
-                        favorite: false
+                        rating: movieData.vote_average || 0
                     };
-
-                    console.log('📤 Adding to watchlist:', payload);
 
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
                         method: 'POST',
@@ -1739,12 +1719,9 @@
                         body: JSON.stringify(payload)
                     });
 
-                    console.log('📡 Add response status:', res.status);
-
                     if (res.status === 409) {
-                        const errData = await res.json().catch(() => ({}));
-                        console.log('Film already in watchlist (409):', errData);
-                        showToast('This film is already in your watchlist', 'info');
+                        const data = await res.json();
+                        showToast(data.message || 'This film is already in your watchlist', 'info');
                         isInWatchlist = await checkWatchlistStatus(movieId);
                         updateWatchlistUI(isInWatchlist);
                         return false;
@@ -1752,12 +1729,9 @@
 
                     if (!res.ok) {
                         const errData = await res.json().catch(() => ({}));
-                        console.error('Add error response:', errData);
                         throw new Error(errData.message || 'Failed to add to watchlist');
                     }
                     
-                    const result = await res.json();
-                    console.log('✅ Add success:', result);
                     return true;
                 } catch (err) {
                     console.error('Add to watchlist error:', err);
@@ -1773,7 +1747,6 @@
                     return false;
                 }
                 try {
-                    console.log(`🗑️ Removing film ${movieId} from watchlist...`);
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist/${movieId}`, {
                         method: 'DELETE',
                         headers: {
@@ -1781,11 +1754,9 @@
                         }
                     });
 
-                    console.log('📡 Remove response status:', res.status);
-
                     if (res.status === 404) {
-                        console.log('Film not found in watchlist (404)');
-                        showToast('Film not found in your watchlist', 'info');
+                        const data = await res.json();
+                        showToast(data.message || 'Film not found in your watchlist', 'info');
                         isInWatchlist = await checkWatchlistStatus(movieId);
                         updateWatchlistUI(isInWatchlist);
                         return false;
@@ -1793,12 +1764,9 @@
 
                     if (!res.ok) {
                         const errData = await res.json().catch(() => ({}));
-                        console.error('Remove error response:', errData);
                         throw new Error(errData.message || 'Failed to remove from watchlist');
                     }
                     
-                    const result = await res.json();
-                    console.log('✅ Remove success:', result);
                     return true;
                 } catch (err) {
                     console.error('Remove from watchlist error:', err);
@@ -1817,7 +1785,7 @@
                 if (!isAuthenticated()) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
-                        window.location.href = 'auth.html';
+                        window.location.href = 'logout.html';
                     }, 2000);
                     return;
                 }
@@ -1826,8 +1794,6 @@
                 DOM.watchlistBtn.style.opacity = '0.6';
 
                 const movieId = currentMovie.id;
-                console.log(`🔄 Toggling watchlist for film ${movieId}, currently in:`, isInWatchlist);
-
                 let success = false;
                 if (isInWatchlist) {
                     success = await removeFromWatchlist(movieId);
@@ -1851,7 +1817,6 @@
             }
 
             function updateWatchlistUI(inWatchlist) {
-                console.log(`🎨 Updating UI: inWatchlist = ${inWatchlist}`);
                 if (inWatchlist) {
                     DOM.watchlistBtn.classList.add('in-watchlist');
                     DOM.watchlistBtn.querySelector('i').className = 'fas fa-heart';
@@ -1870,8 +1835,6 @@
             // TRAILER MODAL
             // ============================================================
 
-            let currentMovieId = null;
-
             function setupTrailerModal() {
                 DOM.trailerModalClose.addEventListener('click', closeTrailerModal);
                 DOM.trailerModal.addEventListener('click', function(e) {
@@ -1885,7 +1848,6 @@
             }
 
             function openTrailerModal(movieId) {
-                currentMovieId = movieId;
                 DOM.trailerModal.classList.add('active');
                 document.body.style.overflow = 'hidden';
                 DOM.trailerLoading.style.display = 'block';
@@ -1990,13 +1952,11 @@
                 DOM.loadingState.style.display = 'none';
                 DOM.movieContent.style.display = 'block';
 
-                // Background
                 if (movie.backdrop_path) {
                     DOM.heroSection.style.backgroundImage =
                         `url('${CONFIG.BACKDROP_BASE}${movie.backdrop_path}')`;
                 }
 
-                // Poster
                 if (movie.poster_path) {
                     DOM.posterImg.src = `${CONFIG.IMAGE_BASE}${movie.poster_path}`;
                     DOM.posterImg.alt = movie.title;
@@ -2006,17 +1966,12 @@
                     `;
                 }
 
-                // Title
                 DOM.movieTitle.textContent = movie.title;
-
-                // Tagline
                 DOM.movieTagline.textContent = movie.tagline || '';
 
-                // Year
                 const movieYear = movie.release_date ? movie.release_date.substring(0, 4) : 'N/A';
                 DOM.movieYear.textContent = movieYear;
 
-                // Runtime
                 const runtime = movie.runtime;
                 if (runtime) {
                     const hours = Math.floor(runtime / 60);
@@ -2026,20 +1981,16 @@
                     DOM.movieRuntime.textContent = 'N/A';
                 }
 
-                // Status
                 DOM.movieStatus.textContent = movie.status || 'N/A';
 
-                // Rating
                 const rating = movie.vote_average || 0;
                 DOM.movieRating.textContent = rating.toFixed(1);
                 DOM.voteCount.textContent = movie.vote_count ? movie.vote_count.toLocaleString() : '0';
 
-                // Stars
                 const stars = Math.round(rating / 2);
                 const starsStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
                 DOM.movieStars.textContent = starsStr;
 
-                // Genres
                 DOM.genresContainer.innerHTML = '';
                 if (movie.genres && movie.genres.length > 0) {
                     movie.genres.forEach(genre => {
@@ -2055,13 +2006,9 @@
                     DOM.genresContainer.appendChild(tag);
                 }
 
-                // Overview
                 DOM.movieOverview.textContent = movie.overview || 'No overview available.';
 
-                // ============================================================
-                // SHOWTIMES - BASED ON YEAR
-                // ============================================================
-
+                // SHOWTIMES
                 const currentYear = new Date().getFullYear();
                 const yearNum = parseInt(movieYear);
 
@@ -2108,7 +2055,6 @@
                         indicator.textContent = '🎬 Now Showing';
                         DOM.showtimesContainer.prepend(indicator);
                     }
-
                 } else if (yearNum < currentYear && yearNum !== 'N/A') {
                     DOM.showtimesContainer.innerHTML = `
                         <div class="past-film-message">
@@ -2128,7 +2074,7 @@
                     `;
                 }
 
-                // ---------- CAST ----------
+                // CAST
                 DOM.castContainer.innerHTML = '';
                 if (credits.cast && credits.cast.length > 0) {
                     const castList = credits.cast.slice(0, 12);
@@ -2167,10 +2113,9 @@
                     `;
                 }
 
-                // Update page title
                 document.title = `${movie.title} — Savannah Cinemas`;
 
-                // ---------- BOOK BUTTON ----------
+                // BOOK BUTTON
                 if (yearNum >= currentYear && yearNum !== 'N/A') {
                     DOM.bookBtn.href = `booking.html?film=${encodeURIComponent(JSON.stringify({
                         filmTitle: movie.title,
@@ -2187,26 +2132,23 @@
                     DOM.bookBtn.style.display = 'none';
                 }
 
-                // ---------- WATCHLIST BUTTON ----------
+                // WATCHLIST BUTTON
                 DOM.watchlistBtn.dataset.filmId = movie.id;
                 
                 if (isAuthenticated()) {
-                    console.log('🔍 Checking watchlist status for film:', movie.id);
                     isInWatchlist = await checkWatchlistStatus(movie.id);
-                    console.log('📊 Watchlist status result:', isInWatchlist);
                 } else {
                     isInWatchlist = false;
                 }
                 updateWatchlistUI(isInWatchlist);
                 
-                // Remove old listeners and add new one
                 const newBtn = DOM.watchlistBtn.cloneNode(true);
                 DOM.watchlistBtn.parentNode.replaceChild(newBtn, DOM.watchlistBtn);
                 DOM.watchlistBtn = newBtn;
                 DOM.watchlistLabel = newBtn.querySelector('span');
                 DOM.watchlistBtn.addEventListener('click', toggleWatchlist);
 
-                // ---------- TRAILER BUTTON ----------
+                // TRAILER BUTTON
                 DOM.trailerBtn.addEventListener('click', function() {
                     openTrailerModal(movie.id);
                 });
@@ -2235,17 +2177,13 @@
                     return;
                 }
 
-                setupProfile();
+                renderNav();
                 setupMobileMenu();
                 setupTrailerModal();
 
                 const data = await fetchMovieDetails(movieId);
                 await renderMovieDetails(data);
             }
-
-            // ============================================================
-            // START
-            // ============================================================
 
             if (document.readyState === 'complete' || document.readyState === 'interactive') {
                 init();

@@ -284,19 +284,17 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// WATCHLIST ROUTES
+// WATCHLIST ROUTES - UPDATED
 // ============================================================
 
-// GET WATCHLIST
+// GET WATCHLIST - Returns the user's watchlist as an array
 app.get('/api/watchlist', authenticateToken, async (req, res) => {
     try {
         const data = readData();
         const watchlist = data.watchlists[req.user.id] || [];
         
-        res.json({
-            success: true,
-            watchlist
-        });
+        // Return the watchlist array directly, not nested
+        res.json(watchlist);
 
     } catch (error) {
         console.error('Get watchlist error:', error);
@@ -310,23 +308,33 @@ app.get('/api/watchlist', authenticateToken, async (req, res) => {
 // ADD TO WATCHLIST
 app.post('/api/watchlist', authenticateToken, async (req, res) => {
     try {
-        const { movieId, title, year, poster, rating } = req.body;
+        const { filmId, title, year, poster, rating } = req.body;
+
+        // Reject early rather than silently saving a broken record
+        if (filmId === undefined || filmId === null) {
+            return res.status(400).json({
+                success: false,
+                message: 'filmId is required'
+            });
+        }
+
         const data = readData();
 
         if (!data.watchlists[req.user.id]) {
             data.watchlists[req.user.id] = [];
         }
 
-        const exists = data.watchlists[req.user.id].some(item => item.movieId === movieId);
+        // Loose equality (==) to handle both number and string filmIds
+        const exists = data.watchlists[req.user.id].some(item => item.filmId == filmId);
         if (exists) {
-            return res.status(400).json({
+            return res.status(409).json({
                 success: false,
                 message: 'Movie already in watchlist'
             });
         }
 
         const movieItem = {
-            movieId,
+            filmId,
             title,
             year,
             poster,
@@ -339,7 +347,7 @@ app.post('/api/watchlist', authenticateToken, async (req, res) => {
         data.watchlists[req.user.id].push(movieItem);
         writeData(data);
 
-        res.json({
+        res.status(201).json({
             success: true,
             message: 'Movie added to watchlist',
             watchlist: data.watchlists[req.user.id]
@@ -355,22 +363,38 @@ app.post('/api/watchlist', authenticateToken, async (req, res) => {
 });
 
 // REMOVE FROM WATCHLIST
-app.delete('/api/watchlist/:movieId', authenticateToken, async (req, res) => {
+app.delete('/api/watchlist/:filmId', authenticateToken, async (req, res) => {
     try {
-        const movieId = parseInt(req.params.movieId);
+        const filmId = req.params.filmId;
         const data = readData();
 
         if (data.watchlists[req.user.id]) {
+            const before = data.watchlists[req.user.id].length;
             data.watchlists[req.user.id] = data.watchlists[req.user.id].filter(
-                item => item.movieId !== movieId
+                item => item.filmId != filmId
             );
+            const removed = before !== data.watchlists[req.user.id].length;
+
             writeData(data);
+
+            if (!removed) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Movie not found in watchlist'
+                });
+            }
+            
+            return res.json({
+                success: true,
+                message: 'Movie removed from watchlist',
+                watchlist: data.watchlists[req.user.id] || []
+            });
         }
 
-        res.json({
-            success: true,
-            message: 'Movie removed from watchlist',
-            watchlist: data.watchlists[req.user.id] || []
+        // If no watchlist exists for the user
+        res.status(404).json({
+            success: false,
+            message: 'Movie not found in watchlist'
         });
 
     } catch (error) {
@@ -392,10 +416,7 @@ app.get('/api/bookings', authenticateToken, async (req, res) => {
         const data = readData();
         const bookings = data.bookings[req.user.id] || [];
         
-        res.json({
-            success: true,
-            bookings: bookings.sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate))
-        });
+        res.json(bookings);
 
     } catch (error) {
         console.error('Get bookings error:', error);

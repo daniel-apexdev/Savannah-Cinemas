@@ -16,11 +16,22 @@
   "watchlists": {
     "1787176697637": [
       {
+        "filmId": 969681,
         "title": "Spider-Man: Brand New Day",
         "year": "2026",
         "poster": "https://image.tmdb.org/t/p/w500/iPOn6DinuVyLY17YM9mKuPofV08.jpg",
-        "rating": 7.884,
-        "addedDate": "2026-08-19T22:22:00.059Z",
+        "rating": 7.9,
+        "addedDate": "2026-08-20T09:38:17.495Z",
+        "watched": false,
+        "favorite": false
+      },
+      {
+        "filmId": 1368337,
+        "title": "The Odyssey",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/5rhTDKUhPYvpdQIijFIs5VoWsON.jpg",
+        "rating": 8,
+        "addedDate": "2026-08-20T09:38:32.904Z",
         "watched": false,
         "favorite": false
       }
