@@ -1358,7 +1358,7 @@
                     
                 } else {
                     DOM.navRight.innerHTML = `
-                        <a href="auth.html" class="btn-signin">
+                        <a href="logout.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
@@ -1368,7 +1368,7 @@
                     
                     const signInLink = document.createElement('li');
                     signInLink.className = 'mobile-auth-link';
-                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     DOM.mobileMenuLinks.appendChild(signInLink);
                     if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
                 }
@@ -1434,7 +1434,7 @@
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = 'auth.html';
+                window.location.href = 'logout.html';
             }
 
             // ============================================================
@@ -1542,7 +1542,7 @@
                 if (!isAuthenticated) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
-                        window.location.href = 'auth.html';
+                        window.location.href = 'logout.html';
                     }, 1500);
                     return { success: false, message: 'Not authenticated' };
                 }
@@ -1855,7 +1855,7 @@
                 if (!isAuthenticated) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
-                        window.location.href = 'auth.html';
+                        window.location.href = 'logout.html';
                     }, 1500);
                     return;
                 }
@@ -1892,7 +1892,7 @@
                 if (!isAuthenticated) {
                     showToast('Please sign in to set notifications', 'info');
                     setTimeout(() => {
-                        window.location.href = 'auth.html';
+                        window.location.href = 'logout.html';
                     }, 1500);
                     return;
                 }
