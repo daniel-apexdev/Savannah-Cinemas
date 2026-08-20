@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
 <title>Savannah Cinemas — Select Seats</title>
-<link rel="stylesheet" href="css/style.css">
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
@@ -20,6 +19,7 @@
     --rust:         #B33951;
     --rust-hover:   #c94661;
     --rust-deep:    #6E2333;
+    --success:      #4C9A6A;
 
     --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
     --font-body:    'Inter', 'Public Sans', -apple-system, sans-serif;
@@ -30,7 +30,8 @@
     --container-padding: clamp(16px, 4vw, 60px);
     
     /* Mobile touch target size - minimum 44px */
-    --touch-target: clamp(44px, 5vw, 56px);
+    --touch-target: clamp(44px, 5vw, 38px);
+    --max-width: 1400px;
   }
 
   *{ box-sizing:border-box; margin:0; padding:0; }
@@ -51,7 +52,7 @@
     display:flex; 
     align-items:center; 
     justify-content:space-between;
-    padding:12px var(--container-padding);
+    padding:16px var(--container-padding);
     border-bottom:1px solid var(--ink-line);
     background:rgba(20,20,28,0.92);
     backdrop-filter:blur(12px);
@@ -89,6 +90,36 @@
     gap: 12px;
     z-index: 1001;
     position: relative;
+  }
+
+  /* ---------- SIGN IN BUTTON ---------- */
+  .btn-signin {
+    padding: 8px 20px;
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: clamp(13px, 0.9vw, 15px);
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--touch-target);
+    touch-action: manipulation;
+  }
+
+  .btn-signin:hover {
+    background: #f0c369;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+  }
+
+  .btn-signin i {
+    font-size: 14px;
   }
 
   /* ---------- HAMBURGER MENU TOGGLE ---------- */
@@ -419,6 +450,8 @@
 
   /* ---------- BOOKING HEADER ---------- */
   .booking-header{
+    max-width: var(--max-width);
+    margin: 0 auto;
     padding:20px var(--container-padding) 8px;
   }
   
@@ -473,6 +506,8 @@
 
   /* ---------- LAYOUT ---------- */
   .booking-layout{
+    max-width: var(--max-width);
+    margin: 0 auto;
     display:flex; 
     gap:clamp(24px, 3vw, 48px); 
     align-items:flex-start;
@@ -487,7 +522,7 @@
     width:clamp(300px, 28vw, 380px);
     position:sticky; 
     top:80px;
-    align-self: flex-start;
+    align-self:flex-start;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
   }
@@ -1036,6 +1071,146 @@
     box-shadow:none;
   }
 
+  /* ---------- TOAST ---------- */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--ink-raised);
+    border: 1px solid var(--ink-line);
+    border-radius: var(--radius-md);
+    padding: 14px 24px;
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: clamp(14px, 0.9vw, 16px);
+    font-weight: 400;
+    z-index: 3000;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 90%;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast .toast-icon {
+    font-size: 20px;
+  }
+
+  .toast .toast-icon.success {
+    color: var(--success);
+  }
+
+  .toast .toast-icon.info {
+    color: var(--gold);
+  }
+
+  .toast .toast-icon.error {
+    color: var(--rust);
+  }
+
+  /* ---------- FOOTER ---------- */
+  .footer {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 40px var(--container-padding) 0;
+    border-top: 1px solid var(--ink-line);
+    margin-top: 20px;
+  }
+
+  .footer-top {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 40px;
+    padding-bottom: 30px;
+  }
+
+  .footer-brand .nav-brand {
+    font-family: var(--font-display);
+    font-size: clamp(20px, 2vw, 26px);
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  .footer-brand p {
+    color: var(--paper-dim);
+    font-size: clamp(13px, 0.9vw, 15px);
+    font-weight: 300;
+    line-height: 1.7;
+    max-width: 400px;
+  }
+
+  .footer span {
+    color: var(--gold);
+  }
+
+  .footer-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .footer-col h4 {
+    font-family: var(--font-display);
+    font-size: clamp(14px, 1vw, 16px);
+    font-weight: 500;
+    color: var(--paper);
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .footer-col a {
+    display: block;
+    color: var(--paper-dim);
+    text-decoration: none;
+    font-size: clamp(13px, 0.9vw, 14px);
+    font-weight: 300;
+    padding: 4px 0;
+    transition: 0.3s ease;
+  }
+
+  .footer-col a:hover {
+    color: var(--gold);
+  }
+
+  .footer-tear {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
+    margin: 0 0 20px;
+  }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 0 24px;
+    font-family: var(--font-mono);
+    font-size: clamp(11px, 0.8vw, 13px);
+    color: var(--paper-dim);
+    font-weight: 300;
+  }
+
+  .footer-bottom .legal a {
+    color: var(--paper-dim);
+    text-decoration: none;
+    margin-left: 20px;
+    transition: 0.3s ease;
+  }
+
+  .footer-bottom .legal a:hover {
+    color: var(--gold);
+  }
+
   /* ---------- RESPONSIVE ---------- */
   @media (max-width: 768px) {
     .menu-toggle {
@@ -1052,7 +1227,7 @@
     }
 
     .panel {
-      padding: 9px;
+      padding: 12px;
     }
 
     .panel h2 {
@@ -1061,8 +1236,9 @@
     }
 
     .ticket-quantity {
-      flex-direction: center;
+      flex-direction: column;
       gap: 12px;
+      align-items: center;
     }
 
     .ticket-quantity .ticket-price-info {
@@ -1086,6 +1262,15 @@
       grid-template-columns:repeat(2, 1fr);
     }
 
+    .footer-top {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .footer-cols {
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
   }
 
   @media (max-width: 600px) {
@@ -1116,49 +1301,14 @@
       background:linear-gradient(270deg, var(--ink-raised), transparent);
     }
 
-    .seat-legend{
-      display:flex; gap:clamp(16px, 2vw, 28px); justify-content:center; flex-wrap:wrap;
-      font-size:clamp(12px, 0.9vw, 14px); color:var(--paper-dim); padding-top:16px;
-      border-top:1px solid var(--ink-line); font-weight:300;
-    }
-    .legend-item{ display:flex; align-items:center; gap:10px; padding:4px 0; }
-    .legend-swatch{
-      width:clamp(18px, 1.5vw, 24px); height:clamp(18px, 1.5vw, 24px);
-      border-radius:clamp(4px, 0.4vw, 8px) clamp(4px, 0.4vw, 8px) clamp(3px, 0.3vw, 5px) clamp(3px, 0.3vw, 5px);
-      border:2px solid var(--ink-line); flex-shrink:0;
-    }
-    .legend-swatch.available{ background:transparent; }
-    .legend-swatch.selected{ background:var(--gold); border-color:var(--gold); }
-    .legend-swatch.taken{ background:var(--ink-line); }
-    .legend-swatch.premium{ border-color:var(--gold-dim); }
-
     .snack-grid{
       grid-template-columns:repeat(2, 1fr);
       gap:10px;
     }
     
-    .snack-thumb{
-      height: 55px;
-      font-size: 32px;
-    }
-    
     .screen{
       width:75%;
       height:5px;
-    }
-    
-    .snack-options select {
-      padding: 10px 12px;
-      font-size: 13px;
-      min-height: 40px;
-    }
-
-    .qty-stepper button {
-      width: 32px;
-      height: 32px;
-      font-size: 16px;
-      min-width: 32px;
-      min-height: 32px;
     }
 
     .booking-header h1 {
@@ -1198,8 +1348,20 @@
 
   @media (max-width:480px){
     .snack-card{ gap:10px; padding:9px 12px; }
-    .snack-options{ display:none; }
     .snack-name{ font-size:13.5px; }
+    .snack-grid{
+      grid-template-columns:1fr;
+    }
+    .footer-cols {
+      grid-template-columns: 1fr;
+    }
+    .footer-bottom {
+      flex-direction: column;
+      text-align: center;
+    }
+    .footer-bottom .legal a {
+      margin: 0 10px;
+    }
   }
 
   @media (max-width: 400px) {
@@ -1218,7 +1380,7 @@
     }
 
     .panel {
-      padding: 12px;
+      padding: 10px;
     }
     
     .row-label{
@@ -1229,11 +1391,6 @@
     .snack-grid{
       grid-template-columns:1fr;
       gap: 12px;
-    }
-
-    .snack-thumb{
-      height: 50px;
-      font-size: 28px;
     }
 
     .booking-header h1 {
@@ -1257,11 +1414,6 @@
       width: 28px;
       height: 28px;
       font-size: 11px;
-    }
-
-    .booking-main {
-      width: 100%;
-      overflow: hidden;
     }
 
     .seat-map {
@@ -1298,12 +1450,6 @@
       font-size: 14px;
       min-width: 28px;
       min-height: 28px;
-    }
-
-    .snack-options select {
-      padding: 8px 10px;
-      font-size: 12px;
-      min-height: 36px;
     }
 
     .screen {
@@ -1356,7 +1502,7 @@
     }
 
     .panel {
-      padding: 10px;
+      padding: 8px;
     }
 
     .screen-selection .screen-option {
@@ -1374,11 +1520,6 @@
 
     .snack-card {
       padding: 10px;
-    }
-
-    .snack-thumb {
-      height: 40px;
-      font-size: 24px;
     }
 
     .snack-name {
@@ -1465,18 +1606,8 @@
       </button>
       <a href="index.html" class="wordmark">Savannah <span>Cinemas</span></a>
     </div>
-    <div class="nav-right">
-      <div class="profile-wrapper" id="profileWrapper">
-        <div class="avatar" id="avatarBtn">DA</div>
-        <div class="profile-menu" id="profileMenu">
-          <div class="who">
-            <div class="name">Daniel Asamoah</div>
-            <div class="stat">142 films watched</div>
-          </div>
-          <a href="profile.html">My Profile</a>
-          <a href="logout.html">Sign out</a>
-        </div>
-      </div>
+    <div class="nav-right" id="navRight">
+      <!-- Will be populated by JavaScript -->
     </div>
   </nav>
 
@@ -1491,17 +1622,24 @@
         <i class="fas fa-times"></i>
       </button>
     </div>
-    <ul class="mobile-menu-links">
+    <ul class="mobile-menu-links" id="mobileMenuLinks">
       <li><a href="coming-soon.html">Coming soon</a></li>
       <li><a href="events.html">Events</a></li>
       <li><a href="discovery.html">Discovery</a></li>
       <li><a href="extras.html">Extras</a></li>
-      <li class="mobile-divider"></li>
-      <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+      <li class="mobile-divider" id="mobileDivider"></li>
     </ul>
     <div class="mobile-menu-footer">
       <p>© 2026 Savannah Cinemas</p>
     </div>
+  </div>
+
+  <!-- ============================================================
+  TOAST NOTIFICATION
+  ============================================================ -->
+  <div class="toast" id="toast">
+    <span class="toast-icon" id="toastIcon">✅</span>
+    <span id="toastMessage">Success!</span>
   </div>
 
   <!-- ============================================================
@@ -1570,7 +1708,7 @@
         </div>
       </div>
 
-      <!-- SNACKS - FIXED WITH INDIVIDUAL ITEMS -->
+      <!-- SNACKS -->
       <div class="panel">
         <h2>Add snacks &amp; drinks</h2>
         <div class="snack-grid" id="snackGrid">
@@ -1708,7 +1846,207 @@
     </div>
   </div>
 
+  <!-- ============================================================
+  FOOTER
+  ============================================================ -->
+  <footer class="footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="nav-brand">SAVANNAH <span>CINEMAS</span></div>
+        <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>Browse</h4>
+          <a href="coming-soon.html">Coming soon</a>
+          <a href="events.html">Events</a>
+          <a href="discovery.html">Discovery</a>
+          <a href="extras.html">Extras</a>
+        </div>
+        <div class="footer-col">
+          <h4>Account</h4>
+          <a href="bookings.html">My bookings</a>
+          <a href="history.html">Watch history</a>
+          <a href="profile.html">Settings</a>
+        </div>
+        <div class="footer-col">
+          <h4>Support</h4>
+          <a href="help.html">Help centre</a>
+          <a href="refunds.html">Refunds</a>
+          <a href="contact.html">Contact us</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-tear"></div>
+    <div class="footer-bottom">
+      <span>© 2026 Savannah Cinemas</span>
+      <span class="legal">
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+      </span>
+    </div>
+  </footer>
+
   <script>
+    // ============================================================
+    // AUTH STATE
+    // ============================================================
+    
+    const token = localStorage.getItem('token');
+    const userData = JSON.parse(localStorage.getItem('user') || 'null');
+    const isAuthenticated = !!token && !!userData;
+
+    // ============================================================
+    // NAV RENDER
+    // ============================================================
+
+    function renderNav() {
+      const navRight = document.getElementById('navRight');
+      const mobileMenuLinks = document.getElementById('mobileMenuLinks');
+      const mobileDivider = document.getElementById('mobileDivider');
+      
+      if (isAuthenticated && userData) {
+        const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        
+        navRight.innerHTML = `
+          <div class="profile-wrapper" id="profileWrapper">
+            <div class="avatar" id="avatarBtn">${initials}</div>
+            <div class="profile-menu" id="profileMenu">
+              <div class="who">
+                <div class="name">${userData.name}</div>
+                <div class="stat" id="navStat">0 films watched</div>
+              </div>
+              <a href="profile.html">My Profile</a>
+              <a href="#" id="logoutBtn">Sign out</a>
+            </div>
+          </div>
+        `;
+        
+        const logoutLink = document.createElement('li');
+        logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
+        mobileMenuLinks.appendChild(logoutLink);
+        if (mobileDivider) mobileDivider.style.display = 'block';
+        
+        setupProfileDropdown();
+        
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+          e.preventDefault();
+          logout();
+        });
+        document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
+          e.preventDefault();
+          logout();
+        });
+        
+        fetchWatchCount();
+        
+      } else {
+        navRight.innerHTML = `
+          <a href="auth.html" class="btn-signin">
+            <i class="fas fa-sign-in-alt"></i> Sign In
+          </a>
+        `;
+        
+        const signInLink = document.createElement('li');
+        signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+        mobileMenuLinks.appendChild(signInLink);
+        if (mobileDivider) mobileDivider.style.display = 'block';
+      }
+    }
+
+    // ============================================================
+    // PROFILE DROPDOWN
+    // ============================================================
+
+    function setupProfileDropdown() {
+      const profileWrapper = document.getElementById('profileWrapper');
+      const avatarBtn = document.getElementById('avatarBtn');
+      if (!profileWrapper || !avatarBtn) return;
+      
+      let closeTimer;
+      profileWrapper.addEventListener('mouseenter', function() {
+        clearTimeout(closeTimer);
+        this.classList.add('is-open');
+      });
+      profileWrapper.addEventListener('mouseleave', function() {
+        closeTimer = setTimeout(() => {
+          this.classList.remove('is-open');
+        }, 150);
+      });
+      avatarBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        profileWrapper.classList.toggle('is-open');
+      });
+      document.addEventListener('click', function(e) {
+        if (!profileWrapper.contains(e.target)) {
+          profileWrapper.classList.remove('is-open');
+        }
+      });
+    }
+
+    // ============================================================
+    // FETCH WATCH COUNT
+    // ============================================================
+
+    async function fetchWatchCount() {
+      try {
+        const response = await fetch('http://localhost:5000/api/watchlist', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const watchlist = await response.json();
+          const watchedCount = watchlist.filter(item => item.watched).length;
+          const statEl = document.getElementById('navStat');
+          if (statEl) {
+            statEl.textContent = `${watchedCount} films watched`;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching watch count:', error);
+      }
+    }
+
+    // ============================================================
+    // LOGOUT
+    // ============================================================
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+    }
+
+    // ============================================================
+    // TOAST SYSTEM
+    // ============================================================
+    
+    let toastTimeout = null;
+
+    function showToast(message, type) {
+      const iconMap = {
+        success: '✅',
+        info: 'ℹ️',
+        error: '❌'
+      };
+      
+      const toast = document.getElementById('toast');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastMessage = document.getElementById('toastMessage');
+      
+      toastIcon.textContent = iconMap[type] || 'ℹ️';
+      toastIcon.className = `toast-icon ${type}`;
+      toastMessage.textContent = message;
+      
+      toast.classList.add('show');
+      
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
     // ============================================================
     // MOBILE MENU
     // ============================================================
@@ -1760,46 +2098,6 @@
 
       document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
         link.addEventListener('click', closeMobileMenu);
-      });
-    })();
-
-    // ============================================================
-    // PROFILE DROPDOWN
-    // ============================================================
-    
-    (function setupProfile() {
-      const profileWrapper = document.getElementById('profileWrapper');
-      const avatarBtn = document.getElementById('avatarBtn');
-      let closeTimer = null;
-
-      if (!profileWrapper) return;
-
-      profileWrapper.addEventListener('mouseenter', function() {
-        clearTimeout(closeTimer);
-        this.classList.add('is-open');
-      });
-
-      profileWrapper.addEventListener('mouseleave', function() {
-        closeTimer = setTimeout(function() {
-          profileWrapper.classList.remove('is-open');
-        }, 150);
-      });
-
-      avatarBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        profileWrapper.classList.toggle('is-open');
-      });
-
-      document.addEventListener('click', function(e) {
-        if (!profileWrapper.contains(e.target)) {
-          profileWrapper.classList.remove('is-open');
-        }
-      });
-
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
-          profileWrapper.classList.remove('is-open');
-        }
       });
     })();
 
@@ -2177,6 +2475,14 @@
     document.getElementById('payBtn').addEventListener('click', function() {
       if (this.disabled) return;
       
+      if (!isAuthenticated) {
+        showToast('Please sign in to complete your booking', 'info');
+        setTimeout(() => {
+          window.location.href = 'auth.html';
+        }, 1500);
+        return;
+      }
+      
       // Build checkout data with all snack items
       var snackItems = Object.keys(snackQuantities).map(function(name) {
         var item = snackQuantities[name];
@@ -2219,6 +2525,7 @@
     // INITIALIZE
     // ============================================================
     
+    renderNav();
     renderScreenOptions();
     buildSeatMap();
     updateTicketDisplay();

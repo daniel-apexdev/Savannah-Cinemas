@@ -46,6 +46,16 @@
         "addedDate": "2026-08-20T09:39:54.298Z",
         "watched": false,
         "favorite": false
+      },
+      {
+        "filmId": 1083381,
+        "title": "Backrooms",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/rhGx6E3qRNMgj3i5su2oukNHwIQ.jpg",
+        "rating": 7.095,
+        "addedDate": "2026-08-20T10:47:43.372Z",
+        "watched": false,
+        "favorite": false
       }
     ]
   },

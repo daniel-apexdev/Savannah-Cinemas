@@ -9,18 +9,479 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="css/style.css">
-    
     <style>
-        /* ============================================================
-           EXTRAS PAGE STYLES
-        ============================================================ */
+        :root {
+            --ink: #14141C;
+            --ink-raised: #1D1D28;
+            --ink-line: #2C2C3A;
+            --paper: #F2EFE9;
+            --paper-dim: #B9B6AC;
+            --gold: #E8B34C;
+            --gold-dim: #7A5C22;
+            --rust: #B33951;
+            --rust-hover: #c94661;
+            --success: #4C9A6A;
+            --font-display: 'Oswald', 'Bebas Neue', Impact, sans-serif;
+            --font-body: 'Inter', 'Public Sans', -apple-system, sans-serif;
+            --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --container-padding: clamp(16px, 4vw, 60px);
+            --touch-target: clamp(44px, 5vw, 38px);
+            --max-width: 1400px;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---------- NAV ---------- */
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px var(--container-padding);
+            border-bottom: 1px solid var(--ink-line);
+            background: rgba(20, 20, 28, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            gap: 16px;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .wordmark {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2.5vw, 28px);
+            font-weight: 500;
+            text-decoration: none;
+            color: var(--paper);
+        }
+
+        .wordmark span {
+            color: var(--gold);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: clamp(16px, 2vw, 32px);
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 1vw, 15px);
+            font-weight: 400;
+            transition: 0.3s ease;
+            letter-spacing: 0.02em;
+            position: relative;
+            padding: 4px 0;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--gold);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--gold);
+            border-radius: 2px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            z-index: 1001;
+        }
+
+        /* ---------- SIGN IN BUTTON ---------- */
+        .btn-signin {
+            padding: 8px 20px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .btn-signin:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+        }
+
+        .btn-signin i {
+            font-size: 14px;
+        }
+
+        /* ---------- HAMBURGER MENU TOGGLE ---------- */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px 8px;
+            z-index: 1001;
+            position: relative;
+            flex-shrink: 0;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            justify-content: center;
+            align-items: center;
+            border-radius: var(--radius-sm);
+            touch-action: manipulation;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 28px;
+            height: 2.5px;
+            background: var(--paper);
+            transition: 0.3s ease;
+            border-radius: 2px;
+            transform-origin: center;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        /* ---------- MOBILE MENU - SLIDE FROM LEFT ---------- */
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 85%;
+            max-width: 380px;
+            height: 100vh;
+            background: var(--ink);
+            z-index: 1000;
+            padding: 0;
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            box-shadow: 8px 0 40px rgba(0, 0, 0, 0.6);
+            border-right: 1px solid var(--ink-line);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-menu.open {
+            left: 0;
+        }
+
+        .mobile-menu-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 24px 20px;
+            border-bottom: 1px solid var(--ink-line);
+            background: var(--ink-raised);
+            flex-shrink: 0;
+        }
+
+        .mobile-menu-brand {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 500;
+            color: var(--paper);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .mobile-menu-brand span {
+            color: var(--gold);
+        }
+
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            color: var(--paper);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 12px;
+            transition: 0.3s ease;
+            line-height: 1;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            touch-action: manipulation;
+        }
+
+        .mobile-menu-close:hover {
+            color: var(--gold);
+            transform: rotate(90deg);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .mobile-menu-links {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: column;
+        }
+
+        .mobile-menu-links li {
+            padding: 0 24px;
+            margin: 4px 0;
+        }
+
+        .mobile-menu-links a {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 12px;
+            color: var(--paper);
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 400;
+            transition: 0.2s ease;
+            border-radius: 10px;
+            width: 100%;
+            letter-spacing: 0.02em;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .mobile-menu-links a i {
+            width: 28px;
+            text-align: center;
+            color: var(--paper-dim);
+            font-size: 20px;
+            transition: 0.2s ease;
+        }
+
+        .mobile-menu-links a:hover {
+            color: var(--gold);
+            background: rgba(232, 179, 76, 0.06);
+            padding-left: 18px;
+        }
+
+        .mobile-menu-links a:hover i {
+            color: var(--gold);
+        }
+
+        .mobile-menu-links a.active {
+            color: var(--gold);
+            background: rgba(232, 179, 76, 0.08);
+        }
+
+        .mobile-menu-links a.active i {
+            color: var(--gold);
+        }
+
+        .mobile-divider {
+            height: 1px;
+            background: var(--ink-line);
+            margin: 12px 24px;
+        }
+
+        .mobile-logout {
+            color: #d95b5b !important;
+            margin-top: 8px;
+        }
+
+        .mobile-logout i {
+            color: #d95b5b !important;
+        }
+
+        .mobile-logout:hover {
+            color: #ff6b6b !important;
+            background: rgba(217, 91, 91, 0.08) !important;
+        }
+
+        .mobile-logout:hover i {
+            color: #ff6b6b !important;
+        }
+
+        .mobile-menu-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--ink-line);
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--paper-dim);
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        /* ---------- PROFILE ---------- */
+        .profile-wrapper {
+            position: relative;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 15px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.3s ease;
+            user-select: none;
+        }
+
+        .avatar:hover {
+            border-color: var(--gold-dim);
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            width: 220px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .profile-wrapper.is-open .profile-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-menu .who {
+            padding: 16px;
+            border-bottom: 1px solid var(--ink-line);
+        }
+
+        .profile-menu .who .name {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--paper);
+        }
+
+        .profile-menu .who .stat {
+            color: var(--gold);
+            font-size: 12px;
+            font-family: var(--font-mono);
+            margin-top: 4px;
+        }
+
+        .profile-menu a {
+            display: block;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--paper-dim);
+            text-decoration: none;
+            border-bottom: 1px solid var(--ink-line);
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .profile-menu a:last-child {
+            border-bottom: none;
+            color: #d95b5b;
+        }
+
+        .profile-menu a:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--paper);
+        }
+
+        .profile-menu a:last-child:hover {
+            color: #ff6b6b;
+        }
+
+        /* ---------- EXTRAS HERO ---------- */
         .extras-hero {
             padding: 32px var(--container-padding) 8px;
             text-align: center;
-            max-width: 80%;
+            max-width: 800px;
             margin: 0 auto;
         }
 
@@ -45,25 +506,25 @@
             margin: 0 auto;
         }
 
-        /* ---------- EXTRAS GRID - SMALLER CARDS WITH BETTER SPACING ---------- */
+        /* ---------- EXTRAS GRID ---------- */
         .extras-grid-wrapper {
-            max-width: 90%;
+            max-width: var(--max-width);
             margin: 0 auto;
-            padding: 16px var(--container-padding) 40px;
+            padding: 24px var(--container-padding) 40px;
         }
 
         .extras-grid-page {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(clamp(170px, 14vw, 210px), 1fr));
-            gap: 14px;
-            margin-top: 4px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-top: 8px;
         }
 
         .extra-card-page {
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-sm);
-            padding: clamp(14px, 1.2vw, 20px);
+            padding: clamp(16px, 1.5vw, 24px);
             text-decoration: none;
             color: var(--paper);
             transition: 0.3s ease;
@@ -74,7 +535,7 @@
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            min-height: 120px;
+            min-height: 140px;
             justify-content: center;
         }
 
@@ -101,13 +562,13 @@
         }
 
         .extra-card-page .extra-icon {
-            font-size: clamp(24px, 2vw, 32px);
-            margin-bottom: 4px;
+            font-size: clamp(28px, 2.5vw, 36px);
+            margin-bottom: 6px;
         }
 
         .extra-card-page .extra-name {
             font-family: var(--font-display);
-            font-size: clamp(14px, 1vw, 17px);
+            font-size: clamp(14px, 1vw, 18px);
             font-weight: 500;
             color: var(--paper);
             margin-bottom: 2px;
@@ -117,7 +578,7 @@
             font-size: clamp(11px, 0.7vw, 13px);
             color: var(--paper-dim);
             font-weight: 300;
-            line-height: 1.3;
+            line-height: 1.4;
             margin-bottom: 6px;
         }
 
@@ -157,7 +618,7 @@
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-md);
-            max-width: 520px;
+            max-width: 560px;
             width: 100%;
             max-height: 85vh;
             overflow-y: auto;
@@ -228,7 +689,7 @@
             padding: 5px 8px;
             border-bottom: 1px solid var(--ink-line);
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
             font-size: clamp(12px, 0.8vw, 14px);
         }
@@ -241,6 +702,12 @@
             color: var(--gold);
             width: 18px;
             font-size: 14px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .modal-content .modal-body ul li strong {
+            color: var(--paper);
         }
 
         .modal-content .modal-btn {
@@ -264,13 +731,13 @@
             transform: translateY(-2px);
         }
 
-        .modal-content .modal-btn.profile-link {
-            background: var(--ink);
+        .modal-content .modal-btn.secondary {
+            background: transparent;
             border: 1px solid var(--gold);
             color: var(--gold);
         }
 
-        .modal-content .modal-btn.profile-link:hover {
+        .modal-content .modal-btn.secondary:hover {
             background: var(--gold);
             color: var(--ink);
         }
@@ -444,40 +911,180 @@
             width: 0%;
         }
 
-        /* ---------- INPUTS ---------- */
-        .modal-body input[type="email"],
-        .modal-body select {
-            padding: 8px 12px;
-            background: var(--ink);
+        /* ---------- TOAST ---------- */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--ink-raised);
             border: 1px solid var(--ink-line);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-md);
+            padding: 14px 24px;
             color: var(--paper);
             font-family: var(--font-body);
-            font-size: clamp(12px, 0.8vw, 14px);
-            min-height: 38px;
-            width: 100%;
+            font-size: clamp(14px, 0.9vw, 16px);
+            font-weight: 400;
+            z-index: 3000;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 90%;
         }
 
-        .modal-body input[type="email"]:focus,
-        .modal-body select:focus {
-            outline: none;
-            border-color: var(--gold);
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast .toast-icon.success {
+            color: var(--success);
+        }
+
+        .toast .toast-icon.info {
+            color: var(--gold);
+        }
+
+        .toast .toast-icon.error {
+            color: var(--rust);
+        }
+
+        /* ---------- FOOTER ---------- */
+        .footer {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 40px var(--container-padding) 0;
+            border-top: 1px solid var(--ink-line);
+            margin-top: 20px;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            padding-bottom: 30px;
+        }
+
+        .footer-brand .nav-brand {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2vw, 26px);
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .footer-brand p {
+            color: var(--paper-dim);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 300;
+            line-height: 1.7;
+            max-width: 400px;
+        }
+
+        .footer span {
+            color: var(--gold);
+        }
+
+        .footer-cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .footer-col h4 {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 0.9vw, 14px);
+            font-weight: 300;
+            padding: 4px 0;
+            transition: 0.3s ease;
+        }
+
+        .footer-col a:hover {
+            color: var(--gold);
+        }
+
+        .footer-tear {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
+            margin: 0 0 20px;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 0 24px;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.8vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .footer-bottom .legal a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: 0.3s ease;
+        }
+
+        .footer-bottom .legal a:hover {
+            color: var(--gold);
         }
 
         /* ---------- RESPONSIVE ---------- */
-        @media (max-width: 768px) {
+        @media (max-width: 1200px) {
             .extras-grid-page {
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 10px;
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .extras-grid-page {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .extras-grid-page {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
             }
 
             .extra-card-page {
-                min-height: 100px;
-                padding: 12px;
+                min-height: 110px;
+                padding: 14px;
             }
 
             .extra-card-page .extra-icon {
-                font-size: 22px;
+                font-size: 24px;
             }
 
             .extra-card-page .extra-name {
@@ -492,24 +1099,30 @@
                 grid-template-columns: 1fr 1fr;
             }
 
-            .extras-grid-wrapper {
-                padding: 12px var(--container-padding) 30px;
+            .footer-top {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
             }
         }
 
         @media (max-width: 600px) {
             .extras-grid-page {
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 8px;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
             }
 
             .extra-card-page {
-                min-height: 90px;
-                padding: 10px;
+                min-height: 100px;
+                padding: 12px;
             }
 
             .extra-card-page .extra-icon {
-                font-size: 20px;
+                font-size: 22px;
             }
 
             .extra-card-page .extra-name {
@@ -541,13 +1154,13 @@
 
         @media (max-width: 480px) {
             .extras-grid-page {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
             }
 
             .extra-card-page {
-                min-height: 85px;
-                padding: 8px;
+                min-height: 90px;
+                padding: 10px;
             }
 
             .modal-content {
@@ -560,19 +1173,32 @@
             }
 
             .extras-grid-wrapper {
-                padding: 8px var(--container-padding) 20px;
+                padding: 16px var(--container-padding) 30px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-bottom .legal a {
+                margin: 0 10px;
             }
         }
 
         @media (max-width: 360px) {
             .extras-grid-page {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(2, 1fr);
                 gap: 6px;
             }
 
             .extra-card-page {
-                min-height: 75px;
-                padding: 6px;
+                min-height: 80px;
+                padding: 8px;
             }
 
             .extra-card-page .extra-icon {
@@ -586,6 +1212,25 @@
             .extra-card-page .extra-desc {
                 display: none;
             }
+        }
+
+        /* ---------- SCROLLBAR ---------- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
         }
     </style>
 </head>
@@ -601,7 +1246,7 @@
                 <span></span>
                 <span></span>
             </button>
-            <a href="index.html" class="nav-brand">Savannah <span>Cinemas</span></a>
+            <a href="index.html" class="wordmark">SAVANNAH <span>CINEMAS</span></a>
         </div>
         
         <!-- Desktop Navigation -->
@@ -612,18 +1257,8 @@
             <li><a href="extras.html" class="active">Extras</a></li>
         </ul>
         
-        <div class="nav-right">
-            <div class="profile-wrapper" id="profileWrapper">
-                <div class="avatar">DA</div>
-                <div class="profile-menu">
-                    <div class="who">
-                        <div class="name">Daniel Asamoah</div>
-                        <div class="stat">142 films watched</div>
-                    </div>
-                    <a href="profile.html">My Profile</a>
-                    <a href="logout.html">Sign out</a>
-                </div>
-            </div>
+        <div class="nav-right" id="navRight">
+            <!-- Will be populated by JavaScript -->
         </div>
     </nav>
 
@@ -638,13 +1273,12 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <ul class="mobile-menu-links">
+        <ul class="mobile-menu-links" id="mobileMenuLinks">
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
             <li><a href="discovery.html">Discovery</a></li>
             <li><a href="extras.html" class="active">Extras</a></li>
-            <li class="mobile-divider"></li>
-            <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+            <li class="mobile-divider" id="mobileDivider"></li>
         </ul>
         <div class="mobile-menu-footer">
             <p>© 2026 Savannah Cinemas</p>
@@ -652,16 +1286,23 @@
     </div>
 
     <!-- ============================================================
+    TOAST NOTIFICATION
+    ============================================================ -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✅</span>
+        <span id="toastMessage">Success!</span>
+    </div>
+
+    <!-- ============================================================
     EXTRAS HERO
     ============================================================ -->
     <div class="extras-hero">
-        <div class="extras-icon">🎬</div>
         <h1>Extras</h1>
         <p>Explore more from the world of cinema — quizzes, trivia, recommendations, and more.</p>
     </div>
 
     <!-- ============================================================
-    EXTRAS GRID - WITH PROPER SPACING
+    EXTRAS GRID
     ============================================================ -->
     <div class="extras-grid-wrapper">
         <div class="extras-grid-page">
@@ -704,22 +1345,6 @@
                 <div class="extra-name">Newsletter</div>
                 <div class="extra-desc">Stay in the loop</div>
                 <span class="extra-tag">Subscribe</span>
-            </div>
-
-            <!-- Watchlist -->
-            <div class="extra-card-page" id="watchlistCard">
-                <div class="extra-icon">📝</div>
-                <div class="extra-name">Watchlist</div>
-                <div class="extra-desc">Save films to watch</div>
-                <span class="extra-tag">Manage</span>
-            </div>
-
-            <!-- Film Stats -->
-            <div class="extra-card-page" id="statsCard">
-                <div class="extra-icon">📈</div>
-                <div class="extra-name">Film Stats</div>
-                <div class="extra-desc">Track your habits</div>
-                <span class="extra-tag">View Stats</span>
             </div>
 
         </div>
@@ -788,6 +1413,164 @@
         document.addEventListener('DOMContentLoaded', function() {
 
             // ============================================================
+            // AUTH STATE
+            // ============================================================
+            
+            const token = localStorage.getItem('token');
+            const userData = JSON.parse(localStorage.getItem('user') || 'null');
+            const isAuthenticated = !!token && !!userData;
+
+            // ============================================================
+            // NAV RENDER
+            // ============================================================
+
+            function renderNav() {
+                const navRight = document.getElementById('navRight');
+                const mobileMenuLinks = document.getElementById('mobileMenuLinks');
+                const mobileDivider = document.getElementById('mobileDivider');
+                
+                if (isAuthenticated && userData) {
+                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    
+                    navRight.innerHTML = `
+                        <div class="profile-wrapper" id="profileWrapper">
+                            <div class="avatar" id="avatarBtn">${initials}</div>
+                            <div class="profile-menu" id="profileMenu">
+                                <div class="who">
+                                    <div class="name">${userData.name}</div>
+                                    <div class="stat" id="navStat">0 films watched</div>
+                                </div>
+                                <a href="profile.html">My Profile</a>
+                                <a href="#" id="logoutBtn">Sign out</a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const logoutLink = document.createElement('li');
+                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
+                    mobileMenuLinks.appendChild(logoutLink);
+                    if (mobileDivider) mobileDivider.style.display = 'block';
+                    
+                    setupProfileDropdown();
+                    
+                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    
+                    fetchWatchCount();
+                    
+                } else {
+                    navRight.innerHTML = `
+                        <a href="auth.html" class="btn-signin">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </a>
+                    `;
+                    
+                    const signInLink = document.createElement('li');
+                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    mobileMenuLinks.appendChild(signInLink);
+                    if (mobileDivider) mobileDivider.style.display = 'block';
+                }
+            }
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+
+            function setupProfileDropdown() {
+                const profileWrapper = document.getElementById('profileWrapper');
+                const avatarBtn = document.getElementById('avatarBtn');
+                if (!profileWrapper || !avatarBtn) return;
+                
+                let closeTimer;
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(() => {
+                        this.classList.remove('is-open');
+                    }, 150);
+                });
+                avatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileWrapper.classList.toggle('is-open');
+                });
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // FETCH WATCH COUNT
+            // ============================================================
+
+            async function fetchWatchCount() {
+                try {
+                    const response = await fetch('http://localhost:5000/api/watchlist', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const watchlist = await response.json();
+                        const watchedCount = watchlist.filter(item => item.watched).length;
+                        const statEl = document.getElementById('navStat');
+                        if (statEl) {
+                            statEl.textContent = `${watchedCount} films watched`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching watch count:', error);
+                }
+            }
+
+            // ============================================================
+            // LOGOUT
+            // ============================================================
+
+            function logout() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
+            }
+
+            // ============================================================
+            // TOAST SYSTEM
+            // ============================================================
+            
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                const iconMap = {
+                    success: '✅',
+                    info: 'ℹ️',
+                    error: '❌'
+                };
+                
+                const toast = document.getElementById('toast');
+                const toastIcon = document.getElementById('toastIcon');
+                const toastMessage = document.getElementById('toastMessage');
+                
+                toastIcon.textContent = iconMap[type] || 'ℹ️';
+                toastIcon.className = `toast-icon ${type}`;
+                toastMessage.textContent = message;
+                
+                toast.classList.add('show');
+                
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+
+            // ============================================================
             // MOBILE MENU
             // ============================================================
             
@@ -838,46 +1621,6 @@
             document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
                 link.addEventListener('click', closeMobileMenu);
             });
-
-            // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
-            
-            const profileWrapper = document.getElementById('profileWrapper');
-            const avatarBtn = document.querySelector('.avatar');
-            let closeTimer = null;
-
-            if (profileWrapper) {
-                profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-
-                profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(function() {
-                        profileWrapper.classList.remove('is-open');
-                    }, 150);
-                });
-
-                if (avatarBtn) {
-                    avatarBtn.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        profileWrapper.classList.toggle('is-open');
-                    });
-                }
-
-                document.addEventListener('click', function(e) {
-                    if (!profileWrapper.contains(e.target)) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-            }
 
             // ============================================================
             // MODAL SYSTEM
@@ -1078,20 +1821,38 @@
                 }, 100);
             });
 
-            // Film Trivia
+            // Film Trivia - Improved layout with categories
             document.getElementById('triviaCard').addEventListener('click', function() {
                 openModal(`
                     <div class="modal-icon">💡</div>
                     <h2 class="modal-title">Film Trivia</h2>
                     <div class="modal-body">
-                        <p>Did you know these fascinating film facts?</p>
+                        <p style="margin-bottom:12px;">Fascinating facts from the world of cinema:</p>
+                        
+                        <h4 style="font-family:var(--font-display);color:var(--gold);font-weight:500;font-size:clamp(14px,0.9vw,16px);margin:12px 0 6px;letter-spacing:0.02em;">🎥 History of Film</h4>
                         <ul>
-                            <li><i class="fas fa-film"></i> First film ever made: <strong>"Roundhay Garden Scene"</strong> (1888) - only 2 seconds!</li>
-                            <li><i class="fas fa-clock"></i> Longest film: <strong>"Logistics"</strong> (2012) - runs 857 hours (35 days)!</li>
-                            <li><i class="fas fa-dollar-sign"></i> Most expensive film: <strong>"Star Wars: The Force Awakens"</strong> - $447M+</li>
-                            <li><i class="fas fa-trophy"></i> Most awarded film: <strong>"Ben-Hur"</strong> (1959) - 11 Academy Awards</li>
-                            <li><i class="fas fa-popcorn"></i> Highest-grossing film: <strong>"Avatar"</strong> - $2.9B+</li>
+                            <li><i class="fas fa-film"></i> <strong>First film ever made:</strong> "Roundhay Garden Scene" (1888) - only 2 seconds long!</li>
+                            <li><i class="fas fa-microphone"></i> <strong>First talking film:</strong> "The Jazz Singer" (1927)</li>
+                            <li><i class="fas fa-palette"></i> <strong>First color film:</strong> "The Wizard of Oz" (1939) - first to use Technicolor</li>
+                            <li><i class="fas fa-robot"></i> <strong>First CGI character:</strong> Jurassic Park (1993) - the T-Rex and raptors</li>
                         </ul>
+                        
+                        <h4 style="font-family:var(--font-display);color:var(--gold);font-weight:500;font-size:clamp(14px,0.9vw,16px);margin:12px 0 6px;letter-spacing:0.02em;">🏆 Records & Awards</h4>
+                        <ul>
+                            <li><i class="fas fa-trophy"></i> <strong>Most Oscar wins:</strong> "Titanic" (1997) and "Ben-Hur" (1959) - 11 each</li>
+                            <li><i class="fas fa-dollar-sign"></i> <strong>Most expensive film:</strong> "Star Wars: The Force Awakens" - $447M+</li>
+                            <li><i class="fas fa-popcorn"></i> <strong>Highest-grossing film:</strong> "Avatar" - $2.9B+</li>
+                            <li><i class="fas fa-clock"></i> <strong>Longest film:</strong> "Logistics" (2012) - runs 857 hours (35 days)!</li>
+                        </ul>
+                        
+                        <h4 style="font-family:var(--font-display);color:var(--gold);font-weight:500;font-size:clamp(14px,0.9vw,16px);margin:12px 0 6px;letter-spacing:0.02em;">🎬 Iconic Moments</h4>
+                        <ul>
+                            <li><i class="fas fa-quote-right"></i> <strong>Most quoted film:</strong> "The Godfather" - "I'll make him an offer he can't refuse"</li>
+                            <li><i class="fas fa-skull"></i> <strong>Most deaths in a film:</strong> "The Lord of the Rings" trilogy - 835 on-screen deaths</li>
+                            <li><i class="fas fa-smile"></i> <strong>Most smiles in a film:</strong> "The Mask" (1994) - Jim Carrey smiles 87 times!</li>
+                            <li><i class="fas fa-crown"></i> <strong>Most awarded actor:</strong> Katharine Hepburn - 4 Academy Awards</li>
+                        </ul>
+                        
                         <button class="modal-btn" onclick="closeModal()">That's Awesome! 🎬</button>
                     </div>
                 `);
@@ -1099,11 +1860,25 @@
 
             // Recommendations - Redirects to Discovery page
             document.getElementById('recommendCard').addEventListener('click', function() {
+                if (!isAuthenticated) {
+                    showToast('Please sign in to get personalized recommendations', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'auth.html';
+                    }, 1500);
+                    return;
+                }
                 window.location.href = 'discovery.html';
             });
 
-            // Weekly Poll
+            // Weekly Poll - Requires authentication
             document.getElementById('pollCard').addEventListener('click', function() {
+                if (!isAuthenticated) {
+                    showToast('Please create an account or sign in to vote in the poll', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'auth.html';
+                    }, 1500);
+                    return;
+                }
                 openModal(`
                     <div class="modal-icon">📊</div>
                     <h2 class="modal-title">Weekly Poll</h2>
@@ -1137,7 +1912,7 @@
                 `);
             });
 
-            // Newsletter
+            // Newsletter - Works for both signed-in and guest users
             document.getElementById('newsletterCard').addEventListener('click', function() {
                 openModal(`
                     <div class="modal-icon">📬</div>
@@ -1150,24 +1925,47 @@
                             <li><i class="fas fa-gift"></i> Special discounts & offers</li>
                             <li><i class="fas fa-star"></i> Behind-the-scenes content</li>
                         </ul>
+                        <p style="font-size:13px;color:var(--paper-dim);margin:8px 0;">${isAuthenticated ? '👋 Welcome back! Subscribe to stay updated.' : '✉️ Enter your email to receive our weekly newsletter.'}</p>
                         <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
-                            <input type="email" placeholder="Enter your email" style="flex:1;min-height:38px;">
-                            <button class="modal-btn" style="flex:0 0 auto;width:auto;padding:8px 20px;min-height:38px;" onclick="this.textContent='✅ Subscribed!'">Subscribe</button>
+                            <input type="email" id="newsletterEmail" placeholder="Enter your email" style="flex:1;min-height:38px;padding:8px 12px;background:var(--ink);border:1px solid var(--ink-line);border-radius:var(--radius-sm);color:var(--paper);font-family:var(--font-body);font-size:clamp(12px,0.8vw,14px);min-height:38px;width:100%;">
+                            <button class="modal-btn" style="flex:0 0 auto;width:auto;padding:8px 20px;min-height:38px;" onclick="subscribeNewsletter()">Subscribe</button>
                         </div>
-                        <p style="font-size:11px;color:var(--paper-dim);margin-top:6px;">No spam, unsubscribe anytime.</p>
+                        <p style="font-size:11px;color:var(--paper-dim);margin-top:6px;">No spam, unsubscribe anytime. ${isAuthenticated ? '✓ You\'re signed in' : 'You can also sign in for more features.'}</p>
                     </div>
                 `);
             });
 
-            // Watchlist - Navigates to profile page
-            document.getElementById('watchlistCard').addEventListener('click', function() {
-                window.location.href = 'profile.html';
-            });
-
-            // Film Stats - Navigates to profile page
-            document.getElementById('statsCard').addEventListener('click', function() {
-                window.location.href = 'profile.html';
-            });
+            // ============================================================
+            // NEWSLETTER SUBSCRIPTION
+            // ============================================================
+            
+            window.subscribeNewsletter = function() {
+                const emailInput = document.getElementById('newsletterEmail');
+                const email = emailInput.value.trim();
+                
+                if (!email) {
+                    showToast('Please enter your email address', 'error');
+                    return;
+                }
+                
+                if (!email.includes('@') || !email.includes('.')) {
+                    showToast('Please enter a valid email address', 'error');
+                    return;
+                }
+                
+                // In a real app, this would send to the backend
+                showToast(`🎉 Thanks for subscribing! You'll receive our weekly newsletter at ${email}`, 'success');
+                
+                // Update button to show success
+                const btn = document.querySelector('.modal-btn');
+                if (btn) {
+                    btn.textContent = '✅ Subscribed!';
+                    btn.style.background = 'var(--success)';
+                    btn.style.color = 'var(--paper)';
+                }
+                
+                emailInput.disabled = true;
+            };
 
             // ============================================================
             // POLL VOTING FUNCTION
@@ -1191,7 +1989,7 @@
                     opt.querySelector('.poll-fill').style.width = percentage + '%';
                 });
                 
-                alert(`You voted for "${genre}"! Thanks for participating! 📊`);
+                showToast(`You voted for "${genre}"! Thanks for participating! 📊`, 'success');
             };
 
             // ============================================================
@@ -1200,6 +1998,13 @@
             
             window.closeModal = closeModal;
             window.handleQuizNext = handleQuizNext;
+            window.showToast = showToast;
+
+            // ============================================================
+            // INITIALIZE
+            // ============================================================
+
+            renderNav();
 
         });
     </script>

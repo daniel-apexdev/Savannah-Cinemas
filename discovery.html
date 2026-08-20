@@ -28,7 +28,7 @@
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
             --touch-target: clamp(44px, 5vw, 56px);
-            --max-width: 1200px;
+            --max-width: 1400px;
         }
 
         * {
@@ -51,7 +51,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px var(--container-padding);
+            padding: 16px var(--container-padding);
             border-bottom: 1px solid var(--ink-line);
             background: rgba(20, 20, 28, 0.92);
             backdrop-filter: blur(12px);
@@ -121,6 +121,36 @@
             gap: 16px;
             position: relative;
             z-index: 1001;
+        }
+
+        /* ---------- SIGN IN BUTTON ---------- */
+        .btn-signin {
+            padding: 8px 20px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .btn-signin:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+        }
+
+        .btn-signin i {
+            font-size: 14px;
         }
 
         /* ---------- HAMBURGER MENU TOGGLE ---------- */
@@ -483,7 +513,7 @@
         .search-bar {
             max-width: var(--max-width);
             margin: 0 auto;
-            padding: 0 var(--container-padding) 20px;
+            padding: 0 var(--container-padding) 24px;
             display: flex;
             gap: 12px;
             align-items: center;
@@ -564,20 +594,20 @@
             color: var(--gold);
         }
 
-        /* ---------- DISCOVERY GRID ---------- */
+        /* ---------- DISCOVERY GRID - MATCHING HOME PAGE ---------- */
         .discovery-grid {
             max-width: var(--max-width);
             margin: 0 auto;
-            padding: 20px var(--container-padding) 20px;
+            padding: 0 var(--container-padding) 20px;
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 16px;
         }
 
         .movie-card {
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-sm);
             overflow: hidden;
             transition: 0.3s ease;
             cursor: pointer;
@@ -586,9 +616,9 @@
         }
 
         .movie-card:hover {
-            transform: translateY(-6px);
-            border-color: var(--gold);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            transform: translateY(-4px);
+            border-color: var(--gold-dim);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
         }
 
         .movie-card .poster {
@@ -603,278 +633,175 @@
 
         .movie-card .poster .rating-badge {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(4px);
-            padding: 2px 10px;
-            border-radius: 8px;
+            bottom: 8px;
+            left: 8px;
             font-family: var(--font-mono);
-            font-size: clamp(10px, 0.7vw, 12px);
+            font-size: 10px;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.7);
             color: var(--gold);
-            border: 1px solid rgba(232, 179, 76, 0.15);
+            border: 1px solid var(--gold-dim);
+            backdrop-filter: blur(4px);
         }
 
         .movie-card .poster .watchlist-badge {
             position: absolute;
             top: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.75);
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(4px);
-            border: 1px solid var(--success);
+            border: 1px solid var(--rust);
             border-radius: 50%;
             width: 28px;
             height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--success);
+            color: var(--rust);
             font-size: 12px;
         }
 
-        .movie-card .info {
-            padding: 12px 14px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .movie-card .info .title {
-            font-family: var(--font-display);
-            font-size: clamp(13px, 0.9vw, 16px);
-            font-weight: 500;
-            color: var(--paper);
-            margin-bottom: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .movie-card .info .meta {
-            font-size: clamp(11px, 0.7vw, 13px);
-            color: var(--paper-dim);
-            font-weight: 300;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .movie-card .info .meta .year {
-            color: var(--paper-dim);
-        }
-
-        .movie-card .info .actions {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-
-        .movie-card .info .actions button {
-            padding: 4px 12px;
-            background: transparent;
+        /* ---------- TOAST ---------- */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--ink-raised);
             border: 1px solid var(--ink-line);
-            border-radius: var(--radius-sm);
-            color: var(--paper-dim);
+            border-radius: var(--radius-md);
+            padding: 14px 24px;
+            color: var(--paper);
             font-family: var(--font-body);
-            font-size: clamp(10px, 0.6vw, 12px);
-            cursor: pointer;
-            transition: 0.3s ease;
-            touch-action: manipulation;
-            min-height: 30px;
+            font-size: clamp(14px, 0.9vw, 16px);
+            font-weight: 400;
+            z-index: 3000;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
             display: flex;
             align-items: center;
-            gap: 4px;
-            flex: 1;
-            justify-content: center;
+            gap: 12px;
+            max-width: 90%;
         }
 
-        .movie-card .info .actions button:hover {
-            border-color: var(--gold);
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast .toast-icon.success {
+            color: var(--success);
+        }
+
+        .toast .toast-icon.info {
             color: var(--gold);
         }
 
-        .movie-card .info .actions button.watchlist-btn.in-watchlist {
-            border-color: var(--rust);
+        .toast .toast-icon.error {
             color: var(--rust);
         }
 
-        .movie-card .info .actions button.watchlist-btn.in-watchlist:hover {
-            background: var(--rust);
-            color: var(--ink);
+        /* ---------- FOOTER ---------- */
+        .footer {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 40px var(--container-padding) 0;
+            border-top: 1px solid var(--ink-line);
+            margin-top: 40px;
         }
 
-        /* ---------- MOBILE OPTIMIZATION ---------- */
-        @media (max-width: 768px) {
-            .menu-toggle {
-                display: flex;
-            }
-
-            .nav-links {
-                display: none;
-            }
-
-            .discovery-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-                padding: 16px var(--container-padding) 16px;
-            }
-
-            .search-bar {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-
-            .search-bar .result-badge {
-                text-align: center;
-            }
-
-            /* Hide title, year, and rating on mobile - keep only watchlist button */
-            .movie-card .info .title {
-                display: none;
-            }
-
-            .movie-card .info .meta {
-                display: none;
-            }
-
-            .movie-card .info .actions button {
-                font-size: 10px;
-                padding: 6px 10px;
-                min-height: 34px;
-                width: 100%;
-                justify-content: center;
-            }
-
-            .movie-card .info {
-                padding: 8px 10px;
-            }
-
-            .movie-card .poster .rating-badge {
-                font-size: 9px;
-                padding: 2px 8px;
-                top: 6px;
-                right: 6px;
-            }
-
-            .movie-card .poster .watchlist-badge {
-                width: 24px;
-                height: 24px;
-                font-size: 11px;
-                top: 6px;
-                left: 6px;
-            }
+        .footer-top {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            padding-bottom: 30px;
         }
 
-        @media (max-width: 600px) {
-            .discovery-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 10px;
-                padding: 12px var(--container-padding) 12px;
-            }
-
-            .movie-card .poster .rating-badge {
-                font-size: 8px;
-                padding: 1px 6px;
-                top: 4px;
-                right: 4px;
-            }
-
-            .movie-card .poster .watchlist-badge {
-                width: 20px;
-                height: 20px;
-                font-size: 9px;
-                top: 4px;
-                left: 4px;
-            }
-
-            .movie-card .info {
-                padding: 6px 8px;
-            }
-
-            .movie-card .info .actions button {
-                font-size: 9px;
-                padding: 4px 8px;
-                min-height: 28px;
-            }
-
-            .page-header h1 {
-                font-size: 26px;
-            }
-
-            .page-header p {
-                font-size: 13px;
-            }
-
-            .toast {
-                bottom: 16px;
-                padding: 10px 16px;
-                font-size: 13px;
-                max-width: 95%;
-            }
-
-            /* Extra small screens - even smaller cards */
-            .discovery-grid {
-                gap: 8px;
-            }
+        .footer-brand .nav-brand {
+            font-size: clamp(20px, 2vw, 26px);
+            display: inline-block;
+            margin-bottom: 8px;
         }
 
-        @media (max-width: 400px) {
-            .discovery-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 6px;
-            }
-
-            .search-bar .search-input-wrapper input {
-                font-size: 13px;
-                padding: 10px 12px 10px 38px;
-                min-height: 38px;
-            }
-
-            .search-bar .search-input-wrapper i {
-                left: 12px;
-                font-size: 14px;
-            }
-
-            .movie-card .info .actions button {
-                font-size: 8px;
-                padding: 3px 6px;
-                min-height: 24px;
-            }
-
-            .movie-card .poster .rating-badge {
-                font-size: 7px;
-                padding: 1px 5px;
-            }
-
-            .movie-card .poster .watchlist-badge {
-                width: 18px;
-                height: 18px;
-                font-size: 8px;
-            }
+        .footer-brand p {
+            color: var(--paper-dim);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 300;
+            line-height: 1.7;
+            max-width: 400px;
         }
 
-        /* ---------- SCROLLBAR ---------- */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+        .footer span{
+            color: var(--gold);
         }
 
-        ::-webkit-scrollbar-track {
-            background: var(--ink);
+        .footer-cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--gold-dim);
-            border-radius: 3px;
+        .footer-col h4 {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--gold);
+        .footer-col a {
+            display: block;
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 0.9vw, 14px);
+            font-weight: 300;
+            padding: 4px 0;
+            transition: 0.3s ease;
         }
 
-        /* ---------- LOADING ---------- */
+        .footer-col a:hover {
+            color: var(--gold);
+        }
+
+        .footer-tear {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
+            margin: 0 0 20px;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 0 24px;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.8vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .footer-bottom .legal a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: 0.3s ease;
+        }
+
+        .footer-bottom .legal a:hover {
+            color: var(--gold);
+        }
+
+        /* ---------- LOADING & EMPTY STATES ---------- */
         .loading-state {
             max-width: var(--max-width);
             margin: 0 auto;
@@ -893,7 +820,6 @@
             margin-bottom: 12px;
         }
 
-        /* ---------- EMPTY STATE ---------- */
         .empty-state {
             max-width: var(--max-width);
             margin: 0 auto;
@@ -951,50 +877,155 @@
             color: var(--paper-dim);
         }
 
-        /* ---------- TOAST ---------- */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--ink-raised);
-            border: 1px solid var(--ink-line);
-            border-radius: var(--radius-md);
-            padding: 14px 24px;
-            color: var(--paper);
-            font-family: var(--font-body);
-            font-size: clamp(14px, 0.9vw, 16px);
-            font-weight: 400;
-            z-index: 3000;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            max-width: 90%;
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 1600px) {
+            .discovery-grid {
+                grid-template-columns: repeat(8, 1fr);
+            }
         }
 
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
+        @media (max-width: 1200px) {
+            .discovery-grid {
+                grid-template-columns: repeat(6, 1fr);
+                gap: 14px;
+            }
         }
 
-        .toast .toast-icon {
-            font-size: 20px;
+        @media (max-width: 992px) {
+            .discovery-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 12px;
+            }
         }
 
-        .toast .toast-icon.success {
-            color: var(--success);
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .discovery-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+            }
+
+            .search-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+
+            .search-bar .result-badge {
+                text-align: center;
+            }
+
+            .footer-top {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+
+            .movie-card .poster .watchlist-badge {
+                width: 24px;
+                height: 24px;
+                font-size: 11px;
+                top: 6px;
+                right: 6px;
+            }
+
+            .movie-card .poster .rating-badge {
+                font-size: 9px;
+                padding: 2px 8px;
+                bottom: 6px;
+                left: 6px;
+            }
         }
 
-        .toast .toast-icon.info {
-            color: var(--gold);
+        @media (max-width: 600px) {
+            .discovery-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+            }
+
+            .movie-card .poster .rating-badge {
+                font-size: 8px;
+                padding: 1px 6px;
+                bottom: 4px;
+                left: 4px;
+            }
+
+            .movie-card .poster .watchlist-badge {
+                width: 20px;
+                height: 20px;
+                font-size: 9px;
+                top: 4px;
+                right: 4px;
+            }
+
+            .page-header h1 {
+                font-size: 26px;
+            }
+
+            .page-header p {
+                font-size: 13px;
+            }
         }
 
-        .toast .toast-icon.error {
-            color: var(--rust);
+        @media (max-width: 400px) {
+            .discovery-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+
+            .search-bar .search-input-wrapper input {
+                font-size: 13px;
+                padding: 10px 12px 10px 38px;
+                min-height: 38px;
+            }
+
+            .search-bar .search-input-wrapper i {
+                left: 12px;
+                font-size: 14px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-bottom .legal a {
+                margin: 0 10px;
+            }
+        }
+
+        /* ---------- SCROLLBAR ---------- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
         }
     </style>
 </head>
@@ -1021,18 +1052,8 @@
             <li><a href="extras.html">Extras</a></li>
         </ul>
         
-        <div class="nav-right">
-            <div class="profile-wrapper" id="profileWrapper">
-                <div class="avatar" id="avatarBtn">DA</div>
-                <div class="profile-menu" id="profileMenu">
-                    <div class="who">
-                        <div class="name">Daniel Asamoah</div>
-                        <div class="stat">142 films watched</div>
-                    </div>
-                    <a href="profile.html">My Profile</a>
-                    <a href="logout.html">Sign out</a>
-                </div>
-            </div>
+        <div class="nav-right" id="navRight">
+            <!-- Will be populated by JavaScript -->
         </div>
     </nav>
 
@@ -1047,13 +1068,12 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <ul class="mobile-menu-links">
+        <ul class="mobile-menu-links" id="mobileMenuLinks">
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
             <li><a href="discovery.html" class="active">Discovery</a></li>
             <li><a href="extras.html">Extras</a></li>
-            <li class="mobile-divider"></li>
-            <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+            <li class="mobile-divider" id="mobileDivider"></li>
         </ul>
         <div class="mobile-menu-footer">
             <p>© 2026 Savannah Cinemas</p>
@@ -1107,6 +1127,48 @@
     </div>
 
     <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="nav-brand">SAVANNAH <span>CINEMAS</span></div>
+                <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4>Browse</h4>
+                    <a href="coming-soon.html">Coming soon</a>
+                    <a href="events.html">Events</a>
+                    <a href="discovery.html">Discovery</a>
+                    <a href="extras.html">Extras</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Settings</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="help.html">Help centre</a>
+                    <a href="refunds.html">Refunds</a>
+                    <a href="contact.html">Contact us</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-tear"></div>
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
     JAVASCRIPT
     ============================================================ -->
     <script>
@@ -1121,6 +1183,9 @@
             const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
             const STORAGE_KEY = 'savannah_watchlist';
             const ITEMS_PER_PAGE = 20;
+            const token = localStorage.getItem('token');
+            const userData = JSON.parse(localStorage.getItem('user') || 'null');
+            const isAuthenticated = !!token && !!userData;
 
             // ============================================================
             // DOM REFS
@@ -1139,9 +1204,127 @@
                 mobileMenu: document.getElementById('mobileMenu'),
                 mobileOverlay: document.getElementById('mobileOverlay'),
                 mobileMenuClose: document.getElementById('mobileMenuClose'),
-                profileWrapper: document.getElementById('profileWrapper'),
-                avatarBtn: document.getElementById('avatarBtn')
+                navRight: document.getElementById('navRight'),
+                mobileMenuLinks: document.getElementById('mobileMenuLinks'),
+                mobileDivider: document.getElementById('mobileDivider')
             };
+
+            // ============================================================
+            // NAV RENDER
+            // ============================================================
+
+            function renderNav() {
+                if (isAuthenticated && userData) {
+                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    
+                    DOM.navRight.innerHTML = `
+                        <div class="profile-wrapper" id="profileWrapper">
+                            <div class="avatar" id="avatarBtn">${initials}</div>
+                            <div class="profile-menu" id="profileMenu">
+                                <div class="who">
+                                    <div class="name">${userData.name}</div>
+                                    <div class="stat" id="navStat">0 films watched</div>
+                                </div>
+                                <a href="profile.html">My Profile</a>
+                                <a href="#" id="logoutBtn">Sign out</a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const logoutLink = document.createElement('li');
+                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
+                    DOM.mobileMenuLinks.appendChild(logoutLink);
+                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
+                    
+                    setupProfileDropdown();
+                    
+                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    
+                    fetchWatchCount();
+                    
+                } else {
+                    DOM.navRight.innerHTML = `
+                        <a href="logout.html" class="btn-signin">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </a>
+                    `;
+                    
+                    const signInLink = document.createElement('li');
+                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    DOM.mobileMenuLinks.appendChild(signInLink);
+                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
+                }
+            }
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+
+            function setupProfileDropdown() {
+                const profileWrapper = document.getElementById('profileWrapper');
+                const avatarBtn = document.getElementById('avatarBtn');
+                if (!profileWrapper || !avatarBtn) return;
+                
+                let closeTimer;
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(() => {
+                        this.classList.remove('is-open');
+                    }, 150);
+                });
+                avatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileWrapper.classList.toggle('is-open');
+                });
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // FETCH WATCH COUNT
+            // ============================================================
+
+            async function fetchWatchCount() {
+                try {
+                    const response = await fetch('http://localhost:5000/api/watchlist', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const watchlist = await response.json();
+                        const watchedCount = watchlist.filter(item => item.watched).length;
+                        const statEl = document.getElementById('navStat');
+                        if (statEl) {
+                            statEl.textContent = `${watchedCount} films watched`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching watch count:', error);
+                }
+            }
+
+            // ============================================================
+            // LOGOUT
+            // ============================================================
+
+            function logout() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
+            }
 
             // ============================================================
             // STATE
@@ -1273,44 +1456,6 @@
             }
 
             // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
-
-            let closeTimer = null;
-
-            function setupProfile() {
-                if (!DOM.profileWrapper) return;
-
-                DOM.profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-
-                DOM.profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(() => {
-                        this.classList.remove('is-open');
-                    }, 150);
-                });
-
-                DOM.avatarBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    DOM.profileWrapper.classList.toggle('is-open');
-                });
-
-                document.addEventListener('click', function(e) {
-                    if (!DOM.profileWrapper.contains(e.target)) {
-                        DOM.profileWrapper.classList.remove('is-open');
-                    }
-                });
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && DOM.profileWrapper.classList.contains('is-open')) {
-                        DOM.profileWrapper.classList.remove('is-open');
-                    }
-                });
-            }
-
-            // ============================================================
             // FETCH FILMS
             // ============================================================
 
@@ -1370,7 +1515,6 @@
 
                 const filmsHTML = films.map(film => {
                     const posterUrl = film.poster_path ? `${IMAGE_BASE}${film.poster_path}` : '';
-                    const year = film.release_date ? film.release_date.substring(0, 4) : 'N/A';
                     const rating = film.vote_average ? film.vote_average.toFixed(1) : 'N/A';
                     const inWatchlist = isInWatchlist(film.id);
 
@@ -1378,20 +1522,7 @@
                         <div class="movie-card" onclick="viewMovie(${film.id})">
                             <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
                                 ${inWatchlist ? '<div class="watchlist-badge"><i class="fas fa-heart"></i></div>' : ''}
-                                <span class="rating-badge">★ ${rating}</span>
-                            </div>
-                            <div class="info">
-                                <div class="title">${film.title || 'Untitled'}</div>
-                                <div class="meta">
-                                    <span class="year">${year}</span>
-                                    <span>★ ${rating}</span>
-                                </div>
-                                <div class="actions">
-                                    <button class="watchlist-btn ${inWatchlist ? 'in-watchlist' : ''}" onclick="event.stopPropagation(); toggleWatchlist(${film.id})">
-                                        <i class="fas ${inWatchlist ? 'fa-heart' : 'fa-heart-o'}"></i>
-                                        ${inWatchlist ? 'Watched' : 'Watchlist'}
-                                    </button>
-                                </div>
+                                <span class="rating-badge">⭐ ${rating}</span>
                             </div>
                         </div>
                     `;
@@ -1474,64 +1605,6 @@
             }
 
             // ============================================================
-            // WATCHLIST TOGGLE
-            // ============================================================
-
-            window.toggleWatchlist = function(movieId) {
-                let film = allFilms.find(f => f.id === movieId);
-                
-                if (!film) {
-                    const cards = document.querySelectorAll('.movie-card');
-                    for (let card of cards) {
-                        const onclick = card.getAttribute('onclick');
-                        if (onclick && onclick.includes(movieId)) {
-                            const titleEl = card.querySelector('.title');
-                            const yearEl = card.querySelector('.year');
-                            if (titleEl) {
-                                film = {
-                                    id: movieId,
-                                    title: titleEl.textContent,
-                                    release_date: yearEl ? yearEl.textContent : 'N/A',
-                                    poster_path: '',
-                                    vote_average: 0
-                                };
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                if (!film) return;
-
-                const inWatchlist = isInWatchlist(movieId);
-
-                if (inWatchlist) {
-                    const result = removeFromWatchlist(movieId);
-                    if (result.success) {
-                        showToast(`"${film.title}" removed from watchlist`, 'info');
-                        // Re-render the current view
-                        renderFilms(allFilms.slice(0, 20), false);
-                        if (allFilms.length > 20) {
-                            const remaining = allFilms.slice(20);
-                            renderFilms(remaining, true);
-                        }
-                    }
-                } else {
-                    const result = addToWatchlist(film);
-                    if (result.success) {
-                        showToast(`"${film.title}" added to watchlist ❤️`, 'success');
-                        renderFilms(allFilms.slice(0, 20), false);
-                        if (allFilms.length > 20) {
-                            const remaining = allFilms.slice(20);
-                            renderFilms(remaining, true);
-                        }
-                    } else {
-                        showToast(`"${film.title}" is already in your watchlist`, 'info');
-                    }
-                }
-            };
-
-            // ============================================================
             // VIEW MOVIE
             // ============================================================
 
@@ -1590,8 +1663,8 @@
             // ============================================================
 
             async function init() {
+                renderNav();
                 setupMobileMenu();
-                setupProfile();
                 await loadFilms(true);
             }
 

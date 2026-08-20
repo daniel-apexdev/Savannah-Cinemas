@@ -28,8 +28,8 @@
             --radius-sm: 8px;
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
-            --touch-target: clamp(44px, 5vw, 56px);
-            --max-width: 1200px;
+            --touch-target: clamp(44px, 5vw, 38px);
+            --max-width: 1400px;
         }
 
         * {
@@ -52,7 +52,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px var(--container-padding);
+            padding: 16px var(--container-padding);
             border-bottom: 1px solid var(--ink-line);
             background: rgba(20, 20, 28, 0.92);
             backdrop-filter: blur(12px);
@@ -122,6 +122,36 @@
             gap: 16px;
             position: relative;
             z-index: 1001;
+        }
+
+        /* ---------- SIGN IN BUTTON ---------- */
+        .btn-signin {
+            padding: 8px 20px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .btn-signin:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+        }
+
+        .btn-signin i {
+            font-size: 14px;
         }
 
         /* ---------- HAMBURGER MENU TOGGLE ---------- */
@@ -633,7 +663,7 @@
         .events-grid {
             max-width: var(--max-width);
             margin: 0 auto;
-            padding: 20px var(--container-padding) 60px;
+            padding: 20px var(--container-padding) 40px;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(clamp(280px, 25vw, 340px), 1fr));
             gap: 24px;
@@ -811,6 +841,146 @@
             font-weight: 300;
         }
 
+        /* ---------- TOAST ---------- */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            padding: 14px 24px;
+            color: var(--paper);
+            font-family: var(--font-body);
+            font-size: clamp(14px, 0.9vw, 16px);
+            font-weight: 400;
+            z-index: 3000;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast .toast-icon.success {
+            color: var(--success);
+        }
+
+        .toast .toast-icon.info {
+            color: var(--gold);
+        }
+
+        .toast .toast-icon.error {
+            color: var(--rust);
+        }
+
+        /* ---------- FOOTER ---------- */
+        .footer {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 40px var(--container-padding) 0;
+            border-top: 1px solid var(--ink-line);
+            margin-top: 20px;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            padding-bottom: 30px;
+        }
+
+        .footer-brand .nav-brand {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2vw, 26px);
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .footer-brand p {
+            color: var(--paper-dim);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 300;
+            line-height: 1.7;
+            max-width: 400px;
+        }
+
+        .footer span {
+            color: var(--gold);
+        }
+
+        .footer-cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .footer-col h4 {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 0.9vw, 14px);
+            font-weight: 300;
+            padding: 4px 0;
+            transition: 0.3s ease;
+        }
+
+        .footer-col a:hover {
+            color: var(--gold);
+        }
+
+        .footer-tear {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
+            margin: 0 0 20px;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 0 24px;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.8vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .footer-bottom .legal a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: 0.3s ease;
+        }
+
+        .footer-bottom .legal a:hover {
+            color: var(--gold);
+        }
+
         /* ---------- RESPONSIVE ---------- */
         @media (max-width: 768px) {
             .menu-toggle {
@@ -824,7 +994,7 @@
             .events-grid {
                 grid-template-columns: 1fr 1fr;
                 gap: 16px;
-                padding: 16px var(--container-padding) 40px;
+                padding: 16px var(--container-padding) 30px;
             }
 
             .event-card .event-image {
@@ -849,13 +1019,23 @@
             .promo-banner .promo-content::before {
                 display: none;
             }
+
+            .footer-top {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
         }
 
         @media (max-width: 480px) {
             .events-grid {
-                grid-template-columns: 2fr;
+                grid-template-columns: 1fr;
                 gap: 14px;
-                padding: 12px var(--container-padding) 30px;
+                padding: 12px var(--container-padding) 20px;
             }
 
             .event-card .event-image {
@@ -894,11 +1074,24 @@
                 padding: 6px 10px;
                 min-height: 34px;
             }
+
+            .footer-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-bottom .legal a {
+                margin: 0 10px;
+            }
         }
 
         @media (max-width: 360px) {
             .events-grid {
-                grid-template-columns: 2fr;
+                grid-template-columns: 1fr;
             }
         }
 
@@ -945,18 +1138,8 @@
             <li><a href="extras.html">Extras</a></li>
         </ul>
         
-        <div class="nav-right">
-            <div class="profile-wrapper" id="profileWrapper">
-                <div class="avatar" id="avatarBtn">DA</div>
-                <div class="profile-menu" id="profileMenu">
-                    <div class="who">
-                        <div class="name">Daniel Asamoah</div>
-                        <div class="stat">142 films watched</div>
-                    </div>
-                    <a href="profile.html">My Profile</a>
-                    <a href="logout.html">Sign out</a>
-                </div>
-            </div>
+        <div class="nav-right" id="navRight">
+            <!-- Will be populated by JavaScript -->
         </div>
     </nav>
 
@@ -971,17 +1154,24 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <ul class="mobile-menu-links">
+        <ul class="mobile-menu-links" id="mobileMenuLinks">
             <li><a href="coming-soon.html">Coming soon</a></li>
             <li><a href="events.html" class="active">Events</a></li>
             <li><a href="discovery.html">Discovery</a></li>
             <li><a href="extras.html">Extras</a></li>
-            <li class="mobile-divider"></li>
-            <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+            <li class="mobile-divider" id="mobileDivider"></li>
         </ul>
         <div class="mobile-menu-footer">
             <p>© 2026 Savannah Cinemas</p>
         </div>
+    </div>
+
+    <!-- ============================================================
+    TOAST NOTIFICATION
+    ============================================================ -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✅</span>
+        <span id="toastMessage">Success!</span>
     </div>
 
     <!-- ============================================================
@@ -1004,7 +1194,7 @@
                 <p>Get a free ticket for any film when you purchase a combo meal. Use code:</p>
                 <span class="promo-code">SAVANNAH-BOGO</span>
             </div>
-            <button class="promo-btn" onclick="alert('Promo code SAVANNAH-BOGO applied! 🎉')">
+            <button class="promo-btn" id="promoBtn">
                 Claim Offer <i class="fas fa-arrow-right"></i>
             </button>
         </div>
@@ -1041,10 +1231,210 @@
     </div>
 
     <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="nav-brand">SAVANNAH <span>CINEMAS</span></div>
+                <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4>Browse</h4>
+                    <a href="coming-soon.html">Coming soon</a>
+                    <a href="events.html">Events</a>
+                    <a href="discovery.html">Discovery</a>
+                    <a href="extras.html">Extras</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Settings</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="help.html">Help centre</a>
+                    <a href="refunds.html">Refunds</a>
+                    <a href="contact.html">Contact us</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-tear"></div>
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
     JAVASCRIPT
     ============================================================ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+
+            // ============================================================
+            // AUTH STATE
+            // ============================================================
+            
+            const token = localStorage.getItem('token');
+            const userData = JSON.parse(localStorage.getItem('user') || 'null');
+            const isAuthenticated = !!token && !!userData;
+
+            // ============================================================
+            // NAV RENDER
+            // ============================================================
+            
+            function renderNav() {
+                const navRight = document.getElementById('navRight');
+                const mobileMenuLinks = document.getElementById('mobileMenuLinks');
+                const mobileDivider = document.getElementById('mobileDivider');
+                
+                if (isAuthenticated && userData) {
+                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    
+                    navRight.innerHTML = `
+                        <div class="profile-wrapper" id="profileWrapper">
+                            <div class="avatar" id="avatarBtn">${initials}</div>
+                            <div class="profile-menu" id="profileMenu">
+                                <div class="who">
+                                    <div class="name">${userData.name}</div>
+                                    <div class="stat" id="navStat">0 films watched</div>
+                                </div>
+                                <a href="profile.html">My Profile</a>
+                                <a href="#" id="logoutBtn">Sign out</a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const logoutLink = document.createElement('li');
+                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
+                    mobileMenuLinks.appendChild(logoutLink);
+                    if (mobileDivider) mobileDivider.style.display = 'block';
+                    
+                    setupProfileDropdown();
+                    
+                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    
+                    fetchWatchCount();
+                    
+                } else {
+                    navRight.innerHTML = `
+                        <a href="logout.html" class="btn-signin">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </a>
+                    `;
+                    
+                    const signInLink = document.createElement('li');
+                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    mobileMenuLinks.appendChild(signInLink);
+                    if (mobileDivider) mobileDivider.style.display = 'block';
+                }
+            }
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+            
+            function setupProfileDropdown() {
+                const profileWrapper = document.getElementById('profileWrapper');
+                const avatarBtn = document.getElementById('avatarBtn');
+                if (!profileWrapper || !avatarBtn) return;
+                
+                let closeTimer;
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(() => {
+                        this.classList.remove('is-open');
+                    }, 150);
+                });
+                avatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileWrapper.classList.toggle('is-open');
+                });
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // FETCH WATCH COUNT
+            // ============================================================
+
+            async function fetchWatchCount() {
+                try {
+                    const response = await fetch('http://localhost:5000/api/watchlist', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const watchlist = await response.json();
+                        const watchedCount = watchlist.filter(item => item.watched).length;
+                        const statEl = document.getElementById('navStat');
+                        if (statEl) {
+                            statEl.textContent = `${watchedCount} films watched`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching watch count:', error);
+                }
+            }
+
+            // ============================================================
+            // LOGOUT
+            // ============================================================
+
+            function logout() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
+            }
+
+            // ============================================================
+            // TOAST SYSTEM
+            // ============================================================
+            
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                const iconMap = {
+                    success: '✅',
+                    info: 'ℹ️',
+                    error: '❌'
+                };
+                
+                const toast = document.getElementById('toast');
+                const toastIcon = document.getElementById('toastIcon');
+                const toastMessage = document.getElementById('toastMessage');
+                
+                toastIcon.textContent = iconMap[type] || 'ℹ️';
+                toastIcon.className = `toast-icon ${type}`;
+                toastMessage.textContent = message;
+                
+                toast.classList.add('show');
+                
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
 
             // ============================================================
             // MOBILE MENU
@@ -1097,44 +1487,6 @@
             document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
                 link.addEventListener('click', closeMobileMenu);
             });
-
-            // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
-            
-            const profileWrapper = document.getElementById('profileWrapper');
-            const avatarBtn = document.getElementById('avatarBtn');
-            let closeTimer = null;
-
-            if (profileWrapper) {
-                profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-
-                profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(function() {
-                        profileWrapper.classList.remove('is-open');
-                    }, 150);
-                });
-
-                avatarBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    profileWrapper.classList.toggle('is-open');
-                });
-
-                document.addEventListener('click', function(e) {
-                    if (!profileWrapper.contains(e.target)) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-            }
 
             // ============================================================
             // EVENTS DATA
@@ -1270,6 +1622,21 @@
             };
 
             // ============================================================
+            // AUTH GUARD FOR ACTIONS
+            // ============================================================
+            
+            function requireAuth(actionName) {
+                if (!isAuthenticated) {
+                    showToast(`Please sign in to ${actionName}`, 'info');
+                    setTimeout(() => {
+                        window.location.href = 'logout.html';
+                    }, 2000);
+                    return false;
+                }
+                return true;
+            }
+
+            // ============================================================
             // RENDER FUNCTIONS
             // ============================================================
             
@@ -1358,16 +1725,27 @@
             }
 
             // ============================================================
-            // EVENT FUNCTIONS
+            // EVENT FUNCTIONS WITH AUTH CHECK
             // ============================================================
             
             window.eventDetail = function(title) {
+                if (!requireAuth('view event details')) return;
                 alert(`📽️ Event: "${title}"\n\nMore details will be available soon. Check back for updates!`);
             };
 
             window.bookEvent = function(title) {
+                if (!requireAuth(`book "${title}"`)) return;
                 alert(`🎟️ You've booked a spot for "${title}"!\n\nWe'll send you a confirmation email shortly.`);
             };
+
+            // ============================================================
+            // PROMO BANNER WITH AUTH CHECK
+            // ============================================================
+            
+            document.getElementById('promoBtn').addEventListener('click', function() {
+                if (!requireAuth('claim this offer')) return;
+                alert('🎉 Promo code SAVANNAH-BOGO applied!\n\nGet a free ticket when you purchase a combo meal.');
+            });
 
             // ============================================================
             // FILTER EVENT LISTENERS
@@ -1384,17 +1762,10 @@
             });
 
             // ============================================================
-            // PROMO BANNER
-            // ============================================================
-            
-            document.querySelector('.promo-btn')?.addEventListener('click', function() {
-                alert('🎉 Promo code SAVANNAH-BOGO applied!\n\nGet a free ticket when you purchase a combo meal.');
-            });
-
-            // ============================================================
             // INITIALIZE
             // ============================================================
             
+            renderNav();
             renderEvents(eventsData);
             document.getElementById('resultCount').textContent = eventsData.length;
 

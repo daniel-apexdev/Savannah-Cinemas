@@ -27,8 +27,8 @@
             --radius-sm: 8px;
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
-            --touch-target: clamp(44px, 5vw, 56px);
-            --max-width: 1200px;
+            --touch-target: clamp(44px, 5vw, 38px);
+            --max-width: 1400px;
         }
 
         * {
@@ -51,7 +51,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px var(--container-padding);
+            padding: 16px var(--container-padding);
             border-bottom: 1px solid var(--ink-line);
             background: rgba(20, 20, 28, 0.92);
             backdrop-filter: blur(12px);
@@ -121,6 +121,36 @@
             gap: 16px;
             position: relative;
             z-index: 1001;
+        }
+
+        /* ---------- SIGN IN BUTTON ---------- */
+        .btn-signin {
+            padding: 8px 20px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .btn-signin:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+        }
+
+        .btn-signin i {
+            font-size: 14px;
         }
 
         /* ---------- HAMBURGER MENU TOGGLE ---------- */
@@ -536,7 +566,7 @@
         .coming-soon-grid {
             max-width: var(--max-width);
             margin: 0 auto;
-            padding: 20px var(--container-padding) 60px;
+            padding: 20px var(--container-padding) 40px;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(clamp(180px, 16vw, 220px), 1fr));
             gap: 20px;
@@ -809,6 +839,100 @@
             color: var(--rust);
         }
 
+        /* ---------- FOOTER ---------- */
+        .footer {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 40px var(--container-padding) 0;
+            border-top: 1px solid var(--ink-line);
+            margin-top: 20px;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            padding-bottom: 30px;
+        }
+
+        .footer-brand .nav-brand {
+            font-family: var(--font-display);
+            font-size: clamp(20px, 2vw, 26px);
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .footer-brand p {
+            color: var(--paper-dim);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 300;
+            line-height: 1.7;
+            max-width: 400px;
+        }
+
+        .footer span {
+            color: var(--gold);
+        }
+
+        .footer-cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .footer-col h4 {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 0.9vw, 14px);
+            font-weight: 300;
+            padding: 4px 0;
+            transition: 0.3s ease;
+        }
+
+        .footer-col a:hover {
+            color: var(--gold);
+        }
+
+        .footer-tear {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
+            margin: 0 0 20px;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 0 24px;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.8vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .footer-bottom .legal a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: 0.3s ease;
+        }
+
+        .footer-bottom .legal a:hover {
+            color: var(--gold);
+        }
+
         /* ---------- RESPONSIVE ---------- */
         @media (max-width: 768px) {
             .menu-toggle {
@@ -822,7 +946,7 @@
             .coming-soon-grid {
                 grid-template-columns: repeat(3, 1fr);
                 gap: 14px;
-                padding: 16px var(--container-padding) 40px;
+                padding: 16px var(--container-padding) 30px;
             }
 
             .filters-bar {
@@ -844,13 +968,23 @@
             .coming-soon-card .info .title {
                 font-size: 13px;
             }
+
+            .footer-top {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
         }
 
         @media (max-width: 480px) {
             .coming-soon-grid {
                 grid-template-columns: repeat(3, 1fr);
                 gap: 10px;
-                padding: 12px var(--container-padding) 30px;
+                padding: 12px var(--container-padding) 20px;
             }
 
             .coming-soon-card .poster .release-badge {
@@ -911,11 +1045,17 @@
                 font-size: 13px;
             }
 
-            .toast {
-                bottom: 16px;
-                padding: 10px 16px;
-                font-size: 13px;
-                max-width: 95%;
+            .footer-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-bottom .legal a {
+                margin: 0 10px;
             }
         }
 
@@ -975,18 +1115,8 @@
             <li><a href="extras.html">Extras</a></li>
         </ul>
         
-        <div class="nav-right">
-            <div class="profile-wrapper" id="profileWrapper">
-                <div class="avatar" id="avatarBtn">DA</div>
-                <div class="profile-menu" id="profileMenu">
-                    <div class="who">
-                        <div class="name">Daniel Asamoah</div>
-                        <div class="stat">142 films watched</div>
-                    </div>
-                    <a href="profile.html">My Profile</a>
-                    <a href="logout.html">Sign out</a>
-                </div>
-            </div>
+        <div class="nav-right" id="navRight">
+            <!-- Will be populated by JavaScript -->
         </div>
     </nav>
 
@@ -1001,13 +1131,12 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <ul class="mobile-menu-links">
+        <ul class="mobile-menu-links" id="mobileMenuLinks">
             <li><a href="coming-soon.html" class="active">Coming soon</a></li>
             <li><a href="events.html">Events</a></li>
             <li><a href="discovery.html">Discovery</a></li>
             <li><a href="extras.html">Extras</a></li>
-            <li class="mobile-divider"></li>
-            <li><a href="logout.html" class="mobile-logout"><i class="fas fa-sign-out-alt"></i> Sign out</a></li>
+            <li class="mobile-divider" id="mobileDivider"></li>
         </ul>
         <div class="mobile-menu-footer">
             <p>© 2026 Savannah Cinemas</p>
@@ -1061,6 +1190,48 @@
     </div>
 
     <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="nav-brand">SAVANNAH <span>CINEMAS</span></div>
+                <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4>Browse</h4>
+                    <a href="coming-soon.html">Coming soon</a>
+                    <a href="events.html">Events</a>
+                    <a href="discovery.html">Discovery</a>
+                    <a href="extras.html">Extras</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Settings</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="help.html">Help centre</a>
+                    <a href="refunds.html">Refunds</a>
+                    <a href="contact.html">Contact us</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-tear"></div>
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
     JAVASCRIPT
     ============================================================ -->
     <script>
@@ -1074,9 +1245,9 @@
             const API_KEY = 'a0b31df2c8c2865ebe236c9e1eb7cbd9';
             const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
             const STORAGE_KEY = 'savannah_watchlist';
-
-
-            
+            const token = localStorage.getItem('token');
+            const userData = JSON.parse(localStorage.getItem('user') || 'null');
+            const isAuthenticated = !!token && !!userData;
 
             // ============================================================
             // DOM REFS
@@ -1094,9 +1265,186 @@
                 mobileMenu: document.getElementById('mobileMenu'),
                 mobileOverlay: document.getElementById('mobileOverlay'),
                 mobileMenuClose: document.getElementById('mobileMenuClose'),
-                profileWrapper: document.getElementById('profileWrapper'),
-                avatarBtn: document.getElementById('avatarBtn')
+                navRight: document.getElementById('navRight'),
+                mobileMenuLinks: document.getElementById('mobileMenuLinks'),
+                mobileDivider: document.getElementById('mobileDivider')
             };
+
+            // ============================================================
+            // NAV RENDER
+            // ============================================================
+
+            function renderNav() {
+                if (isAuthenticated && userData) {
+                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    
+                    DOM.navRight.innerHTML = `
+                        <div class="profile-wrapper" id="profileWrapper">
+                            <div class="avatar" id="avatarBtn">${initials}</div>
+                            <div class="profile-menu" id="profileMenu">
+                                <div class="who">
+                                    <div class="name">${userData.name}</div>
+                                    <div class="stat" id="navStat">0 films watched</div>
+                                </div>
+                                <a href="profile.html">My Profile</a>
+                                <a href="#" id="logoutBtn">Sign out</a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const logoutLink = document.createElement('li');
+                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
+                    DOM.mobileMenuLinks.appendChild(logoutLink);
+                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
+                    
+                    setupProfileDropdown();
+                    
+                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    
+                    fetchWatchCount();
+                    
+                } else {
+                    DOM.navRight.innerHTML = `
+                        <a href="logout.html" class="btn-signin">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </a>
+                    `;
+                    
+                    const signInLink = document.createElement('li');
+                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    DOM.mobileMenuLinks.appendChild(signInLink);
+                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
+                }
+            }
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+
+            function setupProfileDropdown() {
+                const profileWrapper = document.getElementById('profileWrapper');
+                const avatarBtn = document.getElementById('avatarBtn');
+                if (!profileWrapper || !avatarBtn) return;
+                
+                let closeTimer;
+                profileWrapper.addEventListener('mouseenter', function() {
+                    clearTimeout(closeTimer);
+                    this.classList.add('is-open');
+                });
+                profileWrapper.addEventListener('mouseleave', function() {
+                    closeTimer = setTimeout(() => {
+                        this.classList.remove('is-open');
+                    }, 150);
+                });
+                avatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileWrapper.classList.toggle('is-open');
+                });
+                document.addEventListener('click', function(e) {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileWrapper.classList.remove('is-open');
+                    }
+                });
+            }
+
+            // ============================================================
+            // FETCH WATCH COUNT
+            // ============================================================
+
+            async function fetchWatchCount() {
+                try {
+                    const response = await fetch('http://localhost:5000/api/watchlist', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const watchlist = await response.json();
+                        const watchedCount = watchlist.filter(item => item.watched).length;
+                        const statEl = document.getElementById('navStat');
+                        if (statEl) {
+                            statEl.textContent = `${watchedCount} films watched`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching watch count:', error);
+                }
+            }
+
+            // ============================================================
+            // LOGOUT
+            // ============================================================
+
+            function logout() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
+            }
+
+            // ============================================================
+            // TOAST
+            // ============================================================
+
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                const iconMap = {
+                    success: '✅',
+                    info: 'ℹ️',
+                    error: '❌'
+                };
+                
+                DOM.toastIcon.textContent = iconMap[type] || 'ℹ️';
+                DOM.toastIcon.className = `toast-icon ${type}`;
+                DOM.toastMessage.textContent = message;
+                
+                DOM.toast.classList.add('show');
+                
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    DOM.toast.classList.remove('show');
+                }, 3000);
+            }
+
+            // ============================================================
+            // MOBILE MENU
+            // ============================================================
+
+            function setupMobileMenu() {
+                DOM.menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    DOM.mobileMenu.classList.toggle('open');
+                    DOM.mobileOverlay.classList.toggle('active');
+                    DOM.menuToggle.classList.toggle('active');
+                    document.body.style.overflow = DOM.mobileMenu.classList.contains('open') ? 'hidden' : '';
+                });
+
+                DOM.mobileMenuClose.addEventListener('click', closeMobileMenu);
+                DOM.mobileOverlay.addEventListener('click', closeMobileMenu);
+
+                DOM.mobileMenu.querySelectorAll('a').forEach(function(link) {
+                    link.addEventListener('click', closeMobileMenu);
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && DOM.mobileMenu.classList.contains('open')) {
+                        closeMobileMenu();
+                    }
+                });
+            }
+
+            function closeMobileMenu() {
+                DOM.mobileMenu.classList.remove('open');
+                DOM.mobileOverlay.classList.remove('active');
+                DOM.menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
 
             // ============================================================
             // STATE
@@ -1164,103 +1512,6 @@
                 
                 saveWatchlist(updatedWatchlist);
                 return { success: true, message: 'Removed from watchlist' };
-            }
-
-            // ============================================================
-            // TOAST
-            // ============================================================
-
-            let toastTimeout = null;
-
-            function showToast(message, type) {
-                const iconMap = {
-                    success: '✅',
-                    info: 'ℹ️',
-                    error: '❌'
-                };
-                
-                DOM.toastIcon.textContent = iconMap[type] || 'ℹ️';
-                DOM.toastIcon.className = `toast-icon ${type}`;
-                DOM.toastMessage.textContent = message;
-                
-                DOM.toast.classList.add('show');
-                
-                clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => {
-                    DOM.toast.classList.remove('show');
-                }, 3000);
-            }
-
-            // ============================================================
-            // MOBILE MENU
-            // ============================================================
-
-            function setupMobileMenu() {
-                DOM.menuToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    DOM.mobileMenu.classList.toggle('open');
-                    DOM.mobileOverlay.classList.toggle('active');
-                    DOM.menuToggle.classList.toggle('active');
-                    document.body.style.overflow = DOM.mobileMenu.classList.contains('open') ? 'hidden' : '';
-                });
-
-                DOM.mobileMenuClose.addEventListener('click', closeMobileMenu);
-                DOM.mobileOverlay.addEventListener('click', closeMobileMenu);
-
-                DOM.mobileMenu.querySelectorAll('a').forEach(function(link) {
-                    link.addEventListener('click', closeMobileMenu);
-                });
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && DOM.mobileMenu.classList.contains('open')) {
-                        closeMobileMenu();
-                    }
-                });
-            }
-
-            function closeMobileMenu() {
-                DOM.mobileMenu.classList.remove('open');
-                DOM.mobileOverlay.classList.remove('active');
-                DOM.menuToggle.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-
-            // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
-
-            let closeTimer = null;
-
-            function setupProfile() {
-                if (!DOM.profileWrapper) return;
-
-                DOM.profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-
-                DOM.profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(() => {
-                        this.classList.remove('is-open');
-                    }, 150);
-                });
-
-                DOM.avatarBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    DOM.profileWrapper.classList.toggle('is-open');
-                });
-
-                document.addEventListener('click', function(e) {
-                    if (!DOM.profileWrapper.contains(e.target)) {
-                        DOM.profileWrapper.classList.remove('is-open');
-                    }
-                });
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && DOM.profileWrapper.classList.contains('is-open')) {
-                        DOM.profileWrapper.classList.remove('is-open');
-                    }
-                });
             }
 
             // ============================================================
@@ -1425,10 +1676,18 @@
             }
 
             // ============================================================
-            // WATCHLIST FUNCTIONS
+            // WATCHLIST FUNCTIONS WITH AUTH
             // ============================================================
 
             window.toggleWatchlist = function(movieId) {
+                if (!isAuthenticated) {
+                    showToast('Please sign in to add films to your watchlist', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'logout.html';
+                    }, 1500);
+                    return;
+                }
+                
                 const film = allUpcomingFilms.find(f => f.id === movieId);
                 if (!film) return;
 
@@ -1452,10 +1711,18 @@
             };
 
             // ============================================================
-            // NOTIFY FUNCTION
+            // NOTIFY FUNCTION WITH AUTH
             // ============================================================
 
             window.toggleNotify = function(title, button) {
+                if (!isAuthenticated) {
+                    showToast('Please sign in to set notifications', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'logout.html';
+                    }, 1500);
+                    return;
+                }
+                
                 button.classList.toggle('notified');
                 const icon = button.querySelector('i');
                 if (button.classList.contains('notified')) {
@@ -1491,8 +1758,8 @@
                 `;
 
                 // Setup mobile menu and profile
+                renderNav();
                 setupMobileMenu();
-                setupProfile();
 
                 // Fetch films
                 allUpcomingFilms = await fetchUpcomingFilms();
