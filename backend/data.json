@@ -10,7 +10,9 @@
         "notifications": true,
         "newsletter": true,
         "language": "en"
-      }
+      },
+      "resetToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE3ODcxNzY2OTc2MzciLCJlbWFpbCI6Im5rZGFuaWVsYXNhbW9haEBnbWFpbC5jb20iLCJpYXQiOjE3ODcyMzQ3MDUsImV4cCI6MTc4NzIzODMwNX0.WyPyJqyXST5SKaIOdqXgVhgjO2tMabaHp3hgUUVWLAU",
+      "resetTokenExpiry": "2026-08-20T15:05:05.031Z"
     }
   ],
   "watchlists": {

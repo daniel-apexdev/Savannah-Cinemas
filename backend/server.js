@@ -43,33 +43,30 @@ function writeData(data) {
 }
 
 // ============================================================
-// GMAIL SMTP TRANSPORTER - WITH BETTER CONFIG
+// GMAIL SMTP TRANSPORTER
 // ============================================================
 
-// Check if Gmail credentials are set
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 
-// Create transporter only if credentials are provided
 let transporter = null;
 
 if (GMAIL_USER && GMAIL_APP_PASSWORD) {
     transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
-        secure: true, // Use SSL
+        secure: true,
         auth: {
             user: GMAIL_USER,
             pass: GMAIL_APP_PASSWORD
         },
         tls: {
-            rejectUnauthorized: false // Accept self-signed certificates
+            rejectUnauthorized: false
         },
-        logger: true, // Enable logging
-        debug: true // Enable debug output
+        logger: true,
+        debug: true
     });
 
-    // Verify connection
     transporter.verify()
         .then(() => {
             console.log('✅ Gmail SMTP connection successful');
@@ -160,21 +157,22 @@ app.post('/api/auth/register', async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        // Send welcome email (if transporter is configured)
         if (transporter) {
             try {
-                // Simple welcome email
                 const welcomeMail = {
                     from: `"Savannah Cinemas" <${GMAIL_USER}>`,
                     to: user.email,
                     subject: 'Welcome to Savannah Cinemas! 🎬',
                     html: `
-                        <h1>Welcome to Savannah Cinemas!</h1>
-                        <p>Hello ${user.name},</p>
-                        <p>Thank you for joining Savannah Cinemas. We're excited to have you!</p>
-                        <p>Start exploring our collection of films and book your first ticket today.</p>
-                        <br>
-                        <p>🎬 The Savannah Cinemas Team</p>
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1D1D28; color: #F2EFE9; padding: 30px; border-radius: 14px;">
+                            <h1 style="font-family: Oswald, sans-serif; color: #E8B34C;">SAVANNAH CINEMAS</h1>
+                            <h2 style="color: #E8B34C;">Welcome!</h2>
+                            <p>Hello ${user.name},</p>
+                            <p>Thank you for joining Savannah Cinemas. We're excited to have you!</p>
+                            <p>Start exploring our collection of films and book your first ticket today.</p>
+                            <br>
+                            <p style="color: #B9B6AC;">🎬 The Savannah Cinemas Team</p>
+                        </div>
                     `
                 };
                 await transporter.sendMail(welcomeMail);
@@ -284,18 +282,174 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// WATCHLIST ROUTES - UPDATED WITH TOGGLE ENDPOINTS
+// PASSWORD RESET ROUTES
 // ============================================================
 
-// GET WATCHLIST - Returns the user's watchlist as an array
+// REQUEST PASSWORD RESET
+app.post('/api/auth/request-reset', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const data = readData();
+
+        const user = data.users.find(u => u.email === email.toLowerCase());
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'No account found with this email address'
+            });
+        }
+
+        // Generate a reset token (valid for 1 hour)
+        const resetToken = jwt.sign(
+            { id: user.id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // Store the reset token in the user's record
+        user.resetToken = resetToken;
+        user.resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+        writeData(data);
+
+        // Send reset email if transporter is configured
+        if (transporter) {
+            const resetLink = `http://localhost:5000/reset-password.html?token=${resetToken}`;
+            
+            const mailOptions = {
+                from: `"Savannah Cinemas" <${GMAIL_USER}>`,
+                to: user.email,
+                subject: 'Password Reset Request — Savannah Cinemas',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1D1D28; color: #F2EFE9; padding: 30px; border-radius: 14px;">
+                        <h1 style="font-family: Oswald, sans-serif; color: #E8B34C;">SAVANNAH CINEMAS</h1>
+                        <h2 style="color: #E8B34C;">Password Reset</h2>
+                        <p>Hello ${user.name},</p>
+                        <p>We received a request to reset your password for your account.</p>
+                        <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+                        <br>
+                        <a href="${resetLink}" style="display: inline-block; padding: 12px 32px; background: #E8B34C; color: #14141C; text-decoration: none; border-radius: 8px; font-weight: 500; font-family: Arial, sans-serif;">
+                            Reset Password
+                        </a>
+                        <br><br>
+                        <p style="color: #B9B6AC; font-size: 13px;">If you didn't request this, please ignore this email.</p>
+                        <hr style="border-color: #2C2C3A;">
+                        <p style="color: #B9B6AC; font-size: 12px;">This link will expire in 1 hour.</p>
+                        <p style="color: #B9B6AC; font-size: 12px;">Link: ${resetLink}</p>
+                    </div>
+                `
+            };
+
+            await transporter.sendMail(mailOptions);
+            console.log('✅ Password reset email sent to:', user.email);
+        } else {
+            console.warn('⚠️ Email service not configured. Reset token:', resetToken);
+        }
+
+        res.json({
+            success: true,
+            message: 'Password reset link sent to your email',
+            // In development, return the token for testing
+            ...(process.env.NODE_ENV === 'development' && { resetToken })
+        });
+
+    } catch (error) {
+        console.error('Password reset request error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process password reset request'
+        });
+    }
+});
+
+// RESET PASSWORD
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token and new password are required'
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 8 characters'
+            });
+        }
+
+        // Verify the token
+        let decoded;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch (err) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired reset token'
+            });
+        }
+
+        const data = readData();
+        const user = data.users.find(u => u.id === decoded.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Check if the token matches and hasn't expired
+        if (user.resetToken !== token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid reset token'
+            });
+        }
+
+        if (new Date(user.resetTokenExpiry) < new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Reset token has expired'
+            });
+        }
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update the user's password
+        user.password = hashedPassword;
+        user.resetToken = null;
+        user.resetTokenExpiry = null;
+        writeData(data);
+
+        res.json({
+            success: true,
+            message: 'Password reset successfully'
+        });
+
+    } catch (error) {
+        console.error('Password reset error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reset password'
+        });
+    }
+});
+
+// ============================================================
+// WATCHLIST ROUTES
+// ============================================================
+
+// GET WATCHLIST
 app.get('/api/watchlist', authenticateToken, async (req, res) => {
     try {
         const data = readData();
         const watchlist = data.watchlists[req.user.id] || [];
-        
-        // Return the watchlist array directly, not nested
         res.json(watchlist);
-
     } catch (error) {
         console.error('Get watchlist error:', error);
         res.status(500).json({
@@ -310,7 +464,6 @@ app.post('/api/watchlist', authenticateToken, async (req, res) => {
     try {
         const { filmId, title, year, poster, rating } = req.body;
 
-        // Reject early rather than silently saving a broken record
         if (filmId === undefined || filmId === null) {
             return res.status(400).json({
                 success: false,
@@ -324,7 +477,6 @@ app.post('/api/watchlist', authenticateToken, async (req, res) => {
             data.watchlists[req.user.id] = [];
         }
 
-        // Loose equality (==) to handle both number and string filmIds
         const exists = data.watchlists[req.user.id].some(item => item.filmId == filmId);
         if (exists) {
             return res.status(409).json({
@@ -391,7 +543,6 @@ app.delete('/api/watchlist/:filmId', authenticateToken, async (req, res) => {
             });
         }
 
-        // If no watchlist exists for the user
         res.status(404).json({
             success: false,
             message: 'Movie not found in watchlist'
@@ -419,7 +570,6 @@ app.post('/api/watchlist/toggle-watched', authenticateToken, async (req, res) =>
             });
         }
 
-        // Find the film in the watchlist using loose equality
         const filmIndex = data.watchlists[req.user.id].findIndex(item => item.filmId == filmId);
         
         if (filmIndex === -1) {
@@ -429,7 +579,6 @@ app.post('/api/watchlist/toggle-watched', authenticateToken, async (req, res) =>
             });
         }
 
-        // Update the watched status
         data.watchlists[req.user.id][filmIndex].watched = watched;
         data.watchlists[req.user.id][filmIndex].watchedDate = watched ? new Date() : null;
         writeData(data);
@@ -462,7 +611,6 @@ app.post('/api/watchlist/toggle-favorite', authenticateToken, async (req, res) =
             });
         }
 
-        // Find the film in the watchlist using loose equality
         const filmIndex = data.watchlists[req.user.id].findIndex(item => item.filmId == filmId);
         
         if (filmIndex === -1) {
@@ -472,7 +620,6 @@ app.post('/api/watchlist/toggle-favorite', authenticateToken, async (req, res) =
             });
         }
 
-        // Update the favorite status
         data.watchlists[req.user.id][filmIndex].favorite = favorite;
         writeData(data);
 
@@ -500,9 +647,7 @@ app.get('/api/bookings', authenticateToken, async (req, res) => {
     try {
         const data = readData();
         const bookings = data.bookings[req.user.id] || [];
-        
         res.json(bookings);
-
     } catch (error) {
         console.error('Get bookings error:', error);
         res.status(500).json({
