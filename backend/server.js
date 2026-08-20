@@ -14,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
+const SERVER_IP = process.env.SERVER_IP || 'localhost';
 
 // ============================================================
 // FILE-BASED STORAGE
@@ -69,19 +70,19 @@ if (GMAIL_USER && GMAIL_APP_PASSWORD) {
 
     transporter.verify()
         .then(() => {
-            console.log('✅ Gmail SMTP connection successful');
-            console.log(`📧 Using account: ${GMAIL_USER}`);
+            console.log(' Gmail SMTP connection successful');
+            console.log(` Using account: ${GMAIL_USER}`);
         })
         .catch((error) => {
-            console.error('❌ Gmail SMTP connection failed:', error.message);
-            console.log('📝 Please check your Gmail credentials in the .env file');
-            console.log('💡 Make sure you are using an App Password, not your regular password');
+            console.error(' Gmail SMTP connection failed:', error.message);
+            console.log(' Please check your Gmail credentials in the .env file');
+            console.log(' Make sure you are using an App Password, not your regular password');
             transporter = null;
         });
 } else {
-    console.warn('⚠️ Gmail credentials not configured. Email sending will be disabled.');
-    console.log('📝 Add GMAIL_USER and GMAIL_APP_PASSWORD to your .env file');
-    console.log('💡 Get an App Password at: https://myaccount.google.com/apppasswords');
+    console.warn(' Gmail credentials not configured. Email sending will be disabled.');
+    console.log(' Add GMAIL_USER and GMAIL_APP_PASSWORD to your .env file');
+    console.log(' Get an App Password at: https://myaccount.google.com/apppasswords');
 }
 
 // ============================================================
@@ -171,14 +172,14 @@ app.post('/api/auth/register', async (req, res) => {
                             <p>Thank you for joining Savannah Cinemas. We're excited to have you!</p>
                             <p>Start exploring our collection of films and book your first ticket today.</p>
                             <br>
-                            <p style="color: #B9B6AC;">🎬 The Savannah Cinemas Team</p>
+                            <p style="color: #B9B6AC;">The Savannah Cinemas Team</p>
                         </div>
                     `
                 };
                 await transporter.sendMail(welcomeMail);
-                console.log('✅ Welcome email sent to:', user.email);
+                console.log('Welcome email sent to:', user.email);
             } catch (emailError) {
-                console.error('❌ Welcome email failed:', emailError.message);
+                console.error('Welcome email failed:', emailError.message);
             }
         }
 
