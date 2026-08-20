@@ -1612,7 +1612,7 @@
             document.getElementById('mobileLogoutBtn').addEventListener('click', (e) => { e.preventDefault(); logout(); });
 
             // ============================================================
-            // WATCHLIST API - COMPLETELY REWRITTEN
+            // WATCHLIST API - FIXED WITH FLEXIBLE DATA HANDLING
             // ============================================================
 
             let currentMovie = null;
@@ -1622,19 +1622,69 @@
             async function fetchWatchlist() {
                 if (!isAuthenticated()) return [];
                 try {
-                    console.log('Fetching watchlist...');
+                    console.log('🔍 Fetching watchlist from:', `${CONFIG.BACKEND_API}/watchlist`);
+                    
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
                     });
+                    
                     if (!res.ok) {
-                        console.error('Failed to fetch watchlist:', res.status);
+                        console.error('❌ Failed to fetch watchlist:', res.status);
                         return [];
                     }
+                    
                     const data = await res.json();
-                    console.log('Watchlist data:', data);
-                    return data || [];
+                    console.log('📦 Raw watchlist data:', data);
+                    console.log('📊 Data type:', typeof data);
+                    
+                    // Handle different response formats (same as profile page)
+                    let watchlistData = [];
+                    
+                    // Check if data is an array
+                    if (Array.isArray(data)) {
+                        watchlistData = data;
+                        console.log('✅ Data is an array with', data.length, 'items');
+                    } 
+                    // Check if data has a 'watchlist' property that is an array
+                    else if (data && data.watchlist && Array.isArray(data.watchlist)) {
+                        watchlistData = data.watchlist;
+                        console.log('✅ Data has watchlist array with', data.watchlist.length, 'items');
+                    }
+                    // Check if data has a 'data' property that is an array
+                    else if (data && data.data && Array.isArray(data.data)) {
+                        watchlistData = data.data;
+                        console.log('✅ Data has data array with', data.data.length, 'items');
+                    }
+                    // Check if data has a 'films' property that is an array
+                    else if (data && data.films && Array.isArray(data.films)) {
+                        watchlistData = data.films;
+                        console.log('✅ Data has films array with', data.films.length, 'items');
+                    }
+                    // If data is an object with numeric keys, convert to array
+                    else if (data && typeof data === 'object' && !Array.isArray(data)) {
+                        const values = Object.values(data);
+                        if (values.length > 0 && values.every(v => typeof v === 'object' && v !== null)) {
+                            watchlistData = values;
+                            console.log('✅ Converted object to array with', values.length, 'items');
+                        } else {
+                            console.warn('⚠️ Data is an object but values are not watchlist items');
+                            for (const key in data) {
+                                if (Array.isArray(data[key])) {
+                                    watchlistData = data[key];
+                                    console.log(`✅ Found array in property "${key}" with`, data[key].length, 'items');
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log('📊 Final watchlist data:', watchlistData);
+                    return watchlistData || [];
                 } catch (err) {
-                    console.error('Fetch watchlist error:', err);
+                    console.error('❌ Fetch watchlist error:', err);
                     return [];
                 }
             }
@@ -1648,10 +1698,9 @@
                 try {
                     const watchlist = await fetchWatchlist();
                     const found = watchlist.some(item => {
-                        // Check both possible ID fields
-                        const itemId = item.filmId || item.id;
+                        const itemId = item.filmId || item.id || item._id;
                         const match = itemId == movieId;
-                        if (match) console.log(`Found film ${movieId} in watchlist:`, item);
+                        if (match) console.log(`✅ Found film ${movieId} in watchlist:`, item);
                         return match;
                     });
                     console.log(`Film ${movieId} in watchlist:`, found);
@@ -1679,7 +1728,7 @@
                         favorite: false
                     };
 
-                    console.log('Adding to watchlist:', payload);
+                    console.log('📤 Adding to watchlist:', payload);
 
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
                         method: 'POST',
@@ -1690,14 +1739,12 @@
                         body: JSON.stringify(payload)
                     });
 
-                    console.log('Add response status:', res.status);
+                    console.log('📡 Add response status:', res.status);
 
-                    // If 409 Conflict, the film is already in the watchlist
                     if (res.status === 409) {
                         const errData = await res.json().catch(() => ({}));
                         console.log('Film already in watchlist (409):', errData);
                         showToast('This film is already in your watchlist', 'info');
-                        // Refresh status to make sure UI is correct
                         isInWatchlist = await checkWatchlistStatus(movieId);
                         updateWatchlistUI(isInWatchlist);
                         return false;
@@ -1710,7 +1757,7 @@
                     }
                     
                     const result = await res.json();
-                    console.log('Add success:', result);
+                    console.log('✅ Add success:', result);
                     return true;
                 } catch (err) {
                     console.error('Add to watchlist error:', err);
@@ -1726,7 +1773,7 @@
                     return false;
                 }
                 try {
-                    console.log(`Removing film ${movieId} from watchlist...`);
+                    console.log(`🗑️ Removing film ${movieId} from watchlist...`);
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist/${movieId}`, {
                         method: 'DELETE',
                         headers: {
@@ -1734,12 +1781,11 @@
                         }
                     });
 
-                    console.log('Remove response status:', res.status);
+                    console.log('📡 Remove response status:', res.status);
 
                     if (res.status === 404) {
                         console.log('Film not found in watchlist (404)');
                         showToast('Film not found in your watchlist', 'info');
-                        // Refresh status to make sure UI is correct
                         isInWatchlist = await checkWatchlistStatus(movieId);
                         updateWatchlistUI(isInWatchlist);
                         return false;
@@ -1752,7 +1798,7 @@
                     }
                     
                     const result = await res.json();
-                    console.log('Remove success:', result);
+                    console.log('✅ Remove success:', result);
                     return true;
                 } catch (err) {
                     console.error('Remove from watchlist error:', err);
@@ -1768,7 +1814,6 @@
                     return;
                 }
 
-                // If not authenticated, prompt to sign in
                 if (!isAuthenticated()) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
@@ -1777,12 +1822,11 @@
                     return;
                 }
 
-                // Disable button while processing
                 DOM.watchlistBtn.disabled = true;
                 DOM.watchlistBtn.style.opacity = '0.6';
 
                 const movieId = currentMovie.id;
-                console.log(`Toggling watchlist for film ${movieId}, currently in:`, isInWatchlist);
+                console.log(`🔄 Toggling watchlist for film ${movieId}, currently in:`, isInWatchlist);
 
                 let success = false;
                 if (isInWatchlist) {
@@ -1791,12 +1835,10 @@
                     success = await addToWatchlist(movieId, currentMovie);
                 }
 
-                // Re-enable button
                 DOM.watchlistBtn.disabled = false;
                 DOM.watchlistBtn.style.opacity = '1';
 
                 if (success) {
-                    // Refresh the watchlist status from backend to ensure consistency
                     isInWatchlist = await checkWatchlistStatus(movieId);
                     updateWatchlistUI(isInWatchlist);
 
@@ -1809,7 +1851,7 @@
             }
 
             function updateWatchlistUI(inWatchlist) {
-                console.log(`Updating UI: inWatchlist = ${inWatchlist}`);
+                console.log(`🎨 Updating UI: inWatchlist = ${inWatchlist}`);
                 if (inWatchlist) {
                     DOM.watchlistBtn.classList.add('in-watchlist');
                     DOM.watchlistBtn.querySelector('i').className = 'fas fa-heart';
@@ -1819,7 +1861,6 @@
                     DOM.watchlistBtn.querySelector('i').className = 'far fa-heart';
                     DOM.watchlistLabel.textContent = 'Add to Watchlist';
                 }
-                // Store the film ID on the button
                 if (currentMovie) {
                     DOM.watchlistBtn.dataset.filmId = currentMovie.id;
                 }
@@ -1944,7 +1985,7 @@
 
                 const { movie, credits } = data;
                 currentMovie = movie;
-                console.log('Current movie loaded:', movie.id, movie.title);
+                console.log('🎬 Current movie loaded:', movie.id, movie.title);
 
                 DOM.loadingState.style.display = 'none';
                 DOM.movieContent.style.display = 'block';
@@ -2147,14 +2188,12 @@
                 }
 
                 // ---------- WATCHLIST BUTTON ----------
-                // Set the film ID on the button
                 DOM.watchlistBtn.dataset.filmId = movie.id;
                 
-                // Check if authenticated and if movie is in watchlist
                 if (isAuthenticated()) {
-                    console.log('Checking watchlist status for film:', movie.id);
+                    console.log('🔍 Checking watchlist status for film:', movie.id);
                     isInWatchlist = await checkWatchlistStatus(movie.id);
-                    console.log('Watchlist status result:', isInWatchlist);
+                    console.log('📊 Watchlist status result:', isInWatchlist);
                 } else {
                     isInWatchlist = false;
                 }
@@ -2163,7 +2202,6 @@
                 // Remove old listeners and add new one
                 const newBtn = DOM.watchlistBtn.cloneNode(true);
                 DOM.watchlistBtn.parentNode.replaceChild(newBtn, DOM.watchlistBtn);
-                // Update references
                 DOM.watchlistBtn = newBtn;
                 DOM.watchlistLabel = newBtn.querySelector('span');
                 DOM.watchlistBtn.addEventListener('click', toggleWatchlist);
