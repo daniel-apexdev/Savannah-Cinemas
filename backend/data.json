@@ -68,6 +68,69 @@
         "addedDate": "2026-08-20T17:34:50.706Z",
         "watched": false,
         "favorite": false
+      },
+      {
+        "filmId": 977942,
+        "title": "The Uprising",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/7TUl15TOsIvndKlgMWTtLgtEzZP.jpg",
+        "rating": 0,
+        "addedDate": "2026-08-20T18:25:32.759Z",
+        "watched": false,
+        "favorite": false
+      },
+      {
+        "filmId": 1187326,
+        "title": "Tad and The Magic Lamp",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/AdDxZgNmRYgDuweY8899buyVqlr.jpg",
+        "rating": 0,
+        "addedDate": "2026-08-20T18:26:43.019Z",
+        "watched": false,
+        "favorite": false
+      },
+      {
+        "filmId": 1384216,
+        "title": "The Dog Stars",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/A7i16oDi03qrKep5pBfuTWNUTb.jpg",
+        "rating": 0,
+        "addedDate": "2026-08-20T18:26:49.539Z",
+        "watched": false,
+        "favorite": false
+      },
+      {
+        "filmId": 634649,
+        "title": "Spider-Man: No Way Home",
+        "year": "2021",
+        "poster": "https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",
+        "rating": 7.941,
+        "addedDate": "2026-08-20T18:27:45.327Z",
+        "watched": true,
+        "favorite": false,
+        "watchedDate": "2026-08-20T18:42:18.118Z"
+      },
+      {
+        "filmId": 1315772,
+        "title": "Minions & Monsters",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/4LwvU9SZc8QQzW1X1FAPhNbXnEU.jpg",
+        "rating": 7.493,
+        "addedDate": "2026-08-20T18:28:24.391Z",
+        "watched": false,
+        "favorite": false,
+        "watchedDate": null
+      },
+      {
+        "filmId": 1339713,
+        "title": "Obsession",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/bRwnj8WEKBCvmfeUNOukJPwB43K.jpg",
+        "rating": 8.227,
+        "addedDate": "2026-08-20T18:28:51.427Z",
+        "watched": true,
+        "favorite": false,
+        "watchedDate": "2026-08-20T18:43:32.722Z"
       }
     ]
   },

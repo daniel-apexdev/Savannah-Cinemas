@@ -807,15 +807,38 @@
             font-weight: 300;
         }
 
-        /* ---------- UPCOMING FILMS ---------- */
-        .upcoming-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(clamp(180px, 16vw, 240px), 1fr));
-            gap: 16px;
-            margin-top: 12px;
+        /* ---------- UPCOMING FILMS - Same as Popular Movies Card ---------- */
+        .upcoming-track {
+            display: flex;
+            gap: 14px;
+            overflow-x: auto;
+            padding: 6px 2px 14px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gold-dim) transparent;
+        }
+
+        .upcoming-track::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .upcoming-track::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .upcoming-track::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 4px;
+        }
+
+        .upcoming-track::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
         }
 
         .upcoming-card {
+            flex: 0 0 clamp(140px, 15vw, 220px);
+            min-width: 140px;
             background: var(--ink-raised);
             border: 1px solid var(--ink-line);
             border-radius: var(--radius-md);
@@ -829,105 +852,66 @@
             border-color: var(--gold-dim);
         }
 
-        .upcoming-card .upcoming-poster {
-            height: 160px;
+        .upcoming-card .poster {
+            width: 100%;
+            aspect-ratio: 2/3;
             background-size: cover;
             background-position: center;
             position: relative;
             background-color: var(--ink);
         }
 
-        .upcoming-card .upcoming-poster .upcoming-date {
+        .upcoming-card .poster .rating-badge {
             position: absolute;
-            bottom: 10px;
-            right: 10px;
+            bottom: 6px;
+            left: 6px;
             font-family: var(--font-mono);
-            font-size: clamp(9px, 0.6vw, 11px);
-            padding: 3px 10px;
+            font-size: 9px;
+            padding: 2px 8px;
             border-radius: 10px;
-            background: rgba(20, 20, 28, 0.85);
+            background: rgba(0, 0, 0, 0.7);
             color: var(--gold);
             border: 1px solid var(--gold-dim);
             backdrop-filter: blur(4px);
         }
 
-        .upcoming-card .upcoming-body {
-            padding: 12px;
+        .upcoming-card .poster .release-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: var(--gold);
+            border: 1px solid var(--gold-dim);
+            backdrop-filter: blur(4px);
         }
 
-        .upcoming-card .upcoming-body .upcoming-title {
+        .upcoming-card .poster .release-badge i {
+            margin-right: 4px;
+            font-size: 8px;
+        }
+
+        .upcoming-card .card-body {
+            padding: 10px 12px 12px;
+        }
+
+        .upcoming-card .card-body .title {
             font-family: var(--font-display);
-            font-size: clamp(13px, 1vw, 16px);
+            font-size: clamp(12px, 0.9vw, 15px);
             font-weight: 500;
             color: var(--paper);
             margin-bottom: 2px;
-        }
-
-        .upcoming-card .upcoming-body .upcoming-meta {
-            font-size: clamp(10px, 0.6vw, 12px);
-            color: var(--paper-dim);
-            font-weight: 300;
-        }
-
-        .upcoming-card .upcoming-body .upcoming-desc {
-            font-size: clamp(11px, 0.7vw, 13px);
-            color: rgba(255, 255, 255, 0.6);
-            font-weight: 300;
-            line-height: 1.5;
-            margin-top: 4px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .upcoming-card .upcoming-body .btn-notify {
-            margin-top: 8px;
-            padding: 5px 16px;
-            background: transparent;
-            color: var(--paper-dim);
-            border: 1px solid var(--ink-line);
-            border-radius: var(--radius-sm);
-            font-family: var(--font-body);
+        .upcoming-card .card-body .year {
             font-size: clamp(10px, 0.6vw, 12px);
-            font-weight: 300;
-            cursor: pointer;
-            transition: 0.3s ease;
-            touch-action: manipulation;
-        }
-
-        .upcoming-card .upcoming-body .btn-notify:hover {
-            border-color: var(--gold);
-            color: var(--gold);
-        }
-
-        .upcoming-card .upcoming-body .btn-notify.notified {
-            border-color: var(--success);
-            color: var(--success);
-        }
-
-        .upcoming-loading {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 30px 0;
             color: var(--paper-dim);
-            font-family: var(--font-mono);
-            font-size: 13px;
-        }
-
-        .upcoming-loading i {
-            color: var(--gold);
-            margin-right: 10px;
-            font-size: 18px;
-        }
-
-        .upcoming-empty {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 30px 0;
-            color: var(--paper-dim);
-            font-family: var(--font-body);
-            font-size: 14px;
             font-weight: 300;
         }
 
@@ -1161,10 +1145,6 @@
                 max-width: 75%;
             }
             
-            .upcoming-grid {
-                grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-            }
-            
             .events-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             }
@@ -1212,15 +1192,6 @@
                 height: 110px;
             }
 
-            .upcoming-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-            }
-
-            .upcoming-card .upcoming-poster {
-                height: 130px;
-            }
-
             .footer-top {
                 grid-template-columns: 1fr;
                 gap: 20px;
@@ -1250,7 +1221,8 @@
                 padding: 24px var(--container-padding) 12px;
             }
 
-            .movie-card {
+            .movie-card,
+            .upcoming-card {
                 flex: 0 0 clamp(120px, 20vw, 160px);
                 min-width: 120px;
             }
@@ -1269,7 +1241,7 @@
 
             .hero-slide .hero-content p {
                 font-size: 11px;
-                --webkit-line-clamp: 1;
+                -webkit-line-clamp: 1;
                 margin-bottom: 6px;
             }
 
@@ -1292,41 +1264,44 @@
                 height: 90px;
             }
 
-            .upcoming-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .upcoming-card .upcoming-poster {
-                height: 110px;
-            }
-
             .section-title {
                 font-size: clamp(18px, 2vw, 24px);
             }
 
-            .movie-card {
+            .movie-card,
+            .upcoming-card {
                 flex: 0 0 clamp(100px, 18vw, 140px);
                 min-width: 100px;
             }
 
-            .movie-card .card-body {
+            .movie-card .card-body,
+            .upcoming-card .card-body {
                 padding: 8px 10px 10px;
             }
 
-            .movie-card .card-body .title {
+            .movie-card .card-body .title,
+            .upcoming-card .card-body .title {
                 font-size: 11px;
             }
 
-            .movie-card .card-body .year {
+            .movie-card .card-body .year,
+            .upcoming-card .card-body .year {
                 font-size: 9px;
             }
 
-            .movie-card .poster .rating-badge {
+            .movie-card .poster .rating-badge,
+            .upcoming-card .poster .rating-badge {
                 font-size: 8px;
                 padding: 1px 6px;
                 bottom: 4px;
                 left: 4px;
+            }
+
+            .upcoming-card .poster .release-badge {
+                font-size: 8px;
+                padding: 1px 6px;
+                top: 4px;
+                right: 4px;
             }
 
             .footer-cols {
@@ -1422,33 +1397,6 @@
                 height: 100px;
             }
 
-            .upcoming-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-            }
-
-            .upcoming-card .upcoming-poster {
-                height: 100px;
-            }
-
-            .upcoming-card .upcoming-body {
-                padding: 10px;
-            }
-
-            .upcoming-card .upcoming-body .upcoming-title {
-                font-size: 12px;
-            }
-
-            .upcoming-card .upcoming-body .upcoming-desc {
-                font-size: 10px;
-                --webkit-line-clamp: 1;
-            }
-
-            .upcoming-card .upcoming-body .btn-notify {
-                font-size: 9px;
-                padding: 4px 12px;
-            }
-
             .section {
                 padding: 16px var(--container-padding) 10px;
             }
@@ -1471,28 +1419,40 @@
                 font-size: 13px;
             }
 
-            .movie-card {
+            .movie-card,
+            .upcoming-card {
                 flex: 0 0 clamp(85px, 26vw, 120px);
                 min-width: 85px;
             }
 
-            .movie-card .card-body {
+            .movie-card .card-body,
+            .upcoming-card .card-body {
                 padding: 6px 8px 8px;
             }
 
-            .movie-card .card-body .title {
+            .movie-card .card-body .title,
+            .upcoming-card .card-body .title {
                 font-size: 10px;
             }
 
-            .movie-card .card-body .year {
+            .movie-card .card-body .year,
+            .upcoming-card .card-body .year {
                 font-size: 8px;
             }
 
-            .movie-card .poster .rating-badge {
+            .movie-card .poster .rating-badge,
+            .upcoming-card .poster .rating-badge {
                 font-size: 7px;
                 padding: 1px 5px;
                 bottom: 3px;
                 left: 3px;
+            }
+
+            .upcoming-card .poster .release-badge {
+                font-size: 7px;
+                padding: 1px 5px;
+                top: 3px;
+                right: 3px;
             }
 
             .btn {
@@ -1601,35 +1561,33 @@
                 min-height: 26px;
             }
 
-            .upcoming-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 6px;
-            }
-
-            .upcoming-card .upcoming-poster {
-                height: 80px;
-            }
-
-            .upcoming-card .upcoming-body .upcoming-title {
-                font-size: 11px;
-            }
-
-            .movie-card {
+            .movie-card,
+            .upcoming-card {
                 flex: 0 0 clamp(75px, 20vw, 100px);
                 min-width: 75px;
             }
 
-            .movie-card .card-body .title {
+            .movie-card .card-body .title,
+            .upcoming-card .card-body .title {
                 font-size: 9px;
             }
 
-            .movie-card .card-body .year {
+            .movie-card .card-body .year,
+            .upcoming-card .card-body .year {
                 font-size: 7px;
             }
 
-            .movie-card .poster .rating-badge {
+            .movie-card .poster .rating-badge,
+            .upcoming-card .poster .rating-badge {
                 font-size: 6px;
                 padding: 1px 4px;
+            }
+
+            .upcoming-card .poster .release-badge {
+                font-size: 6px;
+                padding: 1px 4px;
+                top: 3px;
+                right: 3px;
             }
 
             .events-grid {
@@ -1686,21 +1644,10 @@
                 min-height: 22px;
             }
 
-            .movie-card {
+            .movie-card,
+            .upcoming-card {
                 flex: 0 0 clamp(65px, 18vw, 85px);
                 min-width: 65px;
-            }
-
-            .upcoming-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .upcoming-card .upcoming-poster {
-                height: 70px;
-            }
-
-            .upcoming-card .upcoming-body .upcoming-title {
-                font-size: 10px;
             }
 
             .events-grid {
@@ -1861,7 +1808,7 @@
     </section>
 
     <!-- ============================================================
-    UPCOMING FILMS SECTION
+    UPCOMING FILMS CAROUSEL - Same style as Popular Movies
     ============================================================ -->
     <section class="section">
         <div class="carousel-head">
@@ -1869,11 +1816,14 @@
                 <p class="eyebrow">Coming Soon</p>
                 <h2 class="section-title">Upcoming Films</h2>
             </div>
-        </div>
-        <div class="upcoming-grid" id="upcomingGrid">
-            <div class="upcoming-loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading upcoming films...
+            <div class="carousel-arrows">
+                <button class="carousel-arrow" id="upcomingPrev" aria-label="Previous">&#8592;</button>
+                <button class="carousel-arrow" id="upcomingNext" aria-label="Next">&#8594;</button>
             </div>
+        </div>
+
+        <div class="upcoming-track" id="upcomingTrack">
+            <!-- Upcoming movies populated by JavaScript -->
         </div>
         <br>
         <a href="coming-soon.html" class="btn btn-ghost">
@@ -2144,6 +2094,7 @@
             const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
             const BACKDROP_BASE = 'https://image.tmdb.org/t/p/original';
             const currentYear = new Date().getFullYear();
+            const MAX_PAGES = 5;
 
             // ============================================================
             // HERO CAROUSEL - DYNAMICALLY FETCHED
@@ -2321,46 +2272,66 @@
             }
 
             // ============================================================
-            // FETCH UPCOMING FILMS
+            // FETCH UPCOMING FILMS - Fetch 5 pages with deduplication
             // ============================================================
             
             async function fetchUpcomingFilms() {
-                const grid = document.getElementById('upcomingGrid');
+                const track = document.getElementById('upcomingTrack');
                 
                 try {
-                    const response = await fetch(
-                        `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US`
-                    );
+                    let allUpcomingFilms = [];
+                    const seenIds = new Set();
                     
-                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    // Fetch pages 1 through 5
+                    for (let page = 1; page <= MAX_PAGES; page++) {
+                        const response = await fetch(
+                            `https://api.themoviedb.org/3/movie/upcoming?api_key=${API_KEY}&language=en-US&page=${page}`
+                        );
+                        
+                        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                        
+                        const data = await response.json();
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        
+                        // Filter: only keep films with release date > today and not already seen
+                        const upcoming = data.results.filter(film => {
+                            if (!film.release_date) return false;
+                            const releaseDate = new Date(film.release_date);
+                            // Check if release date is in the future
+                            if (releaseDate <= today) return false;
+                            // Check if we've already seen this film
+                            if (seenIds.has(film.id)) return false;
+                            // Add to seen set
+                            seenIds.add(film.id);
+                            return true;
+                        });
+                        
+                        allUpcomingFilms = [...allUpcomingFilms, ...upcoming];
+                        
+                        // If we've reached the last page, stop fetching
+                        if (page >= data.total_pages) break;
+                    }
                     
-                    const data = await response.json();
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    
-                    const upcomingFilms = data.results.filter(film => {
-                        if (!film.release_date) return false;
-                        const releaseDate = new Date(film.release_date);
-                        return releaseDate > today;
-                    });
-                    
-                    upcomingFilms.sort((a, b) => {
+                    // Sort by release date (earliest first)
+                    allUpcomingFilms.sort((a, b) => {
                         return new Date(a.release_date) - new Date(b.release_date);
                     });
                     
-                    const displayFilms = upcomingFilms.slice(0, 8);
+                    // Take up to 12 films (same as popular movies)
+                    const displayFilms = allUpcomingFilms.slice(0, 12);
                     
                     if (displayFilms.length === 0) {
-                        grid.innerHTML = `
-                            <div class="upcoming-empty">
-                                <i class="fas fa-calendar-alt" style="display:block;font-size:28px;margin-bottom:10px;color:var(--gold);"></i>
+                        track.innerHTML = `
+                            <div style="flex:1;text-align:center;padding:40px;color:var(--paper-dim);font-size:14px;min-width:300px;">
+                                <i class="fas fa-calendar-alt" style="display:block;font-size:32px;margin-bottom:12px;color:var(--gold);"></i>
                                 No upcoming films found. Check back soon!
                             </div>
                         `;
                         return;
                     }
                     
-                    grid.innerHTML = displayFilms.map(film => {
+                    track.innerHTML = displayFilms.map(film => {
                         const posterUrl = film.poster_path ? `${IMAGE_BASE}${film.poster_path}` : '';
                         const releaseDate = film.release_date ? new Date(film.release_date).toLocaleDateString('en-US', {
                             month: 'short',
@@ -2369,19 +2340,17 @@
                         }) : 'TBA';
                         
                         const year = film.release_date ? film.release_date.substring(0, 4) : 'TBA';
+                        const rating = film.vote_average ? film.vote_average.toFixed(1) : 'N/A';
                         
                         return `
                             <div class="upcoming-card" onclick="viewMovie(${film.id})">
-                                <div class="upcoming-poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
-                                    <span class="upcoming-date">${releaseDate}</span>
+                                <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
+                                    <span class="rating-badge">⭐ ${rating}</span>
+                                    <span class="release-badge"><i class="far fa-calendar-alt"></i> ${releaseDate}</span>
                                 </div>
-                                <div class="upcoming-body">
-                                    <div class="upcoming-title">${film.title || 'Untitled'}</div>
-                                    <div class="upcoming-meta">${year}</div>
-                                    <div class="upcoming-desc">${film.overview || 'No description available.'}</div>
-                                    <button class="btn-notify" onclick="event.stopPropagation(); notifyMe('${film.title.replace(/'/g, "\\'")}')">
-                                        <i class="fas fa-bell"></i> Notify Me
-                                    </button>
+                                <div class="card-body">
+                                    <div class="title">${film.title || 'Untitled'}</div>
+                                    <div class="year">${year}</div>
                                 </div>
                             </div>
                         `;
@@ -2389,9 +2358,9 @@
                     
                 } catch (error) {
                     console.error('Error fetching upcoming films:', error);
-                    grid.innerHTML = `
-                        <div class="upcoming-empty">
-                            <i class="fas fa-exclamation-circle" style="display:block;font-size:28px;margin-bottom:10px;color:var(--rust);"></i>
+                    track.innerHTML = `
+                        <div style="flex:1;text-align:center;padding:40px;color:var(--paper-dim);font-size:14px;min-width:300px;">
+                            <i class="fas fa-exclamation-circle" style="display:block;font-size:32px;margin-bottom:12px;color:var(--rust);"></i>
                             Failed to load upcoming films. Please refresh the page.
                         </div>
                     `;
@@ -2471,17 +2440,6 @@
                 window.location.href = `movie-details.html?id=${movieId}`;
             };
             
-            window.notifyMe = function(title) {
-                const btn = event.target.closest('.btn-notify');
-                if (btn) {
-                    btn.classList.toggle('notified');
-                    btn.innerHTML = btn.classList.contains('notified') 
-                        ? '<i class="fas fa-check"></i> Notified' 
-                        : '<i class="fas fa-bell"></i> Notify Me';
-                }
-                alert(`You will be notified when "${title}" is available!`);
-            };
-            
             window.eventDetail = function(title) {
                 alert(`Event: "${title}"\n\nMore details will be available soon.`);
             };
@@ -2490,6 +2448,7 @@
             // CAROUSEL NAVIGATION
             // ============================================================
             
+            // Popular Movies Carousel
             const track = document.getElementById('carouselTrack');
             const prevBtn = document.getElementById('carouselPrev');
             const nextBtn = document.getElementById('carouselNext');
@@ -2501,6 +2460,21 @@
                 
                 nextBtn.addEventListener('click', function() {
                     track.scrollBy({ left: 280, behavior: 'smooth' });
+                });
+            }
+            
+            // Upcoming Films Carousel
+            const upcomingTrack = document.getElementById('upcomingTrack');
+            const upcomingPrev = document.getElementById('upcomingPrev');
+            const upcomingNext = document.getElementById('upcomingNext');
+            
+            if (upcomingPrev && upcomingNext && upcomingTrack) {
+                upcomingPrev.addEventListener('click', function() {
+                    upcomingTrack.scrollBy({ left: -280, behavior: 'smooth' });
+                });
+                
+                upcomingNext.addEventListener('click', function() {
+                    upcomingTrack.scrollBy({ left: 280, behavior: 'smooth' });
                 });
             }
 

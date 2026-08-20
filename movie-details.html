@@ -1459,7 +1459,6 @@
     TOAST NOTIFICATION
     ============================================================ -->
     <div class="toast" id="toast">
-        <span class="toast-icon" id="toastIcon">✅</span>
         <span id="toastMessage">Added to watchlist</span>
     </div>
 
@@ -1668,14 +1667,7 @@
             let toastTimeout = null;
 
             function showToast(message, type) {
-                const iconMap = {
-                    added: '✅',
-                    removed: '🗑️',
-                    error: '❌',
-                    info: 'ℹ️'
-                };
-                DOM.toastIcon.textContent = iconMap[type] || 'ℹ️';
-                DOM.toastIcon.className = `toast-icon ${type}`;
+                
                 DOM.toastMessage.textContent = message;
                 DOM.toast.classList.add('show');
                 clearTimeout(toastTimeout);
@@ -1992,7 +1984,7 @@
                     updateWatchlistUI(isInWatchlist);
 
                     if (isInWatchlist) {
-                        showToast(`"${currentMovie.title}" added to your watchlist ❤️`, 'added');
+                        showToast(`"${currentMovie.title}" added to your watchlist `, 'added');
                     } else {
                         showToast(`"${currentMovie.title}" removed from watchlist`, 'removed');
                     }

@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     
     <style>
+        /* ============================================================
+           All existing styles remain the same
+           ============================================================ */
         :root {
             --ink: #14141C;
             --ink-raised: #1D1D28;
@@ -200,7 +203,7 @@
             transform: rotate(-45deg) translate(5px, -5px);
         }
 
-        /* ---------- MOBILE MENU - SLIDE FROM LEFT ---------- */
+        /* ---------- MOBILE MENU ---------- */
         .mobile-menu-overlay {
             display: none;
             position: fixed;
@@ -839,6 +842,42 @@
             color: var(--rust);
         }
 
+        .toast .toast-icon.added {
+            color: var(--rust);
+        }
+
+        .toast .toast-icon.removed {
+            color: var(--paper-dim);
+        }
+
+        /* ---------- INFINITE SCROLL LOADER ---------- */
+        .scroll-loader {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 20px var(--container-padding) 40px;
+            text-align: center;
+            color: var(--paper-dim);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            display: none;
+            grid-column: 1 / -1;
+        }
+
+        .scroll-loader.show {
+            display: block;
+        }
+
+        .scroll-loader i {
+            color: var(--gold);
+            font-size: 24px;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .scroll-loader .end-message {
+            color: var(--paper-dim);
+        }
+
         /* ---------- FOOTER ---------- */
         .footer {
             max-width: var(--max-width);
@@ -1189,6 +1228,13 @@
     </div>
 
     <!-- ============================================================
+    INFINITE SCROLL LOADER
+    ============================================================ -->
+    <div class="scroll-loader" id="scrollLoader">
+        <i class="fas fa-spinner fa-spin"></i> Loading more films...
+    </div>
+
+    <!-- ============================================================
     FOOTER
     ============================================================ -->
     <footer class="footer">
@@ -1257,6 +1303,7 @@
                 sortSelect: document.getElementById('filterSort'),
                 yearSelect: document.getElementById('filterYear'),
                 resultCount: document.getElementById('resultCount'),
+                scrollLoader: document.getElementById('scrollLoader'),
                 toast: document.getElementById('toast'),
                 toastIcon: document.getElementById('toastIcon'),
                 toastMessage: document.getElementById('toastMessage'),
@@ -1316,7 +1363,6 @@
                         </a>
                     `;
                     
-                    // Remove existing auth links
                     const existingAuthLinks = DOM.mobileMenuLinks.querySelectorAll('.mobile-auth-link');
                     existingAuthLinks.forEach(el => el.remove());
                     
@@ -1382,7 +1428,7 @@
             }
 
             // ============================================================
-            // LOGOUT - Redirect to auth.html
+            // LOGOUT
             // ============================================================
 
             function logout() {
@@ -1392,7 +1438,7 @@
             }
 
             // ============================================================
-            // TOAST
+            // TOAST - NO EMOJIS
             // ============================================================
 
             let toastTimeout = null;
@@ -1567,13 +1613,13 @@
             }
 
             // ============================================================
-            // FETCH UPCOMING FILMS
+            // FETCH UPCOMING FILMS - All films with release date > today
             // ============================================================
 
-            async function fetchUpcomingFilms() {
+            async function fetchUpcomingFilms(page = 1) {
                 try {
                     const response = await fetch(
-                        `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US`
+                        `https://api.themoviedb.org/3/movie/upcoming?api_key=${API_KEY}&language=en-US&page=${page}`
                     );
 
                     if (!response.ok) {
@@ -1581,28 +1627,88 @@
                     }
 
                     const data = await response.json();
+                    
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
 
+                    // Filter: only keep films with release date > today
                     const upcoming = data.results.filter(film => {
                         if (!film.release_date) return false;
                         const releaseDate = new Date(film.release_date);
+                        // Include tomorrow and all future dates
                         return releaseDate > today;
                     });
 
-                    upcoming.sort((a, b) => {
-                        return new Date(a.release_date) - new Date(b.release_date);
-                    });
-
-                    return upcoming;
+                    return {
+                        films: upcoming,
+                        totalPages: data.total_pages,
+                        currentPage: data.page,
+                        totalResults: data.total_results
+                    };
                 } catch (error) {
                     console.error('Error fetching upcoming films:', error);
-                    return [];
+                    return { films: [], totalPages: 0, currentPage: 1, totalResults: 0 };
                 }
             }
 
             // ============================================================
-            // RENDER FUNCTIONS
+            // FETCH ALL PAGES - Keep fetching until no more films with deduplication
+            // ============================================================
+
+            async function fetchAllUpcomingFilms() {
+                let allFilms = [];
+                let page = 1;
+                let hasMorePages = true;
+                const seenIds = new Set(); // Track seen film IDs for deduplication
+                
+                DOM.scrollLoader.classList.add('show');
+                DOM.scrollLoader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading films...';
+
+                while (hasMorePages) {
+                    const result = await fetchUpcomingFilms(page);
+                    
+                    if (result.films.length === 0) {
+                        hasMorePages = false;
+                        break;
+                    }
+                    
+                    // Filter out duplicates before adding
+                    const uniqueFilms = result.films.filter(film => {
+                        if (seenIds.has(film.id)) {
+                            return false; // Skip duplicate
+                        }
+                        seenIds.add(film.id);
+                        return true;
+                    });
+                    
+                    allFilms = [...allFilms, ...uniqueFilms];
+                    
+                    // Check if we've reached the last page
+                    if (page >= result.totalPages) {
+                        hasMorePages = false;
+                    }
+                    
+                    page++;
+                    
+                    // Safety limit: max 10 pages to prevent infinite loops
+                    if (page > 10) {
+                        hasMorePages = false;
+                    }
+                }
+
+                // Sort by release date (earliest first)
+                allFilms.sort((a, b) => {
+                    if (!a.release_date) return 1;
+                    if (!b.release_date) return -1;
+                    return new Date(a.release_date) - new Date(b.release_date);
+                });
+
+                DOM.scrollLoader.classList.remove('show');
+                return allFilms;
+            }
+
+            // ============================================================
+            // RENDER FUNCTIONS - NO EMOJIS
             // ============================================================
 
             async function renderFilms(films) {
@@ -1617,6 +1723,7 @@
                         </div>
                     `;
                     DOM.resultCount.textContent = '0';
+                    DOM.scrollLoader.classList.remove('show');
                     return;
                 }
 
@@ -1669,6 +1776,10 @@
                         </div>
                     `;
                 }).join('');
+
+                // Show end message when all films are loaded
+                DOM.scrollLoader.innerHTML = '<span class="end-message">All upcoming films loaded</span>';
+                DOM.scrollLoader.classList.add('show');
             }
 
             // ============================================================
@@ -1737,7 +1848,7 @@
             }
 
             // ============================================================
-            // WATCHLIST FUNCTIONS WITH BACKEND
+            // WATCHLIST FUNCTIONS
             // ============================================================
 
             window.toggleWatchlist = async function(movieId) {
@@ -1774,7 +1885,7 @@
             };
 
             // ============================================================
-            // NOTIFY FUNCTION
+            // NOTIFY FUNCTION - NO EMOJIS
             // ============================================================
 
             window.toggleNotify = function(title, button) {
@@ -1791,7 +1902,7 @@
                 if (button.classList.contains('notified')) {
                     icon.className = 'fas fa-bell';
                     button.innerHTML = '<i class="fas fa-bell"></i> Notified';
-                    showToast(`You will be notified when "${title}" is available!`, 'success');
+                    showToast(`You will be notified when "${title}" is available`, 'success');
                 } else {
                     icon.className = 'far fa-bell';
                     button.innerHTML = '<i class="far fa-bell"></i> Notify';
@@ -1824,8 +1935,8 @@
                 renderNav();
                 setupMobileMenu();
 
-                // Fetch films
-                allUpcomingFilms = await fetchUpcomingFilms();
+                // Fetch all pages of films with release date > today
+                allUpcomingFilms = await fetchAllUpcomingFilms();
 
                 if (allUpcomingFilms.length === 0) {
                     DOM.grid.innerHTML = `
@@ -1836,6 +1947,7 @@
                         </div>
                     `;
                     DOM.resultCount.textContent = '0';
+                    DOM.scrollLoader.classList.remove('show');
                     return;
                 }
 

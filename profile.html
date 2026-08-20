@@ -304,6 +304,7 @@
             visibility: visible;
             transform: translateY(0) scale(1);
             pointer-events: auto;
+            left:3px;
         }
         .watchlist-card .dropdown-menu .dropdown-item {
             display: flex;
@@ -355,7 +356,6 @@
         
         /* Watched film - subtle overlay indicator */
         .watchlist-card.watched .poster::after {
-            content: '✓';
             position: absolute;
             top: 50%;
             left: 50%;
@@ -753,7 +753,6 @@
 
     <!-- TOAST NOTIFICATION -->
     <div class="toast" id="toast">
-        <span class="toast-icon" id="toastIcon">✅</span>
         <span id="toastMessage">Success!</span>
     </div>
 
