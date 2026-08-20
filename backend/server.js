@@ -811,4 +811,5 @@ app.listen(PORT, () => {
     console.log(`🔑 JWT Secret: ${JWT_SECRET ? '✅ Set' : '❌ Not set'}`);
     console.log(`\n📍 API URL: http://10.20.10.150:${PORT}/api`);
     console.log(`📍 Health Check: http://10.20.10.150:${PORT}/\n`);
+    console.log(`Access from other devices at: http://10.20.10.150:${PORT}`);
 });
