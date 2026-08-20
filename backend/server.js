@@ -284,7 +284,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// WATCHLIST ROUTES - UPDATED
+// WATCHLIST ROUTES - UPDATED WITH TOGGLE ENDPOINTS
 // ============================================================
 
 // GET WATCHLIST - Returns the user's watchlist as an array
@@ -402,6 +402,91 @@ app.delete('/api/watchlist/:filmId', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server error removing from watchlist'
+        });
+    }
+});
+
+// TOGGLE WATCHED STATUS
+app.post('/api/watchlist/toggle-watched', authenticateToken, async (req, res) => {
+    try {
+        const { filmId, watched } = req.body;
+        const data = readData();
+
+        if (!data.watchlists[req.user.id]) {
+            return res.status(404).json({
+                success: false,
+                message: 'Watchlist not found'
+            });
+        }
+
+        // Find the film in the watchlist using loose equality
+        const filmIndex = data.watchlists[req.user.id].findIndex(item => item.filmId == filmId);
+        
+        if (filmIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Film not found in watchlist'
+            });
+        }
+
+        // Update the watched status
+        data.watchlists[req.user.id][filmIndex].watched = watched;
+        data.watchlists[req.user.id][filmIndex].watchedDate = watched ? new Date() : null;
+        writeData(data);
+
+        res.json({
+            success: true,
+            message: watched ? 'Movie marked as watched' : 'Movie marked as unwatched',
+            watchlist: data.watchlists[req.user.id]
+        });
+
+    } catch (error) {
+        console.error('Toggle watched error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating watched status'
+        });
+    }
+});
+
+// TOGGLE FAVORITE STATUS
+app.post('/api/watchlist/toggle-favorite', authenticateToken, async (req, res) => {
+    try {
+        const { filmId, favorite } = req.body;
+        const data = readData();
+
+        if (!data.watchlists[req.user.id]) {
+            return res.status(404).json({
+                success: false,
+                message: 'Watchlist not found'
+            });
+        }
+
+        // Find the film in the watchlist using loose equality
+        const filmIndex = data.watchlists[req.user.id].findIndex(item => item.filmId == filmId);
+        
+        if (filmIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Film not found in watchlist'
+            });
+        }
+
+        // Update the favorite status
+        data.watchlists[req.user.id][filmIndex].favorite = favorite;
+        writeData(data);
+
+        res.json({
+            success: true,
+            message: favorite ? 'Movie added to favorites' : 'Movie removed from favorites',
+            watchlist: data.watchlists[req.user.id]
+        });
+
+    } catch (error) {
+        console.error('Toggle favorite error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating favorite status'
         });
     }
 });

@@ -27,6 +27,7 @@
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
             --touch-target: clamp(44px, 5vw, 38px);
+            --container-max-width: 1400px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1117,6 +1118,99 @@
             margin-bottom: 16px;
         }
 
+        /* ---------- FOOTER ---------- */
+        .footer {
+            max-width: var(--container-max-width);
+            margin: 0 auto;
+            padding: 40px var(--container-padding) 0;
+            border-top: 1px solid var(--ink-line);
+            margin-top: 40px;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            padding-bottom: 30px;
+        }
+
+        .footer span{
+            color: var(--gold);
+        }
+
+        .footer-brand .nav-brand {
+            font-size: clamp(20px, 2vw, 26px);
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .footer-brand p {
+            color: var(--paper-dim);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 300;
+            line-height: 1.7;
+            max-width: 400px;
+        }
+
+        .footer-cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .footer-col h4 {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 0.9vw, 14px);
+            font-weight: 300;
+            padding: 4px 0;
+            transition: 0.3s ease;
+        }
+
+        .footer-col a:hover {
+            color: var(--gold);
+        }
+
+        .footer-tear {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
+            margin: 0 0 20px;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 0 24px;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.8vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .footer-bottom .legal a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: 0.3s ease;
+        }
+
+        .footer-bottom .legal a:hover {
+            color: var(--gold);
+        }
+
         /* ---------- RESPONSIVE ---------- */
         @media (max-width: 920px) {
             .movie-details-hero .container {
@@ -1154,6 +1248,11 @@
             .cast-grid {
                 grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
             }
+
+            .footer-top {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
         }
 
         @media (max-width: 768px) {
@@ -1189,6 +1288,11 @@
                 font-size: 14px;
                 max-width: 95%;
             }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -1218,6 +1322,19 @@
                 width: 32px;
                 height: 32px;
                 font-size: 18px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-bottom .legal a {
+                margin: 0 10px;
             }
         }
 
@@ -1409,6 +1526,48 @@
     </div>
 
     <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="nav-brand">SAVANNAH <span>CINEMAS</span></div>
+                <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4>Browse</h4>
+                    <a href="coming-soon.html">Coming soon</a>
+                    <a href="events.html">Events</a>
+                    <a href="discovery.html">Discovery</a>
+                    <a href="extras.html">Extras</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="settings.html">Settings</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="help.html">Help centre</a>
+                    <a href="refunds.html">Refunds</a>
+                    <a href="contact.html">Contact us</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-tear"></div>
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
     JAVASCRIPT
     ============================================================ -->
     <script>
@@ -1537,13 +1696,13 @@
                     
                 } else {
                     DOM.navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
+                        <a href="auth.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
                     
                     const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     DOM.mobileMenuLinks.appendChild(signInLink);
                     if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
                 }
@@ -1644,13 +1803,12 @@
             }
 
             // ============================================================
-            // WATCHLIST API - UPDATED
+            // WATCHLIST API
             // ============================================================
 
             let currentMovie = null;
             let isInWatchlist = false;
 
-            // Fetch the user's full watchlist
             async function fetchWatchlist() {
                 if (!isAuthenticated()) return [];
                 try {
@@ -1666,7 +1824,6 @@
                         return [];
                     }
                     
-                    // The server now returns the watchlist array directly
                     const watchlist = await res.json();
                     console.log('📦 Watchlist data:', watchlist);
                     return watchlist || [];
@@ -1676,7 +1833,6 @@
                 }
             }
 
-            // Check if a film is in the user's watchlist
             async function checkWatchlistStatus(movieId) {
                 if (!isAuthenticated()) {
                     return false;
@@ -1692,12 +1848,11 @@
                 }
             }
 
-            // Add a film to the watchlist
             async function addToWatchlist(movieId, movieData) {
                 if (!isAuthenticated()) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
-                        window.location.href = 'logout.html';
+                        window.location.href = 'auth.html';
                     }, 2000);
                     return false;
                 }
@@ -1740,7 +1895,6 @@
                 }
             }
 
-            // Remove a film from the watchlist
             async function removeFromWatchlist(movieId) {
                 if (!isAuthenticated()) {
                     showToast('Please sign in to manage your watchlist', 'error');
@@ -1775,7 +1929,6 @@
                 }
             }
 
-            // Toggle watchlist status
             async function toggleWatchlist() {
                 if (!currentMovie) {
                     console.error('No current movie set');
@@ -1785,7 +1938,7 @@
                 if (!isAuthenticated()) {
                     showToast('Please create an account or sign in to add films to your watchlist', 'info');
                     setTimeout(() => {
-                        window.location.href = 'logout.html';
+                        window.location.href = 'auth.html';
                     }, 2000);
                     return;
                 }

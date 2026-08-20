@@ -22,8 +22,9 @@
         "poster": "https://image.tmdb.org/t/p/w500/iPOn6DinuVyLY17YM9mKuPofV08.jpg",
         "rating": 7.9,
         "addedDate": "2026-08-20T09:38:17.495Z",
-        "watched": false,
-        "favorite": false
+        "watched": true,
+        "favorite": true,
+        "watchedDate": "2026-08-20T10:36:26.344Z"
       },
       {
         "filmId": 1368337,
@@ -32,6 +33,17 @@
         "poster": "https://image.tmdb.org/t/p/w500/5rhTDKUhPYvpdQIijFIs5VoWsON.jpg",
         "rating": 8,
         "addedDate": "2026-08-20T09:38:32.904Z",
+        "watched": false,
+        "favorite": false,
+        "watchedDate": null
+      },
+      {
+        "filmId": 1084244,
+        "title": "Toy Story 5",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/sfQtVlIHljToOwYjhe21KPGzZWK.jpg",
+        "rating": 7.9,
+        "addedDate": "2026-08-20T09:39:54.298Z",
         "watched": false,
         "favorite": false
       }
