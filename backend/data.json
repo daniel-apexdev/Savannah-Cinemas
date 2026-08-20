@@ -60,6 +60,22 @@
     ]
   },
   "bookings": {
-    "1787176697637": []
+    "1787176697637": [
+      {
+        "bookingRef": "SC-423707-6YTL",
+        "filmTitle": "Spider-Man: Brand New Day",
+        "screen": "Screen 1",
+        "showtime": "10:30 AM",
+        "seats": [
+          "B7"
+        ],
+        "ticketQuantity": 1,
+        "ticketPrice": 10,
+        "snacks": [],
+        "total": 10,
+        "bookingDate": "2026-08-20T12:20:23.707Z",
+        "status": "confirmed"
+      }
+    ]
   }
 }

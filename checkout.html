@@ -27,8 +27,9 @@
             --radius-sm: 8px;
             --radius-md: 14px;
             --container-padding: clamp(16px, 4vw, 60px);
-            --touch-target: clamp(44px, 5vw, 56px);
-            --max-width: 900px;
+            --touch-target: clamp(44px, 5vw, 38px);
+            --max-width: 1400px;
+            --checkout-max-width: 900px;
         }
 
         * {
@@ -88,6 +89,271 @@
             z-index: 1001;
         }
 
+        /* ---------- SIGN IN BUTTON ---------- */
+        .btn-signin {
+            padding: 8px 20px;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .btn-signin:hover {
+            background: #f0c369;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 179, 76, 0.3);
+        }
+
+        .btn-signin i {
+            font-size: 14px;
+        }
+
+        /* ---------- HAMBURGER MENU TOGGLE ---------- */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px 8px;
+            z-index: 1001;
+            position: relative;
+            flex-shrink: 0;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            justify-content: center;
+            align-items: center;
+            border-radius: var(--radius-sm);
+            touch-action: manipulation;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 28px;
+            height: 2.5px;
+            background: var(--paper);
+            transition: 0.3s ease;
+            border-radius: 2px;
+            transform-origin: center;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        /* ---------- MOBILE MENU - SLIDE FROM LEFT ---------- */
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 85%;
+            max-width: 380px;
+            height: 100vh;
+            background: var(--ink);
+            z-index: 1000;
+            padding: 0;
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            box-shadow: 8px 0 40px rgba(0, 0, 0, 0.6);
+            border-right: 1px solid var(--ink-line);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-menu.open {
+            left: 0;
+        }
+
+        .mobile-menu-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--ink-line);
+            background: var(--ink-raised);
+            flex-shrink: 0;
+            min-height: var(--touch-target);
+        }
+
+        .mobile-menu-brand {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--paper);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .mobile-menu-brand span {
+            color: var(--gold);
+        }
+
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            color: var(--paper);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 12px;
+            transition: 0.3s ease;
+            line-height: 1;
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            touch-action: manipulation;
+        }
+
+        .mobile-menu-close:hover {
+            color: var(--gold);
+            transform: rotate(90deg);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .mobile-menu-links {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: column;
+        }
+
+        .mobile-menu-links li {
+            padding: 0 16px;
+            margin: 2px 0;
+        }
+
+        .mobile-menu-links a {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 16px;
+            color: var(--paper);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 400;
+            transition: 0.2s ease;
+            border-radius: 10px;
+            width: 100%;
+            letter-spacing: 0.02em;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .mobile-menu-links a i {
+            width: 28px;
+            text-align: center;
+            color: var(--paper-dim);
+            font-size: 20px;
+            transition: 0.2s ease;
+        }
+
+        .mobile-menu-links a:hover {
+            color: var(--gold);
+            background: rgba(232, 179, 76, 0.06);
+            padding-left: 22px;
+        }
+
+        .mobile-menu-links a:hover i {
+            color: var(--gold);
+        }
+
+        .mobile-menu-links a.active {
+            color: var(--gold);
+            background: rgba(232, 179, 76, 0.08);
+        }
+
+        .mobile-menu-links a.active i {
+            color: var(--gold);
+        }
+
+        .mobile-divider {
+            height: 1px;
+            background: var(--ink-line);
+            margin: 8px 24px;
+        }
+
+        .mobile-logout {
+            color: #d95b5b !important;
+            margin-top: 4px;
+        }
+
+        .mobile-logout i {
+            color: #d95b5b !important;
+        }
+
+        .mobile-logout:hover {
+            color: #ff6b6b !important;
+            background: rgba(217, 91, 91, 0.08) !important;
+        }
+
+        .mobile-logout:hover i {
+            color: #ff6b6b !important;
+        }
+
+        .mobile-menu-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--ink-line);
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--paper-dim);
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        /* ---------- PROFILE ---------- */
+        .profile-wrapper {
+            position: relative;
+        }
+
         .avatar {
             width: 38px;
             height: 38px;
@@ -108,10 +374,6 @@
 
         .avatar:hover {
             border-color: var(--gold-dim);
-        }
-
-        .profile-wrapper {
-            position: relative;
         }
 
         .profile-menu {
@@ -184,7 +446,7 @@
 
         /* ---------- CHECKOUT CONTAINER ---------- */
         .checkout-container {
-            max-width: var(--max-width);
+            max-width: var(--checkout-max-width);
             margin: 0 auto;
             padding: 32px var(--container-padding) 60px;
             display: grid;
@@ -628,8 +890,105 @@
             color: var(--rust);
         }
 
+        .toast .toast-icon.info {
+            color: var(--gold);
+        }
+
+        /* ---------- FOOTER ---------- */
+        .footer {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 40px var(--container-padding) 0;
+            border-top: 1px solid var(--ink-line);
+            margin-top: 20px;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            padding-bottom: 30px;
+        }
+
+        .footer-brand .nav-brand {
+            font-size: clamp(20px, 2vw, 26px);
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .footer-brand p {
+            color: var(--paper-dim);
+            font-size: clamp(13px, 0.9vw, 15px);
+            font-weight: 300;
+            line-height: 1.7;
+            max-width: 400px;
+        }
+
+        .footer-cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .footer-col h4 {
+            font-family: var(--font-display);
+            font-size: clamp(14px, 1vw, 16px);
+            font-weight: 500;
+            color: var(--paper);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--paper-dim);
+            text-decoration: none;
+            font-size: clamp(13px, 0.9vw, 14px);
+            font-weight: 300;
+            padding: 4px 0;
+            transition: 0.3s ease;
+        }
+
+        .footer-col a:hover {
+            color: var(--gold);
+        }
+
+        .footer-tear {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ink-line), transparent);
+            margin: 0 0 20px;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 0 24px;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 0.8vw, 13px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
+
+        .footer-bottom .legal a {
+            color: var(--paper-dim);
+            text-decoration: none;
+            margin-left: 20px;
+            transition: 0.3s ease;
+        }
+
+        .footer-bottom .legal a:hover {
+            color: var(--gold);
+        }
+
         /* ---------- RESPONSIVE ---------- */
         @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
             .checkout-container {
                 grid-template-columns: 1fr;
                 gap: 24px;
@@ -653,6 +1012,16 @@
             .email-overlay .email-modal {
                 padding: 28px;
                 margin: 16px;
+            }
+
+            .footer-top {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .footer-cols {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
             }
         }
 
@@ -697,6 +1066,19 @@
             .email-overlay .email-modal .email-icon {
                 font-size: 48px;
             }
+
+            .footer-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-bottom .legal a {
+                margin: 0 10px;
+            }
         }
 
         /* ---------- SCROLLBAR ---------- */
@@ -726,22 +1108,40 @@
     ============================================================ -->
     <nav class="nav">
         <div class="nav-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <a href="index.html" class="wordmark">SAVANNAH <span>CINEMAS</span></a>
         </div>
-        <div class="nav-right">
-            <div class="profile-wrapper" id="profileWrapper">
-                <div class="avatar" id="avatarBtn">DA</div>
-                <div class="profile-menu" id="profileMenu">
-                    <div class="who">
-                        <div class="name">Daniel Asamoah</div>
-                        <div class="stat">142 films watched</div>
-                    </div>
-                    <a href="profile.html">My Profile</a>
-                    <a href="logout.html">Sign out</a>
-                </div>
-            </div>
+        <div class="nav-right" id="navRight">
+            <!-- Will be populated by JavaScript -->
         </div>
     </nav>
+
+    <!-- ============================================================
+    MOBILE MENU - SLIDE FROM LEFT
+    ============================================================ -->
+    <div class="mobile-menu-overlay" id="mobileOverlay"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <div class="mobile-menu-brand">Savannah <span>Cinemas</span></div>
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="mobile-menu-links" id="mobileMenuLinks">
+            <li><a href="coming-soon.html">Coming soon</a></li>
+            <li><a href="events.html">Events</a></li>
+            <li><a href="discovery.html">Discovery</a></li>
+            <li><a href="extras.html">Extras</a></li>
+            <li class="mobile-divider" id="mobileDivider"></li>
+        </ul>
+        <div class="mobile-menu-footer">
+            <p>© 2026 Savannah Cinemas</p>
+        </div>
+    </div>
 
     <!-- ============================================================
     EMAIL SENDING OVERLAY
@@ -853,47 +1253,257 @@
     </div>
 
     <!-- ============================================================
+    FOOTER
+    ============================================================ -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="nav-brand">SAVANNAH <span>CINEMAS</span></div>
+                <p>Book the seat, keep the stub. One system for finding tonight's showtime and remembering every film you've watched since.</p>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4>Browse</h4>
+                    <a href="coming-soon.html">Coming soon</a>
+                    <a href="events.html">Events</a>
+                    <a href="discovery.html">Discovery</a>
+                    <a href="extras.html">Extras</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    <a href="bookings.html">My bookings</a>
+                    <a href="history.html">Watch history</a>
+                    <a href="profile.html">Settings</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="help.html">Help centre</a>
+                    <a href="refunds.html">Refunds</a>
+                    <a href="contact.html">Contact us</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-tear"></div>
+        <div class="footer-bottom">
+            <span>© 2026 Savannah Cinemas</span>
+            <span class="legal">
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+                <a href="accessibility.html">Accessibility</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
     JAVASCRIPT
     ============================================================ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
 
             // ============================================================
-            // PROFILE DROPDOWN
+            // AUTH STATE
             // ============================================================
             
-            const profileWrapper = document.getElementById('profileWrapper');
-            const avatarBtn = document.getElementById('avatarBtn');
-            let closeTimer = null;
+            const token = localStorage.getItem('token');
+            const userData = JSON.parse(localStorage.getItem('user') || 'null');
+            const isAuthenticated = !!token && !!userData;
 
-            if (profileWrapper) {
+            // ============================================================
+            // NAV RENDER
+            // ============================================================
+
+            function renderNav() {
+                const navRight = document.getElementById('navRight');
+                const mobileMenuLinks = document.getElementById('mobileMenuLinks');
+                const mobileDivider = document.getElementById('mobileDivider');
+                
+                if (isAuthenticated && userData) {
+                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    
+                    navRight.innerHTML = `
+                        <div class="profile-wrapper" id="profileWrapper">
+                            <div class="avatar" id="avatarBtn">${initials}</div>
+                            <div class="profile-menu" id="profileMenu">
+                                <div class="who">
+                                    <div class="name">${userData.name}</div>
+                                    <div class="stat" id="navStat">0 films watched</div>
+                                </div>
+                                <a href="profile.html">My Profile</a>
+                                <a href="#" id="logoutBtn">Sign out</a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const logoutLink = document.createElement('li');
+                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
+                    mobileMenuLinks.appendChild(logoutLink);
+                    if (mobileDivider) mobileDivider.style.display = 'block';
+                    
+                    setupProfileDropdown();
+                    
+                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                    
+                    fetchWatchCount();
+                    
+                } else {
+                    navRight.innerHTML = `
+                        <a href="auth.html" class="btn-signin">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </a>
+                    `;
+                    
+                    const signInLink = document.createElement('li');
+                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    mobileMenuLinks.appendChild(signInLink);
+                    if (mobileDivider) mobileDivider.style.display = 'block';
+                }
+            }
+
+            // ============================================================
+            // PROFILE DROPDOWN
+            // ============================================================
+
+            function setupProfileDropdown() {
+                const profileWrapper = document.getElementById('profileWrapper');
+                const avatarBtn = document.getElementById('avatarBtn');
+                if (!profileWrapper || !avatarBtn) return;
+                
+                let closeTimer;
                 profileWrapper.addEventListener('mouseenter', function() {
                     clearTimeout(closeTimer);
                     this.classList.add('is-open');
                 });
-
                 profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(function() {
-                        profileWrapper.classList.remove('is-open');
+                    closeTimer = setTimeout(() => {
+                        this.classList.remove('is-open');
                     }, 150);
                 });
-
                 avatarBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     profileWrapper.classList.toggle('is-open');
                 });
-
                 document.addEventListener('click', function(e) {
                     if (!profileWrapper.contains(e.target)) {
                         profileWrapper.classList.remove('is-open');
                     }
                 });
+            }
 
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && profileWrapper.classList.contains('is-open')) {
-                        profileWrapper.classList.remove('is-open');
+            // ============================================================
+            // FETCH WATCH COUNT
+            // ============================================================
+
+            async function fetchWatchCount() {
+                try {
+                    const response = await fetch('http://localhost:5000/api/watchlist', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const watchlist = await response.json();
+                        const watchedCount = watchlist.filter(item => item.watched).length;
+                        const statEl = document.getElementById('navStat');
+                        if (statEl) {
+                            statEl.textContent = `${watchedCount} films watched`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching watch count:', error);
+                }
+            }
+
+            // ============================================================
+            // LOGOUT
+            // ============================================================
+
+            function logout() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
+            }
+
+            // ============================================================
+            // MOBILE MENU
+            // ============================================================
+            
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            const mobileMenuClose = document.getElementById('mobileMenuClose');
+
+            function openMobileMenu() {
+                mobileMenu.classList.add('open');
+                mobileOverlay.classList.add('active');
+                menuToggle.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMobileMenu() {
+                mobileMenu.classList.remove('open');
+                mobileOverlay.classList.remove('active');
+                menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (mobileMenu.classList.contains('open')) {
+                        closeMobileMenu();
+                    } else {
+                        openMobileMenu();
                     }
                 });
+            }
+
+            if (mobileMenuClose) {
+                mobileMenuClose.addEventListener('click', closeMobileMenu);
+            }
+
+            if (mobileOverlay) {
+                mobileOverlay.addEventListener('click', closeMobileMenu);
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
+                    closeMobileMenu();
+                }
+            });
+
+            document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
+                link.addEventListener('click', closeMobileMenu);
+            });
+
+            // ============================================================
+            // TOAST SYSTEM
+            // ============================================================
+            
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                const iconMap = {
+                    success: '✅',
+                    error: '❌',
+                    info: 'ℹ️'
+                };
+                
+                document.getElementById('toastIcon').textContent = iconMap[type] || 'ℹ️';
+                document.getElementById('toastIcon').className = `toast-icon ${type}`;
+                document.getElementById('toastMessage').textContent = message;
+                
+                document.getElementById('toast').classList.add('show');
+                
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    document.getElementById('toast').classList.remove('show');
+                }, 4000);
             }
 
             // ============================================================
@@ -985,28 +1595,54 @@
             document.getElementById('checkoutTotal').textContent = `¢${grandTotal.toFixed(2)}`;
 
             // ============================================================
-            // TOAST SYSTEM
+            // SAVE BOOKING TO BACKEND
             // ============================================================
             
-            let toastTimeout = null;
+            const API_BASE = 'http://localhost:5000/api';
 
-            function showToast(message, type) {
-                const iconMap = {
-                    success: '✅',
-                    error: '❌',
-                    info: 'ℹ️'
-                };
-                
-                document.getElementById('toastIcon').textContent = iconMap[type] || 'ℹ️';
-                document.getElementById('toastIcon').className = `toast-icon ${type}`;
-                document.getElementById('toastMessage').textContent = message;
-                
-                document.getElementById('toast').classList.add('show');
-                
-                clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => {
-                    document.getElementById('toast').classList.remove('show');
-                }, 4000);
+            async function saveBookingToBackend(bookingData) {
+                if (!isAuthenticated) {
+                    console.log('User not authenticated - booking not saved to backend');
+                    return { success: true, message: 'Guest booking - not saved' };
+                }
+
+                try {
+                    // Prepare the booking payload for the backend
+                    const payload = {
+                        filmTitle: bookingData.filmTitle,
+                        screen: bookingData.screen,
+                        showtime: bookingData.showtime,
+                        seats: bookingData.selectedSeats || [],
+                        ticketQuantity: bookingData.ticketQuantity,
+                        ticketPrice: bookingData.ticketPrice,
+                        snacks: bookingData.snacks || [],
+                        total: bookingData.total,
+                        poster: bookingData.poster || null
+                    };
+
+                    console.log('💾 Saving booking to backend:', payload);
+
+                    const response = await fetch(`${API_BASE}/bookings`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || 'Failed to save booking');
+                    }
+
+                    const result = await response.json();
+                    console.log('✅ Booking saved successfully:', result);
+                    return { success: true, result: result };
+                } catch (error) {
+                    console.error('❌ Error saving booking:', error);
+                    return { success: false, error: error.message };
+                }
             }
 
             // ============================================================
@@ -1014,7 +1650,7 @@
             // ============================================================
             
             // API URL - Backend running on port 5000
-            const API_URL = 'http://localhost:5000/api/send-booking-email';
+            const EMAIL_API_URL = 'http://localhost:5000/api/send-booking-email';
             
             async function sendEmailViaAPI(email, bookingData) {
                 const overlay = document.getElementById('emailOverlay');
@@ -1070,7 +1706,7 @@
                     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
                     try {
-                        const response = await fetch(API_URL, {
+                        const response = await fetch(EMAIL_API_URL, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -1191,10 +1827,10 @@
             }
 
             // ============================================================
-            // CHECKOUT BUTTON - WITH LOCAL API INTEGRATION
+            // CHECKOUT BUTTON - WITH BACKEND SAVING
             // ============================================================
             
-            document.getElementById('checkoutBtn').addEventListener('click', function() {
+            document.getElementById('checkoutBtn').addEventListener('click', async function() {
                 const email = document.getElementById('emailInput').value.trim();
                 
                 if (!email) {
@@ -1209,6 +1845,13 @@
                     return;
                 }
 
+                // Show info about booking saving
+                if (isAuthenticated) {
+                    showToast('✅ Your booking will be saved to your account', 'info');
+                } else {
+                    showToast('💡 Sign in to save your booking history', 'info');
+                }
+
                 // Disable button and show loading
                 this.disabled = true;
                 this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
@@ -1216,10 +1859,10 @@
                 // Generate booking reference
                 const bookingRef = 'SC-' + Date.now().toString().slice(-6);
 
-                // Prepare booking data for email
+                // Prepare booking data for email and backend
                 const bookingDataForEmail = {
                     bookingRef: bookingRef,
-                    customerName: 'Daniel Asamoah', // This would come from user profile
+                    customerName: isAuthenticated && userData ? userData.name : 'Valued Guest',
                     film: data.filmTitle,
                     screen: data.screen,
                     showtime: data.showtime,
@@ -1227,36 +1870,65 @@
                     tickets: data.ticketQuantity,
                     ticketPrice: data.ticketPrice.toFixed(2),
                     snacks: snackString,
-                    total: '$' + grandTotal.toFixed(2),
+                    total: '¢' + grandTotal.toFixed(2),
                     venue: 'Savannah Mall, Accra, Ghana',
                     timestamp: new Date().toLocaleString()
+                };
+
+                // Prepare booking data for backend storage
+                const bookingPayload = {
+                    filmTitle: data.filmTitle,
+                    screen: data.screen,
+                    showtime: data.showtime,
+                    selectedSeats: data.selectedSeats || [],
+                    ticketQuantity: data.ticketQuantity,
+                    ticketPrice: data.ticketPrice,
+                    snacks: data.snacks || [],
+                    total: grandTotal,
+                    poster: data.poster || null,
+                    bookingRef: bookingRef
                 };
 
                 // Show toast
                 showToast('Processing payment and sending tickets...', 'info');
 
-                // Send email via local API
-                sendEmailViaAPI(email, bookingDataForEmail)
-                    .then((result) => {
-                        showToast('✅ Tickets sent to ' + email, 'success');
-                        
-                        // Reset button
-                        document.getElementById('checkoutBtn').disabled = false;
-                        document.getElementById('checkoutBtn').innerHTML = `
-                            <i class="fas fa-lock"></i> 
-                            Proceed to Payment · <span id="checkoutTotal">¢${grandTotal.toFixed(2)}</span>
-                        `;
-                    })
-                    .catch((error) => {
-                        showToast('❌ Failed to send email. Please try again.', 'error');
-                        
-                        // Reset button
-                        document.getElementById('checkoutBtn').disabled = false;
-                        document.getElementById('checkoutBtn').innerHTML = `
-                            <i class="fas fa-lock"></i> 
-                            Proceed to Payment · <span id="checkoutTotal">¢${grandTotal.toFixed(2)}</span>
-                        `;
-                    });
+                try {
+                    // 1. Send email
+                    await sendEmailViaAPI(email, bookingDataForEmail);
+                    
+                    // 2. Save booking to backend if authenticated
+                    if (isAuthenticated) {
+                        const saveResult = await saveBookingToBackend(bookingPayload);
+                        if (saveResult.success) {
+                            console.log('✅ Booking saved to backend');
+                        } else {
+                            console.warn('⚠️ Booking not saved to backend:', saveResult.error);
+                            // Don't fail the whole process, just log it
+                        }
+                    } else {
+                        console.log('👤 Guest booking - not saved to backend');
+                    }
+
+                    showToast('✅ Booking confirmed! Tickets sent to ' + email, 'success');
+                    
+                    // Reset button
+                    document.getElementById('checkoutBtn').disabled = false;
+                    document.getElementById('checkoutBtn').innerHTML = `
+                        <i class="fas fa-lock"></i> 
+                        Proceed to Payment · <span id="checkoutTotal">¢${grandTotal.toFixed(2)}</span>
+                    `;
+                    
+                } catch (error) {
+                    console.error('❌ Checkout error:', error);
+                    showToast('❌ Failed to complete booking. Please try again.', 'error');
+                    
+                    // Reset button
+                    document.getElementById('checkoutBtn').disabled = false;
+                    document.getElementById('checkoutBtn').innerHTML = `
+                        <i class="fas fa-lock"></i> 
+                        Proceed to Payment · <span id="checkoutTotal">¢${grandTotal.toFixed(2)}</span>
+                    `;
+                }
             });
 
             // ============================================================
@@ -1316,6 +1988,12 @@
                     document.getElementById('checkoutBtn').click();
                 }
             });
+
+            // ============================================================
+            // INITIALIZE
+            // ============================================================
+
+            renderNav();
 
         });
     </script>
