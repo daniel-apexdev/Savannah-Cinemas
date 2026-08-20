@@ -594,14 +594,14 @@
             color: var(--gold);
         }
 
-        /* ---------- DISCOVERY GRID - MATCHING HOME PAGE ---------- */
+        /* ---------- DISCOVERY GRID - RESPONSIVE ---------- */
         .discovery-grid {
             max-width: var(--max-width);
             margin: 0 auto;
             padding: 0 var(--container-padding) 20px;
             display: grid;
-            grid-template-columns: repeat(10, 1fr);
             gap: 16px;
+            grid-template-columns: repeat(10, 1fr);
         }
 
         .movie-card {
@@ -737,10 +737,6 @@
             font-weight: 300;
             line-height: 1.7;
             max-width: 400px;
-        }
-
-        .footer span{
-            color: var(--gold);
         }
 
         .footer-cols {
@@ -879,12 +875,23 @@
         }
 
         /* ---------- RESPONSIVE ---------- */
-        @media (max-width: 1600px) {
+        /* Large Desktop - 10 columns */
+        @media (min-width: 1601px) {
             .discovery-grid {
-                grid-template-columns: repeat(8, 1fr);
+                grid-template-columns: repeat(10, 1fr);
+                gap: 16px;
             }
         }
 
+        /* Desktop - 8 columns */
+        @media (max-width: 1600px) {
+            .discovery-grid {
+                grid-template-columns: repeat(8, 1fr);
+                gap: 14px;
+            }
+        }
+
+        /* Tablet Landscape - 6 columns */
         @media (max-width: 1200px) {
             .discovery-grid {
                 grid-template-columns: repeat(6, 1fr);
@@ -892,6 +899,7 @@
             }
         }
 
+        /* Tablet Portrait - 5 columns */
         @media (max-width: 992px) {
             .discovery-grid {
                 grid-template-columns: repeat(5, 1fr);
@@ -899,6 +907,7 @@
             }
         }
 
+        /* Mobile Landscape - 4 columns */
         @media (max-width: 768px) {
             .menu-toggle {
                 display: flex;
@@ -949,6 +958,7 @@
             }
         }
 
+        /* Mobile Portrait - 4 columns (keep 4) */
         @media (max-width: 600px) {
             .discovery-grid {
                 grid-template-columns: repeat(4, 1fr);
@@ -977,23 +987,69 @@
             .page-header p {
                 font-size: 13px;
             }
+
+            .search-bar .search-input-wrapper input {
+                font-size: 14px;
+                padding: 10px 12px 10px 38px;
+                min-height: 40px;
+            }
+
+            .search-bar .search-input-wrapper i {
+                font-size: 14px;
+            }
         }
 
-        @media (max-width: 400px) {
+        /* Small Mobile - 4 columns (keep 4) */
+        @media (max-width: 480px) {
             .discovery-grid {
                 grid-template-columns: repeat(4, 1fr);
-                gap: 6px;
+                gap: 8px;
+            }
+
+            .movie-card .poster .rating-badge {
+                font-size: 7px;
+                padding: 1px 5px;
+                bottom: 3px;
+                left: 3px;
+            }
+
+            .movie-card .poster .watchlist-badge {
+                width: 18px;
+                height: 18px;
+                font-size: 8px;
+                top: 3px;
+                right: 3px;
+            }
+
+            .page-header {
+                padding: 20px var(--container-padding) 8px;
+            }
+
+            .page-header h1 {
+                font-size: 22px;
+            }
+
+            .page-header p {
+                font-size: 12px;
+            }
+
+            .search-bar {
+                padding: 0 var(--container-padding) 16px;
             }
 
             .search-bar .search-input-wrapper input {
                 font-size: 13px;
-                padding: 10px 12px 10px 38px;
-                min-height: 38px;
+                padding: 8px 12px 8px 34px;
+                min-height: 36px;
             }
 
             .search-bar .search-input-wrapper i {
-                left: 12px;
-                font-size: 14px;
+                left: 10px;
+                font-size: 13px;
+            }
+
+            .search-bar .result-badge {
+                font-size: 11px;
             }
 
             .footer-cols {
@@ -1007,6 +1063,53 @@
 
             .footer-bottom .legal a {
                 margin: 0 10px;
+            }
+        }
+
+        /* Extra Small Mobile - 4 columns */
+        @media (max-width: 380px) {
+            .discovery-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+
+            .movie-card .poster .rating-badge {
+                font-size: 6px;
+                padding: 1px 4px;
+                bottom: 2px;
+                left: 2px;
+            }
+
+            .movie-card .poster .watchlist-badge {
+                width: 16px;
+                height: 16px;
+                font-size: 7px;
+                top: 2px;
+                right: 2px;
+            }
+
+            .search-bar .search-input-wrapper input {
+                font-size: 12px;
+                padding: 6px 10px 6px 30px;
+                min-height: 32px;
+            }
+
+            .search-bar .search-input-wrapper i {
+                left: 8px;
+                font-size: 12px;
+            }
+
+            .page-header h1 {
+                font-size: 20px;
+            }
+
+            .page-header p {
+                font-size: 11px;
+            }
+
+            .footer {
+                padding: 24px var(--container-padding) 0;
+                margin-top: 24px;
             }
         }
 
@@ -1252,13 +1355,13 @@
                     
                 } else {
                     DOM.navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
+                        <a href="auth.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
                     
                     const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     DOM.mobileMenuLinks.appendChild(signInLink);
                     if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
                 }
@@ -1360,41 +1463,6 @@
             function isInWatchlist(movieId) {
                 const watchlist = getWatchlist();
                 return watchlist.some(item => item.id === movieId);
-            }
-
-            function addToWatchlist(movie) {
-                const watchlist = getWatchlist();
-                
-                if (watchlist.some(item => item.id === movie.id)) {
-                    return { success: false, message: 'Already in watchlist' };
-                }
-                
-                const watchlistItem = {
-                    id: movie.id,
-                    title: movie.title,
-                    year: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
-                    poster: movie.poster_path ? `${IMAGE_BASE}${movie.poster_path}` : '',
-                    rating: movie.vote_average || 0,
-                    addedDate: new Date().toISOString(),
-                    watched: false,
-                    favorite: false
-                };
-                
-                watchlist.push(watchlistItem);
-                saveWatchlist(watchlist);
-                return { success: true, message: 'Added to watchlist' };
-            }
-
-            function removeFromWatchlist(movieId) {
-                const watchlist = getWatchlist();
-                const updatedWatchlist = watchlist.filter(item => item.id !== movieId);
-                
-                if (updatedWatchlist.length === watchlist.length) {
-                    return { success: false, message: 'Not in watchlist' };
-                }
-                
-                saveWatchlist(updatedWatchlist);
-                return { success: true, message: 'Removed from watchlist' };
             }
 
             // ============================================================

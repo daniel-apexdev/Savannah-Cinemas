@@ -1466,13 +1466,13 @@
                     
                 } else {
                     navRight.innerHTML = `
-                        <a href="auth.html" class="btn-signin">
+                        <a href="logout.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
                     
                     const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     mobileMenuLinks.appendChild(signInLink);
                     if (mobileDivider) mobileDivider.style.display = 'block';
                 }
@@ -1863,7 +1863,7 @@
                 if (!isAuthenticated) {
                     showToast('Please sign in to get personalized recommendations', 'info');
                     setTimeout(() => {
-                        window.location.href = 'auth.html';
+                        window.location.href = 'logout.html';
                     }, 1500);
                     return;
                 }
@@ -1875,7 +1875,7 @@
                 if (!isAuthenticated) {
                     showToast('Please create an account or sign in to vote in the poll', 'info');
                     setTimeout(() => {
-                        window.location.href = 'auth.html';
+                        window.location.href = 'logout.html';
                     }, 1500);
                     return;
                 }
