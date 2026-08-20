@@ -1355,13 +1355,13 @@
                     
                 } else {
                     DOM.navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
+                        <a href="auth.html" class="btn-signin">
                             <i class="fas fa-sign-in-alt"></i> Sign In
                         </a>
                     `;
                     
                     const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
+                    signInLink.innerHTML = `<a href="auth.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
                     DOM.mobileMenuLinks.appendChild(signInLink);
                     if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
                 }
@@ -1427,7 +1427,7 @@
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = 'logout.html';
+                window.location.href = 'auth.html';
             }
 
             // ============================================================
@@ -1442,6 +1442,7 @@
             let debounceTimer = null;
             let hasMore = true;
             let isInitialLoad = true;
+            let seenIds = new Set();
 
             // ============================================================
             // WATCHLIST STORAGE
@@ -1525,7 +1526,7 @@
             }
 
             // ============================================================
-            // FETCH FILMS
+            // FETCH FILMS WITH DEDUPLICATION
             // ============================================================
 
             async function fetchFilms(page = 1, query = '') {
@@ -1546,8 +1547,16 @@
                     const data = await response.json();
                     totalPages = data.total_pages;
                     
-                    // Filter out films without posters
-                    const films = data.results.filter(film => film.poster_path);
+                    // Filter out films without posters AND remove duplicates using seenIds
+                    const films = data.results.filter(film => {
+                        // Must have a poster
+                        if (!film.poster_path) return false;
+                        // Check if we've already seen this film
+                        if (seenIds.has(film.id)) return false;
+                        // Add to seen set
+                        seenIds.add(film.id);
+                        return true;
+                    });
                     
                     return films;
                 } catch (error) {
@@ -1580,7 +1589,7 @@
                     return;
                 }
 
-                DOM.resultCount.textContent = append ? allFilms.length : films.length;
+                DOM.resultCount.textContent = allFilms.length;
 
                 const filmsHTML = films.map(film => {
                     const posterUrl = film.poster_path ? `${IMAGE_BASE}${film.poster_path}` : '';
@@ -1591,7 +1600,6 @@
                         <div class="movie-card" onclick="viewMovie(${film.id})">
                             <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
                                 ${inWatchlist ? '<div class="watchlist-badge"><i class="fas fa-heart"></i></div>' : ''}
-                                
                             </div>
                         </div>
                     `;
@@ -1627,6 +1635,7 @@
                     allFilms = [];
                     hasMore = true;
                     isInitialLoad = true;
+                    seenIds = new Set(); // Reset seen IDs on new search
                 }
 
                 const films = await fetchFilms(currentPage, searchQuery);
@@ -1639,7 +1648,7 @@
                     // Check if there are more pages
                     if (currentPage > totalPages) {
                         hasMore = false;
-                        DOM.scrollLoader.innerHTML = '<span class="end-message">🎬 You\'ve reached the end</span>';
+                        DOM.scrollLoader.innerHTML = '<span class="end-message">You\'ve reached the end</span>';
                         DOM.scrollLoader.classList.add('show');
                     } else {
                         DOM.scrollLoader.classList.add('show');
@@ -1650,7 +1659,7 @@
                         renderFilms([]);
                     }
                     hasMore = false;
-                    DOM.scrollLoader.innerHTML = '<span class="end-message">🎬 You\'ve reached the end</span>';
+                    DOM.scrollLoader.innerHTML = '<span class="end-message">You\'ve reached the end</span>';
                     DOM.scrollLoader.classList.add('show');
                 }
 
@@ -1695,6 +1704,7 @@
                     currentPage = 1;
                     allFilms = [];
                     hasMore = true;
+                    seenIds = new Set(); // Reset seen IDs on new search
                     loadFilms(true);
                 }, 500);
             }
@@ -1706,6 +1716,7 @@
                 currentPage = 1;
                 allFilms = [];
                 hasMore = true;
+                seenIds = new Set(); // Reset seen IDs when clearing search
                 loadFilms(true);
                 DOM.searchInput.focus();
             }

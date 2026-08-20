@@ -131,6 +131,46 @@
         "watched": true,
         "favorite": false,
         "watchedDate": "2026-08-20T18:43:32.722Z"
+      },
+      {
+        "filmId": 1275779,
+        "title": "Disclosure Day",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/AnJ8IQJI23hNpYXVNaythu061Ru.jpg",
+        "rating": 7.459,
+        "addedDate": "2026-08-20T19:17:16.967Z",
+        "watched": false,
+        "favorite": false
+      },
+      {
+        "filmId": 1081003,
+        "title": "Supergirl",
+        "year": "2026",
+        "poster": "https://image.tmdb.org/t/p/w500/1QCWdqzTfh2x9UylVpspIU6QTuM.jpg",
+        "rating": 6.747,
+        "addedDate": "2026-08-20T19:17:31.905Z",
+        "watched": false,
+        "favorite": false
+      },
+      {
+        "filmId": 1084242,
+        "title": "Zootopia 2",
+        "year": "2025",
+        "poster": "https://image.tmdb.org/t/p/w500/oJ7g2CifqpStmoYQyaLQgEU32qO.jpg",
+        "rating": 7.677,
+        "addedDate": "2026-08-20T19:24:52.782Z",
+        "watched": false,
+        "favorite": false
+      },
+      {
+        "filmId": 278,
+        "title": "The Shawshank Redemption",
+        "year": "1994",
+        "poster": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+        "rating": 8.728,
+        "addedDate": "2026-08-20T19:26:00.832Z",
+        "watched": false,
+        "favorite": false
       }
     ]
   },
