@@ -313,7 +313,7 @@ app.post('/api/auth/request-reset', async (req, res) => {
 
         // Send reset email if transporter is configured
         if (transporter) {
-            const resetLink = `http://10.20.10.150:5000/reset-password.html?token=${resetToken}`;
+            const resetLink = `http://${SERVER_IP}:${SERVER_PORT}/reset-password.html?token=${resetToken}`;
             
             const mailOptions = {
                 from: `"Savannah Cinemas" <${GMAIL_USER}>`,
@@ -809,7 +809,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`📁 Data stored in: ${DATA_FILE}`);
     console.log(`📧 Email service: ${transporter ? '✅ Configured' : '❌ Not configured'}`);
     console.log(`🔑 JWT Secret: ${JWT_SECRET ? '✅ Set' : '❌ Not set'}`);
-    console.log(`\n📍 API URL: http://10.20.10.150:${PORT}/api`);
-    console.log(`📍 Health Check: http://10.20.10.150:${PORT}/\n`);
-    console.log(`Access from other devices at: http://10.20.10.150:${PORT}`);
+    console.log(`\n📍 API URL: http://${SERVER_IP}:${SERVER_PORT}/api`);
+    console.log(`📍 Health Check: http://${SERVER_IP}:${SERVER_PORT}/\n`);
+    console.log(`Access from other devices at: http://${SERVER_IP}:${SERVER_PORT}`);
 });
