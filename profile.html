@@ -446,7 +446,7 @@
             color: var(--gold);
         }
 
-        /* BOOKINGS */
+        /* BOOKINGS - WITH POSTER */
         .booking-list { display: flex; flex-direction: column; gap: 10px; }
         .booking-item {
             display: flex; align-items: center; gap: 14px; padding: 14px 18px;
@@ -454,13 +454,43 @@
             border-radius: var(--radius-sm); transition: 0.3s ease; flex-wrap: wrap;
         }
         .booking-item:hover { border-color: var(--gold-dim); }
-        .booking-item .booking-poster { width: 44px; height: 66px; border-radius: var(--radius-sm); background-size: cover; background-position: center; flex-shrink: 0; background-color: var(--ink); }
+        .booking-item .booking-poster {
+            width: 44px; height: 66px; border-radius: var(--radius-sm);
+            background-size: cover; background-position: center;
+            flex-shrink: 0; background-color: var(--ink);
+            border: 1px solid var(--ink-line);
+        }
+        .booking-item .booking-poster .no-poster {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--paper-dim); font-size: 20px;
+            background: var(--ink-raised);
+        }
         .booking-item .booking-info { flex: 1; min-width: 140px; }
         .booking-item .booking-info .title { font-family: var(--font-display); font-size: clamp(13px,0.9vw,15px); font-weight: 500; color: var(--paper); }
         .booking-item .booking-info .details { font-size: clamp(11px,0.7vw,13px); color: var(--paper-dim); font-weight: 300; }
-        .booking-item .booking-status { font-family: var(--font-mono); font-size: clamp(10px,0.6vw,12px); padding: 3px 12px; border-radius: 10px; }
-        .booking-item .booking-status.upcoming { background: rgba(232,179,76,0.1); color: var(--gold); border: 1px solid var(--gold-dim); }
-        .booking-item .booking-status.past { background: rgba(255,255,255,0.05); color: var(--paper-dim); border: 1px solid var(--ink-line); }
+        .booking-item .booking-status {
+            font-family: var(--font-mono);
+            font-size: clamp(10px,0.6vw,12px);
+            padding: 3px 12px;
+            border-radius: 10px;
+        }
+        .booking-item .booking-status.upcoming {
+            background: rgba(232,179,76,0.1);
+            color: var(--gold);
+            border: 1px solid var(--gold-dim);
+        }
+        .booking-item .booking-status.past {
+            background: rgba(255,255,255,0.05);
+            color: var(--paper-dim);
+            border: 1px solid var(--ink-line);
+        }
+        .booking-item .booking-ref {
+            font-family: var(--font-mono);
+            font-size: clamp(10px, 0.6vw, 12px);
+            color: var(--paper-dim);
+            font-weight: 300;
+        }
 
         /* STATS */
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
@@ -1042,6 +1072,8 @@
             }
 
             // ===================== FETCH GENRES FOR WATCHLIST =====================
+            let genreCount = 0;
+
             async function fetchGenresForWatchlist() {
                 if (watchlist.length === 0) {
                     genreTags.innerHTML = `
@@ -1050,16 +1082,12 @@
                             Add films to your watchlist to see your genre preferences!
                         </div>
                     `;
+                    statGenres.textContent = '0';
                     return;
                 }
 
                 try {
-                    // Collect all unique genre IDs from films in watchlist
-                    // Since we don't store genres in the watchlist, we need to fetch them from TMDB
                     const genreMap = {};
-                    let totalGenres = 0;
-
-                    // Limit to first 20 films to avoid rate limiting
                     const filmsToFetch = watchlist.slice(0, 20);
                     
                     for (const film of filmsToFetch) {
@@ -1080,7 +1108,6 @@
                                                 count: 1
                                             };
                                         }
-                                        totalGenres++;
                                     });
                                 }
                             }
@@ -1089,11 +1116,11 @@
                         }
                     }
 
-                    // Sort genres by count (descending)
                     const sortedGenres = Object.values(genreMap).sort((a, b) => b.count - a.count);
+                    genreCount = sortedGenres.length;
                     
                     // Update statGenres with unique genre count
-                    statGenres.textContent = sortedGenres.length;
+                    statGenres.textContent = genreCount;
 
                     // Render genre tags
                     if (sortedGenres.length === 0) {
@@ -1325,16 +1352,34 @@
                         bookingList.innerHTML = `<div class="empty-state"><i class="fas fa-ticket-alt"></i><p>You haven't made any bookings yet. Book your first ticket!</p></div>`;
                         return;
                     }
-                    bookingList.innerHTML = bookings.map(b => `
-                        <div class="booking-item">
-                            <div class="booking-poster" style="background-image: url('${b.poster || 'https://via.placeholder.com/200x300?text=No+Poster'}');"></div>
-                            <div class="booking-info">
-                                <div class="title">${b.filmTitle || b.title || 'Untitled'}</div>
-                                <div class="details">${b.showtime || b.date || ''} · ${b.screen || ''} · Seats: ${b.seats || 'N/A'}</div>
+                    
+                    // The IMAGE_BASE for TMDB posters
+                    const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+                    
+                    bookingList.innerHTML = bookings.map(b => {
+                        // Try to get poster from the booking data
+                        let posterHtml = '';
+                        if (b.poster) {
+                            posterHtml = `<div class="booking-poster" style="background-image: url('${b.poster}');"></div>`;
+                        } else {
+                            // Try to fetch poster from TMDB using the film title
+                            posterHtml = `<div class="booking-poster"><div class="no-poster"><i class="fas fa-film"></i></div></div>`;
+                        }
+                        
+                        return `
+                            <div class="booking-item">
+                                ${posterHtml}
+                                <div class="booking-info">
+                                    <div class="title">${b.filmTitle || b.title || 'Untitled'}</div>
+                                    <div class="details">${b.showtime || b.date || ''} · ${b.screen || ''} · Seats: ${Array.isArray(b.seats) ? b.seats.join(', ') : b.seats || 'N/A'}</div>
+                                    <div class="booking-ref">Ref: ${b.bookingRef || 'N/A'}</div>
+                                </div>
+                                <span class="booking-status ${b.status || 'upcoming'}">
+                                    ${b.status === 'past' ? '✓ Watched' : '🎟️ ' + (b.status || 'Upcoming')}
+                                </span>
                             </div>
-                            <span class="booking-status ${b.status || 'upcoming'}">${b.status === 'past' ? '✓ Watched' : '🎟️ ' + (b.status || 'Upcoming')}</span>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 } catch (err) {
                     console.error(err);
                     bookingList.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Could not load bookings.</p></div>`;
@@ -1367,14 +1412,13 @@
                         <div class="stat-card"><div class="stat-number">${favorites}</div><div class="stat-label">Favorites</div></div>
                         <div class="stat-card"><div class="stat-number">${total}</div><div class="stat-label">Total in Watchlist</div></div>
                         <div class="stat-card"><div class="stat-number">${watchlist.reduce((sum, f) => sum + f.rating, 0) / (watchlist.length || 1)}</div><div class="stat-label">Avg Rating</div></div>
-                        <div class="stat-card"><div class="stat-number" id="statGenresDisplay">0</div><div class="stat-label">Genres Explored</div></div>
+                        <div class="stat-card"><div class="stat-number" id="statGenresDisplay">${genreCount}</div><div class="stat-label">Genres Explored</div></div>
                     `;
                     
                     // Update genres display in stats grid
-                    const genreCount = document.getElementById('statGenresDisplay');
-                    if (genreCount) {
-                        // Will be updated by fetchGenresForWatchlist
-                        genreCount.textContent = statGenres.textContent || '0';
+                    const genreCountDisplay = document.getElementById('statGenresDisplay');
+                    if (genreCountDisplay) {
+                        genreCountDisplay.textContent = genreCount || '0';
                     }
                 }
             }
