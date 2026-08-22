@@ -1,0 +1,1411 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Savannah Cinemas — Ticket Scanner
+    </title>
+
+    <!--
+        QR SCANNER LIBRARY
+
+        We will use html5-qrcode for camera
+        access and QR code detection.
+    -->
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            min-height: 100vh;
+
+            background:
+                #11111A;
+
+            color:
+                #F2EFE9;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+        }
+
+
+        /* ====================================================
+           HEADER
+        ==================================================== */
+
+        .header {
+
+            background:
+                #171720;
+
+            padding:
+                20px 30px;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            border-bottom:
+                1px solid #292936;
+
+        }
+
+
+        .logo {
+
+            color:
+                #E8B34C;
+
+            font-size:
+                20px;
+
+            font-weight:
+                bold;
+
+            letter-spacing:
+                2px;
+
+        }
+
+
+        .staff-label {
+
+            color:
+                #B9B6AC;
+
+            font-size:
+                14px;
+
+        }
+
+
+        /* ====================================================
+           MAIN
+        ==================================================== */
+
+        .container {
+
+            width:
+                min(95%, 700px);
+
+            margin:
+                40px auto;
+
+        }
+
+
+        .title {
+
+            text-align:
+                center;
+
+            margin-bottom:
+                25px;
+
+        }
+
+
+        .title h1 {
+
+            margin:
+                0 0 10px;
+
+            color:
+                #E8B34C;
+
+        }
+
+
+        .title p {
+
+            margin:
+                0;
+
+            color:
+                #B9B6AC;
+
+        }
+
+
+        /* ====================================================
+           SCANNER
+        ==================================================== */
+
+        .scanner-card {
+
+            background:
+                #1D1D28;
+
+            border-radius:
+                16px;
+
+            padding:
+                20px;
+
+            box-shadow:
+                0 10px 30px rgba(0,0,0,0.25);
+
+        }
+
+
+        #reader {
+
+            width:
+                100%;
+
+            overflow:
+                hidden;
+
+            border-radius:
+                12px;
+
+        }
+
+
+        .scanner-instruction {
+
+            text-align:
+                center;
+
+            margin:
+                20px 0 0;
+
+            color:
+                #B9B6AC;
+
+        }
+
+
+        /* ====================================================
+           RESULT
+        ==================================================== */
+
+        .result {
+
+            display:
+                none;
+
+            margin-top:
+                25px;
+
+            background:
+                #252532;
+
+            border-radius:
+                12px;
+
+            padding:
+                25px;
+
+        }
+
+
+        .result.visible {
+
+            display:
+                block;
+
+        }
+
+
+        .result-header {
+
+            text-align:
+                center;
+
+            margin-bottom:
+                20px;
+
+        }
+
+
+        .result-header h2 {
+
+            margin:
+                0 0 8px;
+
+        }
+
+
+        .valid {
+
+            color:
+                #55D68A;
+
+        }
+
+
+        .invalid {
+
+            color:
+                #FF6B6B;
+
+        }
+
+
+        .warning {
+
+            color:
+                #E8B34C;
+
+        }
+
+
+        .ticket-info {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap:
+                15px;
+
+        }
+
+
+        .info-item {
+
+            background:
+                #1D1D28;
+
+            padding:
+                15px;
+
+            border-radius:
+                8px;
+
+        }
+
+
+        .info-label {
+
+            display:
+                block;
+
+            font-size:
+                12px;
+
+            color:
+                #B9B6AC;
+
+            margin-bottom:
+                5px;
+
+        }
+
+
+        .info-value {
+
+            font-weight:
+                bold;
+
+        }
+
+
+        .seats {
+
+            margin-top:
+                20px;
+
+        }
+
+
+        .seat-list {
+
+            display:
+                flex;
+
+            flex-wrap:
+                wrap;
+
+            gap:
+                8px;
+
+            margin-top:
+                10px;
+
+        }
+
+
+        .seat {
+
+            padding:
+                8px 12px;
+
+            background:
+                #E8B34C;
+
+            color:
+                #11111A;
+
+            border-radius:
+                6px;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        /* ====================================================
+           BUTTONS
+        ==================================================== */
+
+        button {
+
+            width:
+                100%;
+
+            border:
+                none;
+
+            border-radius:
+                8px;
+
+            padding:
+                15px;
+
+            margin-top:
+                20px;
+
+            font-size:
+                16px;
+
+            font-weight:
+                bold;
+
+            cursor:
+                pointer;
+
+        }
+
+
+        .admit-button {
+
+            background:
+                #55D68A;
+
+            color:
+                #11111A;
+
+        }
+
+
+        .admit-button:hover {
+
+            opacity:
+                0.9;
+
+        }
+
+
+        .scan-button {
+
+            background:
+                #E8B34C;
+
+            color:
+                #11111A;
+
+        }
+
+
+        .hidden {
+
+            display:
+                none;
+
+        }
+
+
+        /* ====================================================
+           MOBILE
+        ==================================================== */
+
+        @media (max-width: 600px) {
+
+            .container {
+
+                margin:
+                    20px auto;
+
+            }
+
+
+            .header {
+
+                padding:
+                    15px;
+
+            }
+
+
+            .ticket-info {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="header">
+
+        <div class="logo">
+            SAVANNAH CINEMAS
+        </div>
+
+        <div class="staff-label">
+            Staff Ticket Scanner
+        </div>
+
+    </header>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="container">
+
+
+        <div class="title">
+
+            <h1>
+                Ticket Scanner
+            </h1>
+
+            <p>
+                Scan the customer's digital ticket
+            </p>
+
+        </div>
+
+
+        <!-- =================================================
+             SCANNER
+        ================================================== -->
+
+        <section
+            class="scanner-card"
+            id="scannerSection"
+        >
+
+            <div id="reader"></div>
+
+            <p class="scanner-instruction">
+
+                Point the camera at the QR code
+                on the customer's ticket.
+
+            </p>
+
+        </section>
+
+
+        <!-- =================================================
+             RESULT
+        ================================================== -->
+
+        <section
+            class="result"
+            id="result"
+        >
+
+            <div
+                class="result-header"
+                id="resultHeader"
+            ></div>
+
+
+            <div
+                class="ticket-info"
+                id="ticketInfo"
+            ></div>
+
+
+            <div
+                class="seats"
+                id="seatsSection"
+            >
+
+                <strong>
+                    Seats
+                </strong>
+
+                <div
+                    class="seat-list"
+                    id="seatList"
+                ></div>
+
+            </div>
+
+
+            <button
+                class="admit-button hidden"
+                id="admitButton"
+            >
+                ADMIT CUSTOMER
+            </button>
+
+
+            <button
+                class="scan-button"
+                id="scanAgainButton"
+            >
+                SCAN ANOTHER TICKET
+            </button>
+
+        </section>
+
+
+    </main>
+
+
+    <script>
+
+        // ====================================================
+        // CONFIGURATION
+        // ====================================================
+
+        const API_BASE_URL =
+            'http://localhost:5000/api';
+
+
+        // ====================================================
+        // ELEMENTS
+        // ====================================================
+
+        const result =
+            document.getElementById('result');
+
+        const resultHeader =
+            document.getElementById('resultHeader');
+
+        const ticketInfo =
+            document.getElementById('ticketInfo');
+
+        const seatList =
+            document.getElementById('seatList');
+
+        const admitButton =
+            document.getElementById('admitButton');
+
+        const scanAgainButton =
+            document.getElementById(
+                'scanAgainButton'
+            );
+
+        const scannerSection =
+            document.getElementById(
+                'scannerSection'
+            );
+
+
+        // ====================================================
+        // STATE
+        // ====================================================
+
+        let scanner = null;
+
+        let currentTicket = null;
+
+        let scanning = true;
+
+
+        // ====================================================
+        // GET AUTH TOKEN
+        // ====================================================
+
+        function getToken() {
+
+            /*
+                Change this if your login system
+                stores the JWT under a different
+                localStorage key.
+            */
+
+            return localStorage.getItem(
+                'f832c8ac3a2b9eb34eb9963503205ff2e10fe9730e81bdbd1ac08577fbc51773a46ca49a2400cee25792a6d0c877b63514d17543b4ef622cbcab9d235f018ec1'
+            );
+
+        }
+
+
+        // ====================================================
+        // EXTRACT TICKET CODE
+        // ====================================================
+
+        function extractTicketCode(
+            qrValue
+        ) {
+
+            const value =
+                String(qrValue).trim();
+
+
+            /*
+                Expected QR format:
+
+                SAVANNAH:TICKET:TKT-XXXXXXXX
+            */
+
+            if (
+                value.startsWith(
+                    'SAVANNAH:TICKET:'
+                )
+            ) {
+
+                return value
+                    .replace(
+                        'SAVANNAH:TICKET:',
+                        ''
+                    )
+                    .trim();
+
+            }
+
+
+            /*
+                If the QR contains the
+                ticket code directly.
+            */
+
+            return value;
+
+        }
+
+
+        // ====================================================
+        // QR SCAN SUCCESS
+        // ====================================================
+
+        async function onScanSuccess(
+            decodedText
+        ) {
+
+            if (!scanning) {
+                return;
+            }
+
+            scanning = false;
+
+
+            const ticketCode =
+                extractTicketCode(
+                    decodedText
+                );
+
+
+            await stopScanner();
+
+
+            await verifyTicket(
+                ticketCode
+            );
+
+        }
+
+
+        // ====================================================
+        // VERIFY TICKET
+        // ====================================================
+
+        async function verifyTicket(
+            ticketCode
+        ) {
+
+            try {
+
+                const token =
+                    getToken();
+
+
+                if (!token) {
+
+                    showError(
+                        'Authentication required. Please login again.'
+                    );
+
+                    return;
+
+                }
+
+
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/tickets/verify`,
+                        {
+                            method:
+                                'POST',
+
+                            headers: {
+
+                                'Content-Type':
+                                    'application/json',
+
+                                'Authorization':
+                                    `Bearer ${token}`
+
+                            },
+
+                            body:
+                                JSON.stringify({
+                                    ticketCode
+                                })
+
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (
+                    data.success &&
+                    data.valid
+                ) {
+
+                    showValidTicket(
+                        data.ticket
+                    );
+
+                } else {
+
+                    showInvalidTicket(
+                        data.message,
+                        data.ticket
+                    );
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'Scanner verification error:',
+                    error
+                );
+
+                showError(
+                    'Unable to connect to the ticket verification service.'
+                );
+
+            }
+
+        }
+
+
+        // ====================================================
+        // SHOW VALID TICKET
+        // ====================================================
+
+        function showValidTicket(
+            ticket
+        ) {
+
+            currentTicket =
+                ticket;
+
+
+            result.classList.add(
+                'visible'
+            );
+
+
+            resultHeader.innerHTML = `
+
+                <h2 class="valid">
+                    ✓ VALID TICKET
+                </h2>
+
+                <p>
+                    This ticket is ready for admission.
+                </p>
+
+            `;
+
+
+            ticketInfo.innerHTML = `
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Movie
+                    </span>
+
+                    <span class="info-value">
+                        ${escapeHtml(
+                            ticket.movie.title
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Booking Reference
+                    </span>
+
+                    <span class="info-value">
+                        ${escapeHtml(
+                            ticket.booking.bookingRef
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Cinema
+                    </span>
+
+                    <span class="info-value">
+                        ${escapeHtml(
+                            ticket.cinema.name
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Screen
+                    </span>
+
+                    <span class="info-value">
+                        ${escapeHtml(
+                            ticket.screen.name
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Date
+                    </span>
+
+                    <span class="info-value">
+                        ${formatDate(
+                            ticket.showtime.showDate
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Showtime
+                    </span>
+
+                    <span class="info-value">
+                        ${formatTime(
+                            ticket.showtime.startTime
+                        )}
+                    </span>
+
+                </div>
+
+            `;
+
+
+            seatList.innerHTML = '';
+
+
+            ticket.seats.forEach(
+                seat => {
+
+                    const element =
+                        document.createElement(
+                            'span'
+                        );
+
+                    element.className =
+                        'seat';
+
+                    element.textContent =
+                        seat.seatLabel;
+
+                    seatList.appendChild(
+                        element
+                    );
+
+                }
+            );
+
+
+            admitButton.classList.remove(
+                'hidden'
+            );
+
+        }
+
+
+        // ====================================================
+        // SHOW INVALID TICKET
+        // ====================================================
+
+        function showInvalidTicket(
+            message,
+            ticket
+        ) {
+
+            currentTicket =
+                ticket || null;
+
+
+            result.classList.add(
+                'visible'
+            );
+
+
+            resultHeader.innerHTML = `
+
+                <h2 class="invalid">
+                    ✕ TICKET NOT VALID
+                </h2>
+
+                <p>
+                    ${escapeHtml(
+                        message ||
+                        'This ticket cannot be admitted.'
+                    )}
+                </p>
+
+            `;
+
+
+            ticketInfo.innerHTML = '';
+
+            seatList.innerHTML = '';
+
+            admitButton.classList.add(
+                'hidden'
+            );
+
+        }
+
+
+        // ====================================================
+        // SHOW ERROR
+        // ====================================================
+
+        function showError(
+            message
+        ) {
+
+            result.classList.add(
+                'visible'
+            );
+
+
+            resultHeader.innerHTML = `
+
+                <h2 class="warning">
+                    ⚠ ERROR
+                </h2>
+
+                <p>
+                    ${escapeHtml(message)}
+                </p>
+
+            `;
+
+
+            ticketInfo.innerHTML = '';
+
+            seatList.innerHTML = '';
+
+            admitButton.classList.add(
+                'hidden'
+            );
+
+        }
+
+
+        // ====================================================
+        // ADMIT CUSTOMER
+        // ====================================================
+
+        admitButton.addEventListener(
+            'click',
+            async function () {
+
+                if (
+                    !currentTicket ||
+                    !currentTicket.ticketId
+                ) {
+
+                    return;
+
+                }
+
+
+                try {
+
+                    admitButton.disabled =
+                        true;
+
+                    admitButton.textContent =
+                        'ADMITTING...';
+
+
+                    const token =
+                        getToken();
+
+
+                    const response =
+                        await fetch(
+                            `${API_BASE_URL}/tickets/${currentTicket.ticketId}/use`,
+                            {
+
+                                method:
+                                    'POST',
+
+                                headers: {
+
+                                    'Authorization':
+                                        `Bearer ${token}`
+
+                                }
+
+                            }
+                        );
+
+
+                    const data =
+                        await response.json();
+
+
+                    if (
+                        response.ok &&
+                        data.success
+                    ) {
+
+                        resultHeader.innerHTML = `
+
+                            <h2 class="valid">
+                                ✓ CUSTOMER ADMITTED
+                            </h2>
+
+                            <p>
+                                Ticket has been successfully used.
+                            </p>
+
+                        `;
+
+
+                        admitButton.classList.add(
+                            'hidden'
+                        );
+
+
+                    } else {
+
+                        showInvalidTicket(
+                            data.message
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        'Admission error:',
+                        error
+                    );
+
+                    showError(
+                        'Unable to admit customer.'
+                    );
+
+                } finally {
+
+                    admitButton.disabled =
+                        false;
+
+                    admitButton.textContent =
+                        'ADMIT CUSTOMER';
+
+                }
+
+            }
+        );
+
+
+        // ====================================================
+        // SCAN AGAIN
+        // ====================================================
+
+        scanAgainButton.addEventListener(
+            'click',
+            async function () {
+
+                result.classList.remove(
+                    'visible'
+                );
+
+                currentTicket = null;
+
+                scanning = true;
+
+                await startScanner();
+
+            }
+        );
+
+
+        // ====================================================
+        // START SCANNER
+        // ====================================================
+
+        async function startScanner() {
+
+            scannerSection.classList.remove(
+                'hidden'
+            );
+
+
+            if (!scanner) {
+
+                scanner =
+                    new Html5Qrcode(
+                        'reader'
+                    );
+
+            }
+
+
+            try {
+
+                await scanner.start(
+
+                    {
+                        facingMode:
+                            'environment'
+                    },
+
+                    {
+                        fps: 10,
+
+                        qrbox: {
+                            width: 250,
+                            height: 250
+                        }
+
+                    },
+
+                    onScanSuccess,
+
+                    function () {
+                        // Ignore scan failures
+                    }
+
+                );
+
+            } catch (error) {
+
+                console.error(
+                    'Unable to start camera:',
+                    error
+                );
+
+                showError(
+                    'Unable to access the camera. Please allow camera access in your browser.'
+                );
+
+            }
+
+        }
+
+
+        // ====================================================
+        // STOP SCANNER
+        // ====================================================
+
+        async function stopScanner() {
+
+            if (!scanner) {
+                return;
+            }
+
+
+            try {
+
+                await scanner.stop();
+
+            } catch (error) {
+
+                console.warn(
+                    'Scanner stop warning:',
+                    error
+                );
+
+            }
+
+        }
+
+
+        // ====================================================
+        // FORMAT DATE
+        // ====================================================
+
+        function formatDate(
+            value
+        ) {
+
+            if (!value) {
+                return '-';
+            }
+
+
+            return new Date(
+                value
+            ).toLocaleDateString(
+                'en-GH',
+                {
+                    weekday:
+                        'long',
+
+                    year:
+                        'numeric',
+
+                    month:
+                        'long',
+
+                    day:
+                        'numeric'
+                }
+            );
+
+        }
+
+
+        // ====================================================
+        // FORMAT TIME
+        // ====================================================
+
+        function formatTime(
+            value
+        ) {
+
+            if (!value) {
+                return '-';
+            }
+
+
+            return new Date(
+                value
+            ).toLocaleTimeString(
+                'en-GH',
+                {
+                    hour:
+                        '2-digit',
+
+                    minute:
+                        '2-digit'
+                }
+            );
+
+        }
+
+
+        // ====================================================
+        // HTML ESCAPE
+        // ====================================================
+
+        function escapeHtml(
+            value
+        ) {
+
+            return String(
+                value ?? ''
+            )
+            .replace(
+                /&/g,
+                '&amp;'
+            )
+            .replace(
+                /</g,
+                '&lt;'
+            )
+            .replace(
+                />/g,
+                '&gt;'
+            )
+            .replace(
+                /"/g,
+                '&quot;'
+            )
+            .replace(
+                /'/g,
+                '&#039;'
+            );
+
+        }
+
+
+        // ====================================================
+        // INITIALIZE
+        // ====================================================
+
+        startScanner();
+
+    </script>
+
+</body>
+
+</html>
+```

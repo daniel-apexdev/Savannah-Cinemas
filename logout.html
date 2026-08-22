@@ -780,12 +780,20 @@
 <script src="backend/config.js"></script>
 
 <script>
+    // ============================================================
+    // CONFIG
+    // ============================================================
+    
+    const API_BASE = typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:5000/api';
     const AUTH_TOKEN_KEY = 'token';
     const USER_DATA_KEY = 'user';
+
+    console.log('🔗 API_BASE:', API_BASE);
 
     // ============================================================
     // DOM REFS
     // ============================================================
+    
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const loginBtn = document.getElementById('loginBtn');
@@ -793,57 +801,10 @@
     const messageEl = document.getElementById('authMessage');
     const messageText = messageEl.querySelector('.message-text');
 
-    // Dialog refs
-    const resetDialog = document.getElementById('resetDialog');
-    const resetPasswordDialog = document.getElementById('resetPasswordDialog');
-    const resetEmail = document.getElementById('resetEmail');
-    const resetBtn = document.getElementById('resetBtn');
-    const cancelResetBtn = document.getElementById('cancelResetBtn');
-    const dialogMessage = document.getElementById('dialogMessage');
-    const resetPasswordMessage = document.getElementById('resetPasswordMessage');
-    const newPassword = document.getElementById('newPassword');
-    const confirmNewPassword = document.getElementById('confirmNewPassword');
-    const resetPasswordBtn = document.getElementById('resetPasswordBtn');
-    const cancelResetPasswordBtn = document.getElementById('cancelResetPasswordBtn');
-
-    // ============================================================
-    // PASSWORD TOGGLES
-    // ============================================================
-    document.querySelectorAll('.password-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const input = btn.closest('.password-input-wrapper').querySelector('input');
-            const icon = btn.querySelector('i');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.className = 'fa-regular fa-eye-slash';
-            } else {
-                input.type = 'password';
-                icon.className = 'fa-regular fa-eye';
-            }
-        });
-    });
-
-    // ============================================================
-    // TAB SWITCHING
-    // ============================================================
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            const tab = btn.dataset.tab;
-            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-
-            if (tab === 'login') document.getElementById('loginForm').classList.add('active');
-            else if (tab === 'register') document.getElementById('registerForm').classList.add('active');
-
-            hideMessage();
-        });
-    });
-
     // ============================================================
     // MESSAGE HELPERS
     // ============================================================
+    
     function showMessage(message, type = 'info') {
         messageText.textContent = message;
         messageEl.className = `auth-message show ${type}`;
@@ -865,8 +826,27 @@
     }
 
     // ============================================================
+    // PASSWORD TOGGLES
+    // ============================================================
+    
+    document.querySelectorAll('.password-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = btn.closest('.password-input-wrapper').querySelector('input');
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-regular fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-regular fa-eye';
+            }
+        });
+    });
+
+    // ============================================================
     // PASSWORD STRENGTH
     // ============================================================
+    
     const registerPassword = document.getElementById('registerPassword');
     const bar1 = document.getElementById('bar1');
     const bar2 = document.getElementById('bar2');
@@ -875,63 +855,30 @@
     const strengthText = document.getElementById('strengthText');
 
     function updatePasswordStrength(password) {
-        // Reset all bars
-        [bar1, bar2, bar3, bar4].forEach(bar => {
-            bar.className = 'bar';
-        });
-
+        [bar1, bar2, bar3, bar4].forEach(bar => { bar.className = 'bar'; });
         if (!password || password.length === 0) {
             strengthText.textContent = 'Enter a password';
             strengthText.className = 'password-strength-text';
             return;
         }
-
         let score = 0;
-        
-        // Length check
         if (password.length >= 8) score++;
         if (password.length >= 12) score++;
-        
-        // Complexity checks
         if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
         if (/\d/.test(password)) score++;
         if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-        // Determine strength level (0-4)
-        let level = 0;
-        let label = '';
-        let className = '';
+        let level = 0, label = '', className = '';
+        if (score <= 1) { level = 1; label = 'Weak'; className = 'weak'; }
+        else if (score <= 2) { level = 2; label = 'Fair'; className = 'weak'; }
+        else if (score <= 3) { level = 3; label = 'Medium'; className = 'medium'; }
+        else if (score <= 4) { level = 4; label = 'Strong'; className = 'strong'; }
+        else { level = 4; label = 'Very Strong'; className = 'strong'; }
 
-        if (score <= 1) {
-            level = 1;
-            label = 'Weak';
-            className = 'weak';
-        } else if (score <= 2) {
-            level = 2;
-            label = 'Fair';
-            className = 'weak';
-        } else if (score <= 3) {
-            level = 3;
-            label = 'Medium';
-            className = 'medium';
-        } else if (score <= 4) {
-            level = 4;
-            label = 'Strong';
-            className = 'strong';
-        } else {
-            level = 4;
-            label = 'Very Strong';
-            className = 'strong';
-        }
-
-        // Apply classes to bars
         const bars = [bar1, bar2, bar3, bar4];
         for (let i = 0; i < bars.length; i++) {
-            if (i < level) {
-                bars[i].className = `bar ${className}`;
-            }
+            if (i < level) bars[i].className = `bar ${className}`;
         }
-
         strengthText.textContent = label;
         strengthText.className = `password-strength-text ${className}`;
     }
@@ -941,19 +888,23 @@
     });
 
     // ============================================================
-    // REGISTER
+    // REGISTER - Updated for Oracle DB
     // ============================================================
+    
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideMessage();
 
-        const name = document.getElementById('registerName').value.trim();
+        const forenames = document.getElementById('registerForenames').value.trim();
+        const surname = document.getElementById('registerSurname').value.trim();
         const email = document.getElementById('registerEmail').value.trim();
+        const phoneNumber = document.getElementById('registerPhone').value.trim() || null;
         const password = document.getElementById('registerPassword').value;
         const confirm = document.getElementById('registerConfirmPassword').value;
         const terms = document.getElementById('agreeTerms').checked;
 
-        if (!name) return showMessage('Please enter your full name', 'error');
+        if (!forenames) return showMessage('Please enter your first name(s)', 'error');
+        if (!surname) return showMessage('Please enter your surname', 'error');
         if (!email) return showMessage('Please enter your email', 'error');
         if (!password || password.length < 8) return showMessage('Password must be at least 8 characters', 'error');
         if (password !== confirm) return showMessage('Passwords do not match', 'error');
@@ -962,13 +913,23 @@
         setLoading(registerBtn, true);
 
         try {
-            const res = await fetch(`${API_URL}/auth/register`, {
+            const payload = {
+                email,
+                password,
+                forenames,
+                surname,
+                phoneNumber
+            };
+
+            console.log('📤 Registering user:', email);
+            const res = await fetch(`${API_BASE}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify(payload)
             });
 
             const data = await res.json();
+            console.log('📥 Register response:', data);
 
             if (data.success) {
                 saveAuth(data.token, data.user);
@@ -978,6 +939,7 @@
                 showMessage(data.message || 'Registration failed', 'error');
             }
         } catch (err) {
+            console.error('❌ Register error:', err);
             showMessage('Network error. Please check your connection.', 'error');
         } finally {
             setLoading(registerBtn, false);
@@ -985,8 +947,9 @@
     });
 
     // ============================================================
-    // LOGIN
+    // LOGIN - Updated for Oracle DB
     // ============================================================
+    
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideMessage();
@@ -999,13 +962,15 @@
         setLoading(loginBtn, true);
 
         try {
-            const res = await fetch(`${API_URL}/auth/login`, {
+            console.log('🔑 Logging in:', email);
+            const res = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
 
             const data = await res.json();
+            console.log('📥 Login response:', data);
 
             if (data.success) {
                 saveAuth(data.token, data.user);
@@ -1015,6 +980,7 @@
                 showMessage(data.message || 'Invalid email or password', 'error');
             }
         } catch (err) {
+            console.error('❌ Login error:', err);
             showMessage('Network error. Please check your connection.', 'error');
         } finally {
             setLoading(loginBtn, false);
@@ -1022,194 +988,9 @@
     });
 
     // ============================================================
-    // FORGOT PASSWORD - OPEN DIALOG
-    // ============================================================
-    document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        resetDialog.classList.add('open');
-        resetEmail.value = '';
-        hideDialogMessage(dialogMessage);
-        setLoading(resetBtn, false);
-    });
-
-    // ============================================================
-    // CANCEL RESET DIALOG
-    // ============================================================
-    cancelResetBtn.addEventListener('click', () => {
-        resetDialog.classList.remove('open');
-        hideDialogMessage(dialogMessage);
-        setLoading(resetBtn, false);
-    });
-
-    // Close dialog on overlay click
-    resetDialog.addEventListener('click', (e) => {
-        if (e.target === resetDialog) {
-            resetDialog.classList.remove('open');
-            hideDialogMessage(dialogMessage);
-            setLoading(resetBtn, false);
-        }
-    });
-
-    // Close on Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (resetDialog.classList.contains('open')) {
-                resetDialog.classList.remove('open');
-                hideDialogMessage(dialogMessage);
-                setLoading(resetBtn, false);
-            }
-            if (resetPasswordDialog.classList.contains('open')) {
-                resetPasswordDialog.classList.remove('open');
-                hideDialogMessage(resetPasswordMessage);
-                setLoading(resetPasswordBtn, false);
-            }
-        }
-    });
-
-    // ============================================================
-    // SEND RESET LINK
-    // ============================================================
-    resetBtn.addEventListener('click', async () => {
-        const email = resetEmail.value.trim();
-
-        if (!email) {
-            return showDialogMessage(dialogMessage, 'Please enter your email address', 'error');
-        }
-
-        setLoading(resetBtn, true);
-        hideDialogMessage(dialogMessage);
-
-        try {
-            const res = await fetch(`${API_URL}/auth/request-reset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                showDialogMessage(dialogMessage, 'Reset link sent to your email!', 'success');
-                resetEmail.value = '';
-                
-                if (data.resetToken) {
-                    console.log('Reset Token (dev):', data.resetToken);
-                    setTimeout(() => {
-                        showDialogMessage(dialogMessage, 'Check your email (dev token logged in console)', 'info');
-                    }, 2000);
-                }
-
-                setTimeout(() => {
-                    resetDialog.classList.remove('open');
-                    hideDialogMessage(dialogMessage);
-                    setLoading(resetBtn, false);
-                }, 3000);
-            } else {
-                showDialogMessage(dialogMessage, data.message || 'Failed to send reset link', 'error');
-                setLoading(resetBtn, false);
-            }
-        } catch (err) {
-            showDialogMessage(dialogMessage, 'Network error. Please check your connection.', 'error');
-            setLoading(resetBtn, false);
-        }
-    });
-
-    // ============================================================
-    // CHECK FOR RESET TOKEN IN URL
-    // ============================================================
-    function checkResetToken() {
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
-        if (token) {
-            console.log('Reset token found:', token);
-            showResetPasswordDialog(token);
-            // Clean URL without reloading
-            const newUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, newUrl);
-        }
-    }
-
-    function showResetPasswordDialog(token) {
-        resetPasswordDialog.classList.add('open');
-        newPassword.value = '';
-        confirmNewPassword.value = '';
-        hideDialogMessage(resetPasswordMessage);
-        setLoading(resetPasswordBtn, false);
-
-        // Store token for use
-        resetPasswordDialog.dataset.token = token;
-    }
-
-    // ============================================================
-    // CANCEL RESET PASSWORD DIALOG
-    // ============================================================
-    cancelResetPasswordBtn.addEventListener('click', () => {
-        resetPasswordDialog.classList.remove('open');
-        hideDialogMessage(resetPasswordMessage);
-        setLoading(resetPasswordBtn, false);
-    });
-
-    resetPasswordDialog.addEventListener('click', (e) => {
-        if (e.target === resetPasswordDialog) {
-            resetPasswordDialog.classList.remove('open');
-            hideDialogMessage(resetPasswordMessage);
-            setLoading(resetPasswordBtn, false);
-        }
-    });
-
-    // ============================================================
-    // RESET PASSWORD
-    // ============================================================
-    resetPasswordBtn.addEventListener('click', async () => {
-        const token = resetPasswordDialog.dataset.token;
-        const password = newPassword.value;
-        const confirm = confirmNewPassword.value;
-
-        if (!password || password.length < 8) {
-            return showDialogMessage(resetPasswordMessage, 'Password must be at least 8 characters', 'error');
-        }
-        if (password !== confirm) {
-            return showDialogMessage(resetPasswordMessage, 'Passwords do not match', 'error');
-        }
-
-        setLoading(resetPasswordBtn, true);
-        hideDialogMessage(resetPasswordMessage);
-
-        try {
-            const res = await fetch(`${API_URL}/auth/reset-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, newPassword: password })
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                showDialogMessage(resetPasswordMessage, 'Password reset successful!', 'success');
-                setTimeout(() => {
-                    resetPasswordDialog.classList.remove('open');
-                    hideDialogMessage(resetPasswordMessage);
-                    setLoading(resetPasswordBtn, false);
-                    // Switch to login tab
-                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                    document.querySelector('.tab-btn[data-tab="login"]').classList.add('active');
-                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                    document.getElementById('loginForm').classList.add('active');
-                    showMessage('Password reset successfully. Please sign in.', 'success');
-                }, 2000);
-            } else {
-                showDialogMessage(resetPasswordMessage, data.message || 'Failed to reset password', 'error');
-                setLoading(resetPasswordBtn, false);
-            }
-        } catch (err) {
-            showDialogMessage(resetPasswordMessage, 'Network error. Please try again.', 'error');
-            setLoading(resetPasswordBtn, false);
-        }
-    });
-
-    // ============================================================
     // UTILITY FUNCTIONS
     // ============================================================
+    
     function setLoading(btn, loading) {
         if (loading) {
             btn.classList.add('loading');
@@ -1228,10 +1009,11 @@
     // ============================================================
     // CHECK IF ALREADY LOGGED IN
     // ============================================================
+    
     function checkAuth() {
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
         if (token) {
-            fetch(`${API_URL}/auth/me`, {
+            fetch(`${API_BASE}/auth/me`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             .then(res => res.json())
@@ -1248,12 +1030,172 @@
     }
 
     // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            if (tab === 'login') document.getElementById('loginForm').classList.add('active');
+            else if (tab === 'register') document.getElementById('registerForm').classList.add('active');
+            hideMessage();
+        });
+    });
+
+    // ============================================================
+    // FORGOT PASSWORD DIALOG
+    // ============================================================
+    
+    document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('resetDialog').classList.add('open');
+        document.getElementById('resetEmail').value = '';
+        hideDialogMessage(document.getElementById('dialogMessage'));
+        setLoading(document.getElementById('resetBtn'), false);
+    });
+
+    document.getElementById('cancelResetBtn').addEventListener('click', () => {
+        document.getElementById('resetDialog').classList.remove('open');
+    });
+
+    document.getElementById('resetDialog').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            document.getElementById('resetDialog').classList.remove('open');
+        }
+    });
+
+    // ============================================================
+    // SEND RESET LINK
+    // ============================================================
+    
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+        const email = document.getElementById('resetEmail').value.trim();
+        const dialogMessage = document.getElementById('dialogMessage');
+
+        if (!email) {
+            return showDialogMessage(dialogMessage, 'Please enter your email address', 'error');
+        }
+
+        setLoading(document.getElementById('resetBtn'), true);
+        hideDialogMessage(dialogMessage);
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/request-reset`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showDialogMessage(dialogMessage, 'Reset link sent to your email!', 'success');
+                document.getElementById('resetEmail').value = '';
+                setTimeout(() => {
+                    document.getElementById('resetDialog').classList.remove('open');
+                    hideDialogMessage(dialogMessage);
+                    setLoading(document.getElementById('resetBtn'), false);
+                }, 3000);
+            } else {
+                showDialogMessage(dialogMessage, data.message || 'Failed to send reset link', 'error');
+                setLoading(document.getElementById('resetBtn'), false);
+            }
+        } catch (err) {
+            showDialogMessage(dialogMessage, 'Network error. Please check your connection.', 'error');
+            setLoading(document.getElementById('resetBtn'), false);
+        }
+    });
+
+    // ============================================================
+    // CHECK FOR RESET TOKEN IN URL
+    // ============================================================
+    
+    function checkResetToken() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (token) {
+            console.log('Reset token found:', token);
+            showResetPasswordDialog(token);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
+    function showResetPasswordDialog(token) {
+        const dialog = document.getElementById('resetPasswordDialog');
+        dialog.classList.add('open');
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmNewPassword').value = '';
+        hideDialogMessage(document.getElementById('resetPasswordMessage'));
+        setLoading(document.getElementById('resetPasswordBtn'), false);
+        dialog.dataset.token = token;
+    }
+
+    document.getElementById('cancelResetPasswordBtn').addEventListener('click', () => {
+        document.getElementById('resetPasswordDialog').classList.remove('open');
+    });
+
+    document.getElementById('resetPasswordDialog').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            document.getElementById('resetPasswordDialog').classList.remove('open');
+        }
+    });
+
+    document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
+        const token = document.getElementById('resetPasswordDialog').dataset.token;
+        const password = document.getElementById('newPassword').value;
+        const confirm = document.getElementById('confirmNewPassword').value;
+        const messageEl = document.getElementById('resetPasswordMessage');
+
+        if (!password || password.length < 8) {
+            return showDialogMessage(messageEl, 'Password must be at least 8 characters', 'error');
+        }
+        if (password !== confirm) {
+            return showDialogMessage(messageEl, 'Passwords do not match', 'error');
+        }
+
+        setLoading(document.getElementById('resetPasswordBtn'), true);
+        hideDialogMessage(messageEl);
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, newPassword: password })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showDialogMessage(messageEl, 'Password reset successful!', 'success');
+                setTimeout(() => {
+                    document.getElementById('resetPasswordDialog').classList.remove('open');
+                    hideDialogMessage(messageEl);
+                    setLoading(document.getElementById('resetPasswordBtn'), false);
+                    document.querySelector('.tab-btn[data-tab="login"]').click();
+                    showMessage('Password reset successfully. Please sign in.', 'success');
+                }, 2000);
+            } else {
+                showDialogMessage(messageEl, data.message || 'Failed to reset password', 'error');
+                setLoading(document.getElementById('resetPasswordBtn'), false);
+            }
+        } catch (err) {
+            showDialogMessage(messageEl, 'Network error. Please try again.', 'error');
+            setLoading(document.getElementById('resetPasswordBtn'), false);
+        }
+    });
+
+    // ============================================================
     // INIT
     // ============================================================
+    
     checkAuth();
     checkResetToken();
 
-    console.log('Savannah Cinemas Auth Page Loaded');
+    console.log('🎬 Savannah Cinemas Auth Page Loaded');
+    console.log('🔗 API_BASE:', API_BASE);
 </script>
 </body>
 </html>

@@ -1,72 +1,84 @@
 require('dotenv').config();
 
 const express = require('express');
-const nodemailer = require('nodemailer');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const nodemailer = require('nodemailer');
+const authRoutes = require('./routes/authRoutes');
+const { authenticateToken } = require('./middleware/authMiddleware');
+const authorize = require('./middleware/roleMiddleware');
+const watchlistRoutes = require('./routes/watchlistRoutes');
+const movieRoutes = require('./routes/movieRoutes');
+const cinemaRoutes = require('./routes/cinemaRoutes');
+const showtimeRoutes = require('./routes/showtimeRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
+
+const {
+    initializeDatabase,
+    getConnection,
+    closeDatabase
+} = require('./config/database');
 
 // ============================================================
 // SERVER CONFIGURATION
 // ============================================================
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Auto-detect local IP address
+const PORT = process.env.PORT || 5000;
+const SERVER_IP = process.env.SERVER_IP || getLocalIP();
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    console.error('❌ JWT_SECRET is not configured in .env');
+    process.exit(1);
+}
+
+// ============================================================
+// MIDDLEWARE
+// ============================================================
+
+app.use(cors());
+app.use(express.json());
+app.use('/api/auth', authRoutes);
+app.use('/api/watchlist', watchlistRoutes);
+app.use('/api/movies', movieRoutes);
+app.use('/api/cinemas', cinemaRoutes);
+app.use('/api/showtimes', showtimeRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/tickets', ticketRoutes);
+// ============================================================
+// LOCAL IP DETECTION
+// ============================================================
+
 function getLocalIP() {
     try {
         const interfaces = os.networkInterfaces();
+
         for (const name of Object.keys(interfaces)) {
             for (const iface of interfaces[name]) {
-                if (iface.family === 'IPv4' && !iface.internal) {
+
+                if (
+                    iface.family === 'IPv4' &&
+                    !iface.internal
+                ) {
                     return iface.address;
                 }
             }
         }
+
         return 'localhost';
+
     } catch (error) {
         return 'localhost';
     }
 }
 
-const SERVER_IP = getLocalIP();
-
-app.use(cors());
-app.use(express.json());
-
 // ============================================================
-// FILE-BASED STORAGE
-// ============================================================
-
-const DATA_FILE = path.join(__dirname, 'data.json');
-
-if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({
-        users: [],
-        watchlists: {},
-        bookings: {}
-    }, null, 2));
-}
-
-function readData() {
-    try {
-        const data = fs.readFileSync(DATA_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return { users: [], watchlists: {}, bookings: {} };
-    }
-}
-
-function writeData(data) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-}
-
-// ============================================================
-// GMAIL SMTP TRANSPORTER
+// GMAIL SMTP
 // ============================================================
 
 const GMAIL_USER = process.env.GMAIL_USER;
@@ -75,249 +87,419 @@ const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 let transporter = null;
 
 if (GMAIL_USER && GMAIL_APP_PASSWORD) {
+
     transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
+
         auth: {
             user: GMAIL_USER,
             pass: GMAIL_APP_PASSWORD
-        },
-        tls: {
-            rejectUnauthorized: false
-        },
-        logger: true,
-        debug: true
+        }
     });
 
     transporter.verify()
         .then(() => {
             console.log('✅ Gmail SMTP connection successful');
-            console.log(`📧 Using account: ${GMAIL_USER}`);
+            console.log(`📧 Email account: ${GMAIL_USER}`);
         })
         .catch((error) => {
-            console.error('❌ Gmail SMTP connection failed:', error.message);
+            console.error(
+                '❌ Gmail SMTP connection failed:',
+                error.message
+            );
+
             transporter = null;
         });
+
 } else {
-    console.warn('⚠️ Gmail credentials not configured.');
+
+    console.warn(
+        '⚠️ Gmail credentials are not configured.'
+    );
+
 }
 
 // ============================================================
-// JWT MIDDLEWARE
+// JWT AUTHENTICATION MIDDLEWARE
 // ============================================================
 
-const JWT_SECRET = process.env.JWT_SECRET || 'savannah-cinemas-secret-key-2024';
-
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({
-            success: false,
-            message: 'Access token required'
-        });
-    }
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({
-                success: false,
-                message: 'Invalid or expired token'
-            });
-        }
-        req.user = user;
-        next();
-    });
-}
 
 // ============================================================
-// AUTHENTICATION ROUTES
-// ============================================================
-
-// REGISTER
-app.post('/api/auth/register', async (req, res) => {
-    console.log('📝 Register request received:', req.body.email);
-    try {
-        const { name, email, password } = req.body;
-        const data = readData();
-
-        if (data.users.find(u => u.email === email.toLowerCase())) {
-            return res.status(400).json({
-                success: false,
-                message: 'User already exists with this email'
-            });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const user = {
-            id: Date.now().toString(),
-            name,
-            email: email.toLowerCase(),
-            password: hashedPassword,
-            memberSince: new Date(),
-            preferences: {
-                notifications: true,
-                newsletter: true,
-                language: 'en'
-            }
-        };
-
-        data.users.push(user);
-        data.watchlists[user.id] = [];
-        data.bookings[user.id] = [];
-        writeData(data);
-
-        const token = jwt.sign(
-            { id: user.id, email: user.email, name: user.name },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.status(201).json({
-            success: true,
-            message: 'User registered successfully',
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                memberSince: user.memberSince
-            }
-        });
-
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error during registration'
-        });
-    }
-});
-
-// LOGIN
-app.post('/api/auth/login', async (req, res) => {
-    console.log('🔑 Login request received:', req.body.email);
-    try {
-        const { email, password } = req.body;
-        const data = readData();
-
-        const user = data.users.find(u => u.email === email.toLowerCase());
-        if (!user) {
-            console.log('❌ User not found:', email);
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            console.log('❌ Password mismatch for:', email);
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
-
-        const token = jwt.sign(
-            { id: user.id, email: user.email, name: user.name },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        console.log('✅ Login successful for:', email);
-        res.json({
-            success: true,
-            message: 'Login successful',
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                memberSince: user.memberSince,
-                preferences: user.preferences
-            }
-        });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error during login'
-        });
-    }
-});
-
-// GET CURRENT USER
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
-    try {
-        const data = readData();
-        const user = data.users.find(u => u.id === req.user.id);
-        
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const { password, ...userWithoutPassword } = user;
-        res.json({
-            success: true,
-            user: userWithoutPassword
-        });
-
-    } catch (error) {
-        console.error('Get user error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error'
-        });
-    }
-});
-
-// ============================================================
-// OTHER ROUTES (Watchlist, Bookings, etc.)
-// ============================================================
-
-// Add your watchlist and booking routes here...
-
-// ============================================================
-// SERVER START
+// BASIC ROUTES
 // ============================================================
 
 app.get('/', (req, res) => {
     res.json({
         success: true,
-        message: 'Savannah Cinemas Server is running',
-        storage: 'File-based',
-        emailConfigured: !!transporter,
-        serverInfo: {
-            ip: SERVER_IP,
-            port: PORT,
-            apiUrl: `http://${SERVER_IP}:${PORT}/api`
-        }
+        application: 'Savannah Cinemas API',
+        status: 'online',
+        version: '1.0.0'
     });
 });
 
 app.get('/api/test', (req, res) => {
     res.json({
         success: true,
-        message: 'API is working!'
+        message: 'Savannah Cinemas API is working!'
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Server running on port ${PORT}`);
-    console.log(`📁 Data stored in: ${DATA_FILE}`);
-    console.log(`📧 Email service: ${transporter ? '✅ Configured' : '❌ Not configured'}`);
-    console.log(`🔑 JWT Secret: ${JWT_SECRET ? '✅ Set' : '❌ Not set'}`);
-    console.log(`\n📍 Local URL: http://localhost:${PORT}`);
-    console.log(`📍 Network URL: http://${SERVER_IP}:${PORT}`);
-    console.log(`📍 API URL: http://${SERVER_IP}:${PORT}/api`);
-    console.log(`📍 Health Check: http://${SERVER_IP}:${PORT}/\n`);
+
+
+// ============================================================
+// DATABASE HEALTH CHECK
+// ============================================================
+
+
+// ============================================================
+// AUTHENTICATION ROUTES
+// ============================================================
+app.get(
+    '/api/admin/test',
+    authenticateToken,
+    authorize('ADMIN'),
+    (req, res) => {
+        res.json({
+            success: true,
+            message: 'Welcome to the Savannah Cinemas administration area',
+            user: req.user
+        });
+    }
+);
+// ============================================================
+// REGISTER
+// ============================================================
+
+
+
+// ============================================================
+// GET CURRENT USER
+// ============================================================
+
+
+// ============================================================
+// BOOKINGS ROUTES
+// ============================================================
+
+// GET BOOKINGS
+app.get('/api/bookings', authenticateToken, async (req, res) => {
+    let connection;
+    try {
+        connection = await getConnection();
+        
+        const result = await connection.execute(
+            `
+            SELECT 
+                BOOKING_REF,
+                FILM_TITLE,
+                SCREEN,
+                SHOWTIME,
+                SEATS,
+                TICKET_QUANTITY,
+                TICKET_PRICE,
+                SNACKS,
+                TOTAL_AMOUNT,
+                STATUS,
+                BOOKING_DATE
+            FROM BOOKINGS
+            WHERE USER_ID = :userId
+            ORDER BY BOOKING_DATE DESC
+            `,
+            { userId: req.user.userId }
+        );
+        
+        const bookings = result.rows.map(row => ({
+            bookingRef: row[0],
+            filmTitle: row[1],
+            screen: row[2],
+            showtime: row[3],
+            seats: row[4] ? row[4].split(',') : [],
+            ticketQuantity: row[5],
+            ticketPrice: row[6],
+            snacks: row[7] ? JSON.parse(row[7]) : [],
+            total: row[8],
+            status: row[9],
+            bookingDate: row[10]
+        }));
+        
+        res.json(bookings);
+        
+    } catch (error) {
+        console.error('❌ Get bookings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error fetching bookings'
+        });
+    } finally {
+        if (connection) {
+            try { await connection.close(); } catch (e) {}
+        }
+    }
 });
+
+// CREATE BOOKING
+app.post('/api/bookings', authenticateToken, async (req, res) => {
+    let connection;
+    try {
+        const {
+            filmTitle,
+            screen,
+            showtime,
+            seats,
+            ticketQuantity,
+            ticketPrice,
+            snacks,
+            total
+        } = req.body;
+        
+        const bookingRef = 'SC-' + Date.now().toString().slice(-6) + '-' + 
+                          Math.random().toString(36).substring(2, 6).toUpperCase();
+        
+        connection = await getConnection();
+        
+        await connection.execute(
+            `
+            INSERT INTO BOOKINGS (
+                USER_ID, BOOKING_REF, FILM_TITLE, SCREEN, SHOWTIME,
+                SEATS, TICKET_QUANTITY, TICKET_PRICE, SNACKS,
+                TOTAL_AMOUNT, STATUS, BOOKING_DATE
+            ) VALUES (
+                :userId, :bookingRef, :filmTitle, :screen, :showtime,
+                :seats, :ticketQuantity, :ticketPrice, :snacks,
+                :total, 'confirmed', CURRENT_TIMESTAMP
+            )
+            `,
+            {
+                userId: req.user.userId,
+                bookingRef,
+                filmTitle,
+                screen: screen || null,
+                showtime: showtime || null,
+                seats: seats ? seats.join(',') : null,
+                ticketQuantity: ticketQuantity || 1,
+                ticketPrice: ticketPrice || 0,
+                snacks: snacks ? JSON.stringify(snacks) : null,
+                total: total || 0
+            }
+        );
+        
+        console.log(`✅ Booking created: ${bookingRef} for user ${req.user.userId}`);
+        
+        res.json({
+            success: true,
+            message: 'Booking created successfully',
+            bookingRef
+        });
+        
+    } catch (error) {
+        console.error('❌ Create booking error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error creating booking'
+        });
+    } finally {
+        if (connection) {
+            try { await connection.close(); } catch (e) {}
+        }
+    }
+});
+
+// ============================================================
+// EMAIL ROUTE
+// ============================================================
+
+app.post('/api/send-booking-email', async (req, res) => {
+    try {
+        if (!transporter) {
+            return res.status(503).json({
+                success: false,
+                message: 'Email service is not configured'
+            });
+        }
+
+        const {
+            to,
+            customerName,
+            bookingRef,
+            film,
+            screen,
+            showtime,
+            seats,
+            tickets,
+            ticketPrice,
+            snacks,
+            total
+        } = req.body;
+
+        if (!to) {
+            return res.status(400).json({
+                success: false,
+                message: 'Customer email is required'
+            });
+        }
+
+        const mailOptions = {
+            from: `"Savannah Cinemas" <${GMAIL_USER}>`,
+            to: to,
+            subject: `Booking Confirmation — ${bookingRef}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1D1D28; color: #F2EFE9; padding: 30px; border-radius: 14px;">
+                    <h1 style="font-family: Oswald, sans-serif; color: #E8B34C;">SAVANNAH CINEMAS</h1>
+                    <h2 style="color: #E8B34C;">Booking Confirmed ✅</h2>
+                    <p>Hello ${customerName || 'Valued Customer'},</p>
+                    <p>Your booking for <strong style="color: #E8B34C;">${film}</strong> has been confirmed.</p>
+                    <hr style="border-color: #2C2C3A;">
+                    <p><strong>Booking Reference:</strong> <span style="color: #E8B34C;">${bookingRef}</span></p>
+                    <p><strong>Film:</strong> ${film}</p>
+                    <p><strong>Screen:</strong> ${screen}</p>
+                    <p><strong>Showtime:</strong> ${showtime}</p>
+                    <p><strong>Seats:</strong> ${seats}</p>
+                    <p><strong>Tickets:</strong> ${tickets}</p>
+                    <p><strong>Total:</strong> ${total}</p>
+                    <hr style="border-color: #2C2C3A;">
+                    <p style="color: #B9B6AC;">Thank you for choosing Savannah Cinemas! 🎬</p>
+                </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Booking email sent:', info.messageId);
+
+        res.json({
+            success: true,
+            message: 'Booking confirmation sent successfully',
+            messageId: info.messageId
+        });
+
+    } catch (error) {
+        console.error('❌ Email sending error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send booking confirmation: ' + error.message
+        });
+    }
+});
+
+// ============================================================
+// 404 HANDLER
+// ============================================================
+
+app.use((req, res) => {
+
+    res.status(404).json({
+        success: false,
+        message: 'API endpoint not found',
+        path: req.originalUrl
+    });
+
+});
+
+// ============================================================
+// GLOBAL ERROR HANDLER
+// ============================================================
+
+app.use((error, req, res, next) => {
+
+    console.error(
+        '❌ Unhandled server error:',
+        error
+    );
+
+    res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+    });
+
+});
+
+// ============================================================
+// SERVER STARTUP
+// ============================================================
+
+async function startServer() {
+
+    try {
+
+        console.log('');
+        console.log('==============================================');
+        console.log('       SAVANNAH CINEMAS API');
+        console.log('==============================================');
+        console.log('');
+
+        // Initialize Oracle
+        await initializeDatabase();
+
+        // Start Express
+        app.listen(PORT, '0.0.0.0', () => {
+
+            console.log('');
+            console.log('🚀 Savannah Cinemas API is running');
+            console.log('');
+            console.log(`📍 Local:   http://localhost:${PORT}`);
+            console.log(`📍 Network: http://${SERVER_IP}:${PORT}`);
+            console.log('');
+            console.log('🗄️ Database: Oracle');
+            console.log(`👤 Schema:   ${process.env.DB_USER}`);
+            console.log(`🔗 Database: ${process.env.DB_CONNECT_STRING}`);
+            console.log('');
+            console.log('Health checks:');
+            console.log(`➡️ API:      http://localhost:${PORT}/api/test`);
+            console.log(
+                `➡️ Database: http://localhost:${PORT}/api/health/database`
+            );
+            console.log('');
+            console.log('==============================================');
+            console.log('');
+
+        });
+
+    } catch (error) {
+
+        console.error('');
+        console.error('❌ FAILED TO START SAVANNAH CINEMAS API');
+        console.error('');
+        console.error(error);
+        console.error('');
+
+        process.exit(1);
+    }
+}
+
+// ============================================================
+// GRACEFUL SHUTDOWN
+// ============================================================
+
+async function shutdown() {
+
+    console.log('');
+    console.log('🛑 Shutting down Savannah Cinemas API...');
+
+    try {
+
+        await closeDatabase();
+
+        console.log('✅ Shutdown complete');
+
+        process.exit(0);
+
+    } catch (error) {
+
+        console.error(
+            '❌ Error during shutdown:',
+            error
+        );
+
+        process.exit(1);
+    }
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+// ============================================================
+// START APPLICATION
+// ============================================================
+
+startServer();
