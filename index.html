@@ -556,7 +556,7 @@
             max-width: 500px;
             margin-bottom: 10px;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            --webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
@@ -1893,603 +1893,846 @@
     </footer>
 
     <!-- JavaScript -->
-     <script src="backend/config.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
+     <script src="/backend/config.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
 
-            // ============================================================
-            // AUTH STATE MANAGEMENT
-            // ============================================================
-            
-            const token = localStorage.getItem('token');
-            const userData = JSON.parse(localStorage.getItem('user') || 'null');
-            const isAuthenticated = !!token && !!userData;
+        // ============================================================
+        // CONSTANTS - Define at the top
+        // ============================================================
+        
+        const currentYear = new Date().getFullYear();
+        let heroSlides = [];
+        let currentSlide = 0;
+        let slideInterval = null;
 
-            // ============================================================
-            // NAVIGATION RENDER
-            // ============================================================
-            
-            function renderNav() {
-                const navRight = document.getElementById('navRight');
-                const mobileMenuLinks = document.getElementById('mobileMenuLinks');
-                const mobileDivider = document.getElementById('mobileDivider');
-                
-                if (isAuthenticated && userData) {
-                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                    
-                    navRight.innerHTML = `
-                        <div class="profile-wrapper" id="profileWrapper">
-                            <div class="avatar" id="avatarBtn">${initials}</div>
-                            <div class="profile-menu" id="profileMenu">
-                                <div class="who">
-                                    <div class="name">${userData.name}</div>
-                                    <div class="stat" id="navStat">0 films watched</div>
-                                </div>
-                                <a href="profile.html">My Profile</a>
-                                <a href="#" id="logoutBtn">Sign out</a>
-                            </div>
-                        </div>
-                    `;
-                    
-                    const logoutLink = document.createElement('li');
-                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
-                    mobileMenuLinks.appendChild(logoutLink);
-                    
-                    if (mobileDivider) mobileDivider.style.display = 'block';
-                    
-                    setupProfileDropdown();
-                    
-                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    
-                    fetchWatchCount();
-                    
-                } else {
-                    navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
-                            <i class="fas fa-sign-in-alt"></i> Sign In
-                        </a>
-                    `;
-                    
-                    const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
-                    mobileMenuLinks.appendChild(signInLink);
-                    
-                    if (mobileDivider) mobileDivider.style.display = 'block';
-                }
-            }
+        // ============================================================
+        // HERO SLIDER CONFIGURATION - MANUALLY SET MOVIE IDs
+        // ============================================================
+        
+        // Add the movie IDs you want to feature in the hero slider
+        const FEATURED_MOVIE_IDS = [
+    1,      // Movie ID 1 from your database
+    2,      // Movie ID 2 from your database
+    3,      // Movie ID 3 from your database
+    4,      // Movie ID 4 from your database
+    10      // Movie ID 10 from your database
+];
 
-            // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
-            
-            function setupProfileDropdown() {
-                const profileWrapper = document.getElementById('profileWrapper');
-                const avatarBtn = document.getElementById('avatarBtn');
-                
-                if (!profileWrapper || !avatarBtn) return;
-                
-                let closeTimer;
-                
-                profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-                
-                profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(() => {
-                        this.classList.remove('is-open');
-                    }, 150);
-                });
-                
-                avatarBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    profileWrapper.classList.toggle('is-open');
-                });
-                
-                document.addEventListener('click', function(e) {
-                    if (!profileWrapper.contains(e.target)) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-            }
+// Number of slides to show (max 5 recommended)
+const MAX_HERO_SLIDES = 5;
 
-            // ============================================================
-            // FETCH WATCH COUNT
-            // ============================================================
-            
-            async function fetchWatchCount() {
-                try {
-                    const response = await fetch(`http://${SERVER_IP}:${SERVER_PORT}/api/watchlist`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        const watchedCount = data.filter(item => item.watched).length;
-                        const statEl = document.getElementById('navStat');
-                        if (statEl) {
-                            statEl.textContent = `${watchedCount} films watched`;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching watch count:', error);
-                }
-            }
+// ============================================================
+// AUTH STATE MANAGEMENT - IMPROVED
+// ============================================================
 
-            // ============================================================
-            // LOGOUT - Redirect to logout.html
-            // ============================================================
-            
-            function logout() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = 'logout.html';
-            }
+// Get auth data from localStorage
+const token = localStorage.getItem('token');
+let userData = null;
 
-            // ============================================================
-            // MOBILE MENU
-            // ============================================================
-            
-            const menuToggle = document.getElementById('menuToggle');
-            const mobileMenu = document.getElementById('mobileMenu');
-            const mobileOverlay = document.getElementById('mobileOverlay');
-            const mobileMenuClose = document.getElementById('mobileMenuClose');
-            
-            function openMobileMenu() {
-                mobileMenu.classList.add('open');
-                mobileOverlay.classList.add('active');
-                menuToggle.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-            
-            function closeMobileMenu() {
-                mobileMenu.classList.remove('open');
-                mobileOverlay.classList.remove('active');
-                menuToggle.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-            
-            if (menuToggle) {
-                menuToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    if (mobileMenu.classList.contains('open')) {
-                        closeMobileMenu();
-                    } else {
-                        openMobileMenu();
-                    }
-                });
-            }
-            
-            if (mobileMenuClose) {
-                mobileMenuClose.addEventListener('click', closeMobileMenu);
-            }
-            
-            if (mobileOverlay) {
-                mobileOverlay.addEventListener('click', closeMobileMenu);
-            }
-            
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
-                    closeMobileMenu();
-                }
-            });
-            
-            document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
-                link.addEventListener('click', closeMobileMenu);
-            });
+try {
+    const userString = localStorage.getItem('user');
+    if (userString) {
+        userData = JSON.parse(userString);
+    }
+} catch (e) {
+    console.error('Error parsing user data:', e);
+    localStorage.removeItem('user');
+}
 
-            // ============================================================
-            // API CONFIGURATION
-            // ============================================================
-            
-            const API_KEY = 'a0b31df2c8c2865ebe236c9e1eb7cbd9';
-            const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
-            const BACKDROP_BASE = 'https://image.tmdb.org/t/p/original';
-            const currentYear = new Date().getFullYear();
-            const MAX_PAGES = 5;
+const isAuthenticated = !!token && !!userData && userData.userId;
 
-            // ============================================================
-            // HERO CAROUSEL - DYNAMICALLY FETCHED
-            // ============================================================
-            
-            let heroSlides = [];
-            let currentSlide = 0;
-            let slideInterval;
+// ============================================================
+// NAVIGATION RENDER - IMPROVED
+// ============================================================
 
-            async function fetchHeroSlides() {
-                const slidesContainer = document.getElementById('heroSlides');
-                
-                try {
-                    const response = await fetch(
-                        `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US&page=1`
-                    );
-                    
-                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                    
-                    const data = await response.json();
-                    
-                    // Filter for movies from the current year
-                    const currentYearFilms = data.results.filter(movie => {
-                        if (!movie.release_date) return false;
-                        const year = parseInt(movie.release_date.substring(0, 4));
-                        return year === currentYear;
-                    });
-                    
-                    // Take up to 5 films
-                    const topFilms = currentYearFilms.slice(0, 5);
-                    
-                    if (topFilms.length === 0) {
-                        // Fallback to any popular movies if no current year films
-                        const fallbackFilms = data.results.slice(0, 5);
-                        heroSlides = fallbackFilms.map(movie => ({
-                            id: movie.id,
-                            title: movie.title,
-                            subtitle: movie.release_date ? movie.release_date.substring(0, 4) : 'Now Showing',
-                            description: movie.overview || 'Experience this film at Savannah Cinemas.',
-                            image: movie.backdrop_path ? `${BACKDROP_BASE}${movie.backdrop_path}` : '',
-                            link: `movie-details.html?id=${movie.id}`
-                        }));
-                    } else {
-                        heroSlides = topFilms.map(movie => ({
-                            id: movie.id,
-                            title: movie.title,
-                            subtitle: movie.release_date ? movie.release_date.substring(0, 4) : 'Now Showing',
-                            description: movie.overview || 'Experience this film at Savannah Cinemas.',
-                            image: movie.backdrop_path ? `${BACKDROP_BASE}${movie.backdrop_path}` : '',
-                            link: `movie-details.html?id=${movie.id}`
-                        }));
-                    }
-                    
-                    renderHero();
-                    
-                } catch (error) {
-                    console.error('Error fetching hero slides:', error);
-                    slidesContainer.innerHTML = `
-                        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--paper-dim);font-family:var(--font-body);flex-direction:column;gap:10px;">
-                            <i class="fas fa-exclamation-circle" style="font-size:28px;color:var(--rust);"></i>
-                            <p style="font-size:14px;">Failed to load hero slides. Please refresh.</p>
-                        </div>
-                    `;
-                }
+function renderNav() {
+    const navRight = document.getElementById('navRight');
+    const mobileMenuLinks = document.getElementById('mobileMenuLinks');
+    const mobileDivider = document.getElementById('mobileDivider');
+    
+    // Clear mobile menu links first (keep only existing items)
+    if (mobileMenuLinks) {
+        // Remove any previously added dynamic links
+        const existingLogout = mobileMenuLinks.querySelector('.mobile-logout');
+        const existingSignIn = mobileMenuLinks.querySelector('.mobile-signin');
+        if (existingLogout) existingLogout.remove();
+        if (existingSignIn) existingSignIn.remove();
+    }
+    
+    if (isAuthenticated && userData) {
+        // Get user initials - FIXED
+        const forenames = userData.forenames || userData.FORENAMES || '';
+        const surname = userData.surname || userData.SURNAME || '';
+        const fullName = `${forenames} ${surname}`.trim() || 'User';
+        
+        let initials = '';
+        
+        // Get first two letters from forenames
+        if (forenames) {
+            const firstWord = forenames.trim().split(' ')[0];
+            if (firstWord && firstWord.length > 0) {
+                initials = firstWord.substring(0, 2).toUpperCase();
             }
-
-            function renderHero() {
-                const slidesContainer = document.getElementById('heroSlides');
-                const dotsContainer = document.getElementById('heroDots');
-                
-                slidesContainer.innerHTML = heroSlides.map((slide) => `
-                    <div class="hero-slide" style="background-image: url('${slide.image}'); background-color: var(--ink-raised);">
-                        <div class="hero-content">
-                            <div class="hero-eyebrow">${slide.subtitle}</div>
-                            <h2>${slide.title}</h2>
-                            <p>${slide.description}</p>
-                            <a href="${slide.link}" class="btn-hero">
-                                <i class="fas fa-play"></i> Learn More
-                            </a>
-                        </div>
+        }
+        
+        // If forenames has less than 2 letters, add first letter of surname
+        if (initials.length < 2 && surname) {
+            const surnameFirst = surname.trim().charAt(0);
+            if (surnameFirst) {
+                initials += surnameFirst.toUpperCase();
+            }
+        }
+        
+        // If we still don't have 2 letters, pad with 'U'
+        while (initials.length < 2) {
+            initials += 'U';
+        }
+        
+        // Ensure we only return 2 characters
+        initials = initials.substring(0, 2);
+        
+        // Get user email
+        const email = userData.email || userData.EMAIL || '';
+        
+        // Render desktop profile
+        navRight.innerHTML = `
+            <div class="profile-wrapper" id="profileWrapper">
+                <div class="avatar" id="avatarBtn" title="${fullName}">
+                    ${initials}
+                    <span class="avatar-status online"></span>
+                </div>
+                <div class="profile-menu" id="profileMenu">
+                    <div class="who">
+                        <div class="name">${fullName}</div>
+                        <div class="email" style="font-size:12px;color:var(--paper-dim);margin-top:2px;">${email}</div>
+                        <div class="stat" id="navStat">0 films watched</div>
                     </div>
-                `).join('');
-                
-                dotsContainer.innerHTML = heroSlides.map((_, index) => `
-                    <button class="hero-dot ${index === 0 ? 'active' : ''}" data-index="${index}" aria-label="Go to slide ${index + 1}"></button>
-                `).join('');
-                
-                // Dots click
-                document.querySelectorAll('.hero-dot').forEach(dot => {
-                    dot.addEventListener('click', function() {
-                        const index = parseInt(this.dataset.index);
-                        goToSlide(index);
-                    });
-                });
-                
-                // Arrow controls
-                document.getElementById('heroPrev').addEventListener('click', function() {
-                    goToSlide(currentSlide - 1);
-                });
-                
-                document.getElementById('heroNext').addEventListener('click', function() {
-                    goToSlide(currentSlide + 1);
-                });
-                
-                if (heroSlides.length > 0) {
-                    startAutoSlide();
-                }
-            }
+                    <div class="profile-menu-divider"></div>
+                    <a href="profile.html">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                    <a href="watchlist.html">
+                        <i class="fas fa-list"></i> My Watchlist
+                    </a>
+                    <a href="bookings.html">
+                        <i class="fas fa-ticket-alt"></i> My Bookings
+                    </a>
+                    <div class="profile-menu-divider"></div>
+                    <a href="#" id="logoutBtn" style="color: var(--rust);">
+                        <i class="fas fa-sign-out-alt"></i> Sign Out
+                    </a>
+                </div>
+            </div>
+        `;
+        
+        // Render mobile profile links
+        if (mobileMenuLinks) {
+            const mobileProfile = document.createElement('li');
+            mobileProfile.className = 'mobile-signin';
+            mobileProfile.innerHTML = `
+                <a href="profile.html" style="color: var(--gold);">
+                    <i class="fas fa-user"></i> ${fullName}
+                </a>
+            `;
+            mobileMenuLinks.appendChild(mobileProfile);
+            
+            const mobileWatchlist = document.createElement('li');
+            mobileWatchlist.innerHTML = `
+                <a href="watchlist.html">
+                    <i class="fas fa-list"></i> My Watchlist
+                </a>
+            `;
+            mobileMenuLinks.appendChild(mobileWatchlist);
+            
+            const mobileBookings = document.createElement('li');
+            mobileBookings.innerHTML = `
+                <a href="bookings.html">
+                    <i class="fas fa-ticket-alt"></i> My Bookings
+                </a>
+            `;
+            mobileMenuLinks.appendChild(mobileBookings);
+            
+            const mobileDividerEl = document.createElement('li');
+            mobileDividerEl.style.cssText = 'border-bottom: 1px solid rgba(242,239,233,0.08); margin: 8px 0;';
+            mobileMenuLinks.appendChild(mobileDividerEl);
+            
+            const mobileLogout = document.createElement('li');
+            mobileLogout.className = 'mobile-logout';
+            mobileLogout.innerHTML = `
+                <a href="#" style="color: var(--rust);">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </a>
+            `;
+            mobileMenuLinks.appendChild(mobileLogout);
+            
+            // Add logout event listener
+            mobileLogout.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                logout();
+            });
+        }
+        
+        if (mobileDivider) mobileDivider.style.display = 'block';
+        
+        // Setup profile dropdown
+        setupProfileDropdown();
+        
+        // Add logout event listener
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+        
+        // Fetch watch count for authenticated user
+        fetchWatchCount();
+        
+    } else {
+        // Not authenticated - show sign in button
+        navRight.innerHTML = `
+            <a href="logout.html" class="btn-signin">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </a>
+        `;
+        
+        // Render mobile sign in link
+        if (mobileMenuLinks) {
+            const signInLink = document.createElement('li');
+            signInLink.className = 'mobile-signin';
+            signInLink.innerHTML = `
+                <a href="logout.html" style="color: var(--gold);">
+                    <i class="fas fa-sign-in-alt"></i> Sign In / Create Account
+                </a>
+            `;
+            mobileMenuLinks.appendChild(signInLink);
+        }
+        
+        if (mobileDivider) mobileDivider.style.display = 'block';
+    }
+}
 
-            function goToSlide(index) {
-                const slides = document.querySelectorAll('.hero-slide');
-                const dots = document.querySelectorAll('.hero-dot');
-                
-                if (slides.length === 0) return;
-                
-                if (index < 0) index = slides.length - 1;
-                if (index >= slides.length) index = 0;
-                
-                currentSlide = index;
-                
-                document.querySelector('.hero-carousel-slides').style.transform = `translateX(-${index * 100}%)`;
-                
-                dots.forEach((dot, i) => {
-                    dot.classList.toggle('active', i === index);
+// ============================================================
+// PROFILE DROPDOWN - IMPROVED
+// ============================================================
+
+function setupProfileDropdown() {
+    const profileWrapper = document.getElementById('profileWrapper');
+    const avatarBtn = document.getElementById('avatarBtn');
+    
+    if (!profileWrapper || !avatarBtn) return;
+    
+    let closeTimer;
+    
+    // Hover events
+    profileWrapper.addEventListener('mouseenter', function() {
+        clearTimeout(closeTimer);
+        this.classList.add('is-open');
+    });
+    
+    profileWrapper.addEventListener('mouseleave', function() {
+        closeTimer = setTimeout(() => {
+            this.classList.remove('is-open');
+        }, 300);
+    });
+    
+    // Click events for mobile
+    avatarBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        profileWrapper.classList.toggle('is-open');
+    });
+    
+    // Close on outside click
+    document.addEventListener('click', function(e) {
+        if (!profileWrapper.contains(e.target)) {
+            profileWrapper.classList.remove('is-open');
+        }
+    });
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            profileWrapper.classList.remove('is-open');
+        }
+    });
+}
+
+// ============================================================
+// FETCH WATCH COUNT
+// ============================================================
+
+async function fetchWatchCount() {
+    try {
+        const response = await fetch(`${API_BASE}/watchlist`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const watchlist = Array.isArray(data) ? data : (data.data || data.watchlist || []);
+            const watchedCount = watchlist.filter(item => item.watched === 'Y' || item.watched === true).length;
+            
+            const statEl = document.getElementById('navStat');
+            if (statEl) {
+                statEl.textContent = `${watchedCount} ${watchedCount === 1 ? 'film' : 'films'} watched`;
+            }
+        } else {
+            console.warn('Failed to fetch watchlist:', response.status);
+        }
+    } catch (error) {
+        console.error('Error fetching watch count:', error);
+    }
+}
+
+// ============================================================
+// LOGOUT - Redirect to logout.html
+// ============================================================
+
+function logout() {
+    // Clear all auth data
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userData');
+    
+    // Clear session storage if used
+    sessionStorage.clear();
+    
+    console.log('🔒 User logged out successfully');
+    
+    // Redirect to logout page or home
+    window.location.href = 'logout.html';
+}
+
+// ============================================================
+// MOBILE MENU
+// ============================================================
+
+const menuToggle = document.getElementById('menuToggle');
+const mobileMenu = document.getElementById('mobileMenu');
+const mobileOverlay = document.getElementById('mobileOverlay');
+const mobileMenuClose = document.getElementById('mobileMenuClose');
+
+function openMobileMenu() {
+    if (mobileMenu) mobileMenu.classList.add('open');
+    if (mobileOverlay) mobileOverlay.classList.add('active');
+    if (menuToggle) menuToggle.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileMenu() {
+    if (mobileMenu) mobileMenu.classList.remove('open');
+    if (mobileOverlay) mobileOverlay.classList.remove('active');
+    if (menuToggle) menuToggle.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+if (menuToggle) {
+    menuToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (mobileMenu && mobileMenu.classList.contains('open')) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    });
+}
+
+if (mobileMenuClose) {
+    mobileMenuClose.addEventListener('click', closeMobileMenu);
+}
+
+if (mobileOverlay) {
+    mobileOverlay.addEventListener('click', closeMobileMenu);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
+        closeMobileMenu();
+    }
+});
+
+document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
+    link.addEventListener('click', closeMobileMenu);
+});
+
+// ============================================================
+// FETCH HERO SLIDES - Using specific movie IDs - FIXED
+// ============================================================
+
+async function fetchHeroSlides() {
+    const slidesContainer = document.getElementById('heroSlides');
+
+    try {
+        const response = await fetch(MOVIES_NOW_SHOWING);
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('📊 All movies data:', data);
+        
+        const allMovies = data.movies || data.data || [];
+        console.log('📊 Total movies found:', allMovies.length);
+        
+        // ✅ FIXED: Correctly filter movies by ID
+        const featuredMovies = allMovies.filter(movie => {
+            // Try all possible ID fields from your database
+            const movieId = movie.movieId || movie.MOVIE_ID || movie.id || movie.TMDB_ID;
+            
+            // Debug each movie
+            console.log(`🔍 Checking: ${movie.title} (ID: ${movieId}) - ${FEATURED_MOVIE_IDS.includes(movieId) ? '✅ MATCH' : '❌ NO'}`);
+            
+            return FEATURED_MOVIE_IDS.includes(movieId);
+        });
+
+        console.log('⭐ Featured movies found:', featuredMovies.length);
+        console.log('⭐ Featured movies:', featuredMovies);
+
+        // If no featured movies found, use first few movies
+        let selectedMovies = featuredMovies.length > 0 
+            ? featuredMovies 
+            : allMovies.slice(0, MAX_HERO_SLIDES);
+
+        selectedMovies = selectedMovies.slice(0, MAX_HERO_SLIDES);
+
+        if (selectedMovies.length === 0) {
+            if (slidesContainer) {
+                slidesContainer.innerHTML = `
+                    <div style="text-align:center;padding:40px;color:var(--paper-dim);">
+                        <i class="fas fa-film" style="font-size:32px;color:var(--gold);"></i>
+                        <p>No movies available</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        // Build hero slides with proper links
+        heroSlides = selectedMovies.map(movie => {
+            // Get the movie ID from the correct field
+            const movieId = movie.movieId || movie.MOVIE_ID || movie.id || movie.TMDB_ID;
+            const link = `movie-details.html?id=${movieId}`;
+            
+            console.log(`✅ Slide: ${movie.title} → ID: ${movieId} → Link: ${link}`);
+            
+            return {
+                id: movieId,
+                title: movie.title || 'Untitled',
+                subtitle: movie.releaseDate 
+                    ? new Date(movie.releaseDate).getFullYear() 
+                    : 'Now Showing',
+                description: movie.description || 'Experience this film at Savannah Cinemas.',
+                image: movie.backdropUrl || movie.backdrop_path || '',
+                link: link,
+                rating: movie.rating || 'N/A'
+            };
+        });
+
+        renderHero();
+
+    } catch (error) {
+        console.error('Error fetching hero slides:', error);
+        if (slidesContainer) {
+            slidesContainer.innerHTML = `
+                <div style="text-align:center;padding:40px;color:var(--paper-dim);">
+                    <i class="fas fa-exclamation-circle" style="font-size:32px;color:var(--rust);"></i>
+                    <p>Failed to load hero slides. Please refresh.</p>
+                </div>
+            `;
+        }
+    }
+}
+        // ============================================================
+        // RENDER HERO
+        // ============================================================
+
+        function renderHero() {
+            const slidesContainer = document.getElementById('heroSlides');
+            const dotsContainer = document.getElementById('heroDots');
+            
+            if (!slidesContainer || !dotsContainer) return;
+            
+            if (heroSlides.length === 0) {
+                slidesContainer.innerHTML = `
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        width:100%;
+                        height:100%;
+                        color:var(--paper-dim);
+                        flex-direction:column;
+                        gap:10px;
+                    ">
+                        <i class="fas fa-film" style="font-size:32px;color:var(--gold);"></i>
+                        <p style="font-size:14px;">No movies currently showing.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            slidesContainer.innerHTML = heroSlides.map((slide) => `
+                <div class="hero-slide" style="background-image: url('${slide.image}'); background-color: var(--ink-raised);">
+                    <div class="hero-content">
+                        <div class="hero-eyebrow">
+                            ${slide.subtitle} ${slide.rating ? '⭐ ' + slide.rating : ''}
+                        </div>
+                        <h2>${slide.title}</h2>
+                        <p>${slide.description}</p>
+                        <a href="${slide.link}" class="btn-hero">
+                            <i class="fas fa-play"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+            
+            dotsContainer.innerHTML = heroSlides.map((_, index) => `
+                <button class="hero-dot ${index === 0 ? 'active' : ''}" data-index="${index}" aria-label="Go to slide ${index + 1}"></button>
+            `).join('');
+            
+            document.querySelectorAll('.hero-dot').forEach(dot => {
+                dot.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    goToSlide(index);
                 });
-                
-                resetAutoSlide();
+            });
+            
+            const prevBtn = document.getElementById('heroPrev');
+            const nextBtn = document.getElementById('heroNext');
+            
+            if (prevBtn) {
+                prevBtn.removeEventListener('click', heroPrevHandler);
+                prevBtn.addEventListener('click', heroPrevHandler);
             }
-
-            function startAutoSlide() {
-                if (heroSlides.length <= 1) return;
-                slideInterval = setInterval(() => {
-                    goToSlide(currentSlide + 1);
-                }, 6000);
+            
+            if (nextBtn) {
+                nextBtn.removeEventListener('click', heroNextHandler);
+                nextBtn.addEventListener('click', heroNextHandler);
             }
-
-            function resetAutoSlide() {
-                clearInterval(slideInterval);
+            
+            if (heroSlides.length > 0) {
                 startAutoSlide();
             }
+        }
 
-            // ============================================================
-            // FETCH POPULAR MOVIES
-            // ============================================================
+        // ============================================================
+        // HERO SLIDE FUNCTIONS
+        // ============================================================
+
+        function heroPrevHandler() {
+            goToSlide(currentSlide - 1);
+        }
+
+        function heroNextHandler() {
+            goToSlide(currentSlide + 1);
+        }
+
+        function goToSlide(index) {
+            const slides = document.querySelectorAll('.hero-slide');
+            const dots = document.querySelectorAll('.hero-dot');
             
-            async function fetchPopularMovies() {
-                const track = document.getElementById('carouselTrack');
-                
-                try {
-                    const response = await fetch(
-                        `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US&page=1`
-                    );
-                    
-                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                    
-                    const data = await response.json();
-                    const movies = data.results.slice(0, 12);
-                    
-                    track.innerHTML = movies.map(movie => `
-                        <div class="movie-card" onclick="viewMovie(${movie.id})">
-                            <div class="poster" style="background-image: url('${movie.poster_path ? IMAGE_BASE + movie.poster_path : ''}');">
-                                <span class="rating-badge">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
+            if (slides.length === 0) return;
+            
+            if (index < 0) index = slides.length - 1;
+            if (index >= slides.length) index = 0;
+            
+            currentSlide = index;
+            
+            const slidesContainer = document.querySelector('.hero-carousel-slides');
+            if (slidesContainer) {
+                slidesContainer.style.transform = `translateX(-${index * 100}%)`;
+            }
+            
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+            
+            resetAutoSlide();
+        }
+
+        function startAutoSlide() {
+            if (heroSlides.length <= 1) return;
+            if (slideInterval) clearInterval(slideInterval);
+            slideInterval = setInterval(() => {
+                goToSlide(currentSlide + 1);
+            }, 6000);
+        }
+
+        function resetAutoSlide() {
+            clearInterval(slideInterval);
+            startAutoSlide();
+        }
+
+        // ============================================================
+        // FETCH POPULAR MOVIES
+        // ============================================================
+
+        async function fetchPopularMovies() {
+            const track = document.getElementById('carouselTrack');
+            if (!track) return;
+
+            try {
+                const response = await fetch(MOVIES_POPULAR);
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const movies = data.movies || data.data || [];
+                const displayMovies = movies.slice(0, 12);
+
+                if (displayMovies.length === 0) {
+                    track.innerHTML = `
+                        <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--paper-dim);font-size:14px;">
+                            No popular movies found.
+                        </div>
+                    `;
+                    return;
+                }
+
+                track.innerHTML = displayMovies.map(movie => {
+                    const posterUrl = movie.posterUrl || movie.poster_path || '';
+                    const rating = movie.rating !== null && movie.rating !== undefined 
+                        ? Number(movie.rating).toFixed(1) 
+                        : 'N/A';
+                    const year = movie.releaseDate 
+                        ? new Date(movie.releaseDate).getFullYear() 
+                        : 'TBA';
+
+                    return `
+                        <div class="movie-card" onclick="viewMovie(${movie.movieId || movie.id})">
+                            <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
+                                <span class="rating-badge">
+                                    ⭐ ${rating}
+                                </span>
                             </div>
                             <div class="card-body">
-                                <div class="title">${movie.title}</div>
-                                <div class="year">${movie.release_date ? movie.release_date.substring(0, 4) : 'TBA'}</div>
+                                <div class="title">${movie.title || 'Untitled'}</div>
+                                <div class="year">${year}</div>
                             </div>
                         </div>
-                    `).join('');
-                    
-                } catch (error) {
-                    console.error('Error fetching popular movies:', error);
-                    track.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--paper-dim);font-size:14px;">Failed to load movies. Please refresh.</div>`;
-                }
-            }
+                    `;
+                }).join('');
 
-            // ============================================================
-            // FETCH UPCOMING FILMS - Fetch 5 pages with deduplication
-            // ============================================================
-            
-            async function fetchUpcomingFilms() {
-                const track = document.getElementById('upcomingTrack');
+            } catch (error) {
+                console.error('Error fetching popular movies:', error);
+                track.innerHTML = `
+                    <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--paper-dim);font-size:14px;">
+                        Failed to load movies. Please refresh.
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================================
+        // FETCH UPCOMING FILMS
+        // ============================================================
+
+        async function fetchUpcomingFilms() {
+            const track = document.getElementById('upcomingTrack');
+            if (!track) return;
+
+            try {
+                const response = await fetch(MOVIES_UPCOMING);
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const movies = data.movies || data.data || [];
                 
-                try {
-                    let allUpcomingFilms = [];
-                    const seenIds = new Set();
-                    
-                    // Fetch pages 1 through 5
-                    for (let page = 1; page <= MAX_PAGES; page++) {
-                        const response = await fetch(
-                            `https://api.themoviedb.org/3/movie/upcoming?api_key=${API_KEY}&language=en-US&page=${page}`
-                        );
-                        
-                        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                        
-                        const data = await response.json();
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        
-                        // Filter: only keep films with release date > today and not already seen
-                        const upcoming = data.results.filter(film => {
-                            if (!film.release_date) return false;
-                            const releaseDate = new Date(film.release_date);
-                            // Check if release date is in the future
-                            if (releaseDate <= today) return false;
-                            // Check if we've already seen this film
-                            if (seenIds.has(film.id)) return false;
-                            // Add to seen set
-                            seenIds.add(film.id);
-                            return true;
-                        });
-                        
-                        allUpcomingFilms = [...allUpcomingFilms, ...upcoming];
-                        
-                        // If we've reached the last page, stop fetching
-                        if (page >= data.total_pages) break;
-                    }
-                    
-                    // Sort by release date (earliest first)
-                    allUpcomingFilms.sort((a, b) => {
-                        return new Date(a.release_date) - new Date(b.release_date);
-                    });
-                    
-                    // Take up to 12 films (same as popular movies)
-                    const displayFilms = allUpcomingFilms.slice(0, 12);
-                    
-                    if (displayFilms.length === 0) {
-                        track.innerHTML = `
-                            <div style="flex:1;text-align:center;padding:40px;color:var(--paper-dim);font-size:14px;min-width:300px;">
-                                <i class="fas fa-calendar-alt" style="display:block;font-size:32px;margin-bottom:12px;color:var(--gold);"></i>
-                                No upcoming films found. Check back soon!
-                            </div>
-                        `;
-                        return;
-                    }
-                    
-                    track.innerHTML = displayFilms.map(film => {
-                        const posterUrl = film.poster_path ? `${IMAGE_BASE}${film.poster_path}` : '';
-                        const releaseDate = film.release_date ? new Date(film.release_date).toLocaleDateString('en-US', {
+                const sortedMovies = movies
+                    .filter(movie => movie.releaseDate)
+                    .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate))
+                    .slice(0, 12);
+
+                if (sortedMovies.length === 0) {
+                    track.innerHTML = `
+                        <div style="flex:1;text-align:center;padding:40px;color:var(--paper-dim);font-size:14px;min-width:300px;">
+                            <i class="fas fa-calendar-alt" style="display:block;font-size:32px;margin-bottom:12px;color:var(--gold);"></i>
+                            No upcoming films found. Check back soon!
+                        </div>
+                    `;
+                    return;
+                }
+
+                track.innerHTML = sortedMovies.map(movie => {
+                    const posterUrl = movie.posterUrl || movie.poster_path || '';
+                    const releaseDate = movie.releaseDate 
+                        ? new Date(movie.releaseDate).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric'
-                        }) : 'TBA';
-                        
-                        const year = film.release_date ? film.release_date.substring(0, 4) : 'TBA';
-                        const rating = film.vote_average ? film.vote_average.toFixed(1) : 'N/A';
-                        
-                        return `
-                            <div class="upcoming-card" onclick="viewMovie(${film.id})">
-                                <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
-                                    <span class="rating-badge">⭐ ${rating}</span>
-                                    <span class="release-badge"><i class="far fa-calendar-alt"></i> ${releaseDate}</span>
-                                </div>
-                                <div class="card-body">
-                                    <div class="title">${film.title || 'Untitled'}</div>
-                                    <div class="year">${year}</div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
+                        }) 
+                        : 'TBA';
                     
-                } catch (error) {
-                    console.error('Error fetching upcoming films:', error);
-                    track.innerHTML = `
-                        <div style="flex:1;text-align:center;padding:40px;color:var(--paper-dim);font-size:14px;min-width:300px;">
-                            <i class="fas fa-exclamation-circle" style="display:block;font-size:32px;margin-bottom:12px;color:var(--rust);"></i>
-                            Failed to load upcoming films. Please refresh the page.
+                    const year = movie.releaseDate 
+                        ? movie.releaseDate.substring(0, 4) 
+                        : 'TBA';
+                    
+                    const rating = movie.rating !== null && movie.rating !== undefined 
+                        ? Number(movie.rating).toFixed(1) 
+                        : 'N/A';
+
+                    return `
+                        <div class="upcoming-card" onclick="viewMovie(${movie.movieId || movie.id})">
+                            <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
+                                <span class="rating-badge">⭐ ${rating}</span>
+                                <span class="release-badge"><i class="far fa-calendar-alt"></i> ${releaseDate}</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="title">${movie.title || 'Untitled'}</div>
+                                <div class="year">${year}</div>
+                            </div>
                         </div>
                     `;
-                }
-            }
+                }).join('');
 
-            // ============================================================
-            // EVENTS DATA
-            // ============================================================
-            
-            const eventsData = [
-                {
-                    title: 'Director\'s Cut Night',
-                    date: 'Dec 15, 2024',
-                    time: '7:00 PM',
-                    location: 'Screen 1',
-                    type: 'Special Screening',
-                    badge: 'Free Entry',
-                    isFree: true,
-                    image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=300&fit=crop',
-                    description: 'Experience the director\'s vision with exclusive behind-the-scenes commentary.'
-                },
-                {
-                    title: 'Christmas Movie Marathon',
-                    date: 'Dec 20, 2024',
-                    time: '10:00 AM',
-                    location: 'Screen 2 & 3',
-                    type: 'Marathon',
-                    badge: 'All-Day Pass',
-                    isFree: false,
-                    image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=300&fit=crop',
-                    description: 'Four classic Christmas films back-to-back with special holiday treats.'
-                },
-                {
-                    title: 'Film Industry Panel',
-                    date: 'Jan 10, 2025',
-                    time: '6:30 PM',
-                    location: 'Lobby Lounge',
-                    type: 'Panel Discussion',
-                    badge: 'Free Entry',
-                    isFree: true,
-                    image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=300&fit=crop',
-                    description: 'Local filmmakers discuss the art of storytelling and the future of cinema.'
-                }
-            ];
-
-            function renderEvents() {
-                const grid = document.getElementById('eventsGrid');
-                if (!grid) return;
-                
-                grid.innerHTML = eventsData.map(event => `
-                    <div class="event-card" onclick="eventDetail('${event.title}')">
-                        <div class="event-image" style="background-image: url('${event.image}');">
-                            <span class="event-badge ${event.isFree ? 'free' : ''}">${event.badge}</span>
-                        </div>
-                        <div class="event-body">
-                            <div class="event-title">${event.title}</div>
-                            <div class="event-meta">
-                                <span><i class="far fa-calendar-alt"></i> ${event.date}</span>
-                                <span><i class="far fa-clock"></i> ${event.time}</span>
-                            </div>
-                            <div class="event-meta">
-                                <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
-                            </div>
-                            <div class="event-desc">${event.description}</div>
-                            <button class="btn-event">Learn More</button>
-                        </div>
+            } catch (error) {
+                console.error('Error fetching upcoming films:', error);
+                track.innerHTML = `
+                    <div style="flex:1;text-align:center;padding:40px;color:var(--paper-dim);font-size:14px;min-width:300px;">
+                        <i class="fas fa-exclamation-circle" style="display:block;font-size:32px;margin-bottom:12px;color:var(--rust);"></i>
+                        Failed to load upcoming films. Please refresh the page.
                     </div>
-                `).join('');
+                `;
             }
+        }
 
-            // ============================================================
-            // GLOBAL FUNCTIONS
-            // ============================================================
-            
-            window.viewMovie = function(movieId) {
-                window.location.href = `movie-details.html?id=${movieId}`;
-            };
-            
-            window.eventDetail = function(title) {
-                alert(`Event: "${title}"\n\nMore details will be available soon.`);
-            };
-
-            // ============================================================
-            // CAROUSEL NAVIGATION
-            // ============================================================
-            
-            // Popular Movies Carousel
-            const track = document.getElementById('carouselTrack');
-            const prevBtn = document.getElementById('carouselPrev');
-            const nextBtn = document.getElementById('carouselNext');
-            
-            if (prevBtn && nextBtn && track) {
-                prevBtn.addEventListener('click', function() {
-                    track.scrollBy({ left: -280, behavior: 'smooth' });
-                });
-                
-                nextBtn.addEventListener('click', function() {
-                    track.scrollBy({ left: 280, behavior: 'smooth' });
-                });
+        // ============================================================
+        // EVENTS DATA
+        // ============================================================
+        
+        const eventsData = [
+            {
+                title: 'Director\'s Cut Night',
+                date: 'Dec 15, 2024',
+                time: '7:00 PM',
+                location: 'Screen 1',
+                type: 'Special Screening',
+                badge: 'Free Entry',
+                isFree: true,
+                image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=300&fit=crop',
+                description: 'Experience the director\'s vision with exclusive behind-the-scenes commentary.'
+            },
+            {
+                title: 'Christmas Movie Marathon',
+                date: 'Dec 20, 2024',
+                time: '10:00 AM',
+                location: 'Screen 2 & 3',
+                type: 'Marathon',
+                badge: 'All-Day Pass',
+                isFree: false,
+                image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=300&fit=crop',
+                description: 'Four classic Christmas films back-to-back with special holiday treats.'
+            },
+            {
+                title: 'Film Industry Panel',
+                date: 'Jan 10, 2025',
+                time: '6:30 PM',
+                location: 'Lobby Lounge',
+                type: 'Panel Discussion',
+                badge: 'Free Entry',
+                isFree: true,
+                image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=300&fit=crop',
+                description: 'Local filmmakers discuss the art of storytelling and the future of cinema.'
             }
-            
-            // Upcoming Films Carousel
-            const upcomingTrack = document.getElementById('upcomingTrack');
-            const upcomingPrev = document.getElementById('upcomingPrev');
-            const upcomingNext = document.getElementById('upcomingNext');
-            
-            if (upcomingPrev && upcomingNext && upcomingTrack) {
-                upcomingPrev.addEventListener('click', function() {
-                    upcomingTrack.scrollBy({ left: -280, behavior: 'smooth' });
-                });
-                
-                upcomingNext.addEventListener('click', function() {
-                    upcomingTrack.scrollBy({ left: 280, behavior: 'smooth' });
-                });
-            }
+        ];
 
-            // ============================================================
-            // INITIALIZE
-            // ============================================================
+        function renderEvents() {
+            const grid = document.getElementById('eventsGrid');
+            if (!grid) return;
             
-            renderNav();
-            fetchHeroSlides();
-            fetchPopularMovies();
-            fetchUpcomingFilms();
-            renderEvents();
+            grid.innerHTML = eventsData.map(event => `
+                <div class="event-card" onclick="eventDetail('${event.title}')">
+                    <div class="event-image" style="background-image: url('${event.image}');">
+                        <span class="event-badge ${event.isFree ? 'free' : ''}">${event.badge}</span>
+                    </div>
+                    <div class="event-body">
+                        <div class="event-title">${event.title}</div>
+                        <div class="event-meta">
+                            <span><i class="far fa-calendar-alt"></i> ${event.date}</span>
+                            <span><i class="far fa-clock"></i> ${event.time}</span>
+                        </div>
+                        <div class="event-meta">
+                            <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
+                        </div>
+                        <div class="event-desc">${event.description}</div>
+                        <button class="btn-event">Learn More</button>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-        });
-    </script>
+        // ============================================================
+        // GLOBAL FUNCTIONS
+        // ============================================================
+        
+        window.viewMovie = function(movieId) {
+            if (!movieId) return;
+            window.location.href = `movie-details.html?id=${movieId}`;
+        };
+        
+        window.eventDetail = function(title) {
+            alert(`Event: "${title}"\n\nMore details will be available soon.`);
+        };
+
+        // ============================================================
+        // CAROUSEL NAVIGATION
+        // ============================================================
+        
+        const track = document.getElementById('carouselTrack');
+        const prevBtn = document.getElementById('carouselPrev');
+        const nextBtn = document.getElementById('carouselNext');
+        
+        if (prevBtn && nextBtn && track) {
+            prevBtn.addEventListener('click', function() {
+                track.scrollBy({ left: -280, behavior: 'smooth' });
+            });
+            
+            nextBtn.addEventListener('click', function() {
+                track.scrollBy({ left: 280, behavior: 'smooth' });
+            });
+        }
+        
+        const upcomingTrack = document.getElementById('upcomingTrack');
+        const upcomingPrev = document.getElementById('upcomingPrev');
+        const upcomingNext = document.getElementById('upcomingNext');
+        
+        if (upcomingPrev && upcomingNext && upcomingTrack) {
+            upcomingPrev.addEventListener('click', function() {
+                upcomingTrack.scrollBy({ left: -280, behavior: 'smooth' });
+            });
+            
+            upcomingNext.addEventListener('click', function() {
+                upcomingTrack.scrollBy({ left: 280, behavior: 'smooth' });
+            });
+        }
+
+        // ============================================================
+        // INITIALIZE
+        // ============================================================
+        
+        console.log('🔐 Authentication Status:', isAuthenticated ? '✅ Logged In' : '❌ Not Logged In');
+        if (isAuthenticated && userData) {
+            console.log('👤 User:', userData.name || userData.forenames || 'Unknown User');
+            console.log('📧 Email:', userData.email || 'No email');
+        }
+        
+        renderNav();
+        fetchHeroSlides();
+        fetchPopularMovies();
+        fetchUpcomingFilms();
+        renderEvents();
+
+        console.log('🎬 Savannah Cinemas initialized');
+        console.log('📡 API Base:', API_BASE);
+
+    });
+</script>
 </body>
 </html>

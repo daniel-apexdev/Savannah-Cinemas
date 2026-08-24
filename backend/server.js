@@ -23,6 +23,7 @@ const preferenceRoutes = require('./routes/preferenceRoutes');
 const cinemaFavoriteRoutes = require('./routes/cinemaFavoriteRoutes');
 const movieViewRoutes = require('./routes/movieViewRoutes');
 const pricingRoutes = require('./routes/pricingRoutes');
+const promotionRoutes = require('./routes/promotionRoutes');
 
 const {
     initializeDatabase,
@@ -68,6 +69,7 @@ app.use('/api/users/me/preferences', preferenceRoutes);
 app.use('/api/favorites/cinemas', cinemaFavoriteRoutes);
 app.use('/api/movies/views', movieViewRoutes);
 app.use('/api/pricing', pricingRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 // ============================================================
 // LOCAL IP DETECTION

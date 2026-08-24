@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Savannah Cinemas - Now Showing</title>
+    <style>
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .movie-card {
+            background: #1D1D28;
+            color: #F2EFE9;
+            border-radius: 10px;
+            overflow: hidden;
+            padding: 10px;
+        }
+        .movie-card img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        .movie-card h3 {
+            color: #E8B34C;
+            margin: 10px 0 5px;
+        }
+        .movie-card .rating {
+            color: #E8B34C;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 Savannah Cinemas</h1>
+    
+    <div>
+        <button onclick="loadMovies('now-showing')">Now Showing</button>
+        <button onclick="loadMovies('upcoming')">Upcoming</button>
+        <button onclick="loadMovies('popular')">Popular</button>
+        <button onclick="loadMovies('top-rated')">Top Rated</button>
+    </div>
+    
+    <div id="movies-container" class="movie-grid">
+        <p>Loading movies...</p>
+    </div>
+
+    <script src="./backend/config.js"></script>
+    <script>
+        // Your config.js should be loaded first
+        // const API_BASE = 'http://192.168.8.104:5000/api';
+        
+        async function loadMovies(endpoint) {
+            const container = document.getElementById('movies-container');
+            container.innerHTML = '<p>Loading movies...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/movies/${endpoint}`);
+                const data = await response.json();
+                
+                if (data.success && data.data.length > 0) {
+                    container.innerHTML = data.data.map(movie => `
+                        <div class="movie-card">
+                            ${movie.posterUrl ? `<img src="${movie.posterUrl}" alt="${movie.title}">` : ''}
+                            <h3>${movie.title}</h3>
+                            ${movie.releaseDate ? `<p>📅 ${new Date(movie.releaseDate).toLocaleDateString()}</p>` : ''}
+                            ${movie.rating ? `<p class="rating">⭐ ${movie.rating.toFixed(1)}/10</p>` : ''}
+                            ${movie.runtimeMinutes ? `<p>⏱ ${movie.runtimeMinutes} min</p>` : ''}
+                            ${movie.ageRating ? `<p>🔞 ${movie.ageRating}</p>` : ''}
+                            <p>Status: ${movie.status}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>No movies found.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading movies:', error);
+                container.innerHTML = `<p>Error loading movies: ${error.message}</p>`;
+            }
+        }
+
+        // Load Now Showing on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMovies('now-showing');
+        });
+    </script>
+</body>
+</html>
