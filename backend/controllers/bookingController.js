@@ -297,7 +297,16 @@ async function createBooking(req, res) {
 
             WHERE BS.SHOWTIME_ID = :showtimeId
               AND BS.SEAT_ID IN (${placeholders})
-              AND B.STATUS IN ('PENDING', 'CONFIRMED')
+              AND (
+    B.STATUS = 'CONFIRMED'
+    OR (
+        B.STATUS = 'PENDING'
+        AND (
+            B.EXPIRES_AT IS NULL
+            OR B.EXPIRES_AT > CURRENT_TIMESTAMP
+        )
+    )
+)
             `,
             {
                 showtimeId: parsedShowtimeId,

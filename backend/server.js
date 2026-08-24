@@ -9,11 +9,20 @@ const { authenticateToken } = require('./middleware/authMiddleware');
 const authorize = require('./middleware/roleMiddleware');
 const watchlistRoutes = require('./routes/watchlistRoutes');
 const movieRoutes = require('./routes/movieRoutes');
+const tmdbRoutes = require('./routes/tmdbRoutes');
+const movieEnrichmentRoutes = require('./routes/movieEnrichmentRoutes');
 const cinemaRoutes = require('./routes/cinemaRoutes');
 const showtimeRoutes = require('./routes/showtimeRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
+const userRoutes = require('./routes/userRoutes');
+const favouriteRoutes = require('./routes/favouriteRoutes');
+const movieReviewRoutes = require('./routes/movieReviewRoutes');
+const preferenceRoutes = require('./routes/preferenceRoutes');
+const cinemaFavoriteRoutes = require('./routes/cinemaFavoriteRoutes');
+const movieViewRoutes = require('./routes/movieViewRoutes');
+const pricingRoutes = require('./routes/pricingRoutes');
 
 const {
     initializeDatabase,
@@ -45,11 +54,21 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/watchlist', watchlistRoutes);
 app.use('/api/movies', movieRoutes);
+app.use('/api/movies/tmdb', tmdbRoutes);
+app.use('/api/movies/enrichment', movieEnrichmentRoutes);
 app.use('/api/cinemas', cinemaRoutes);
 app.use('/api/showtimes', showtimeRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/users/me/favourites', favouriteRoutes);
+app.use('/api/reviews', movieReviewRoutes);
+app.use('/api/users/me/preferences', preferenceRoutes);
+app.use('/api/favorites/cinemas', cinemaFavoriteRoutes);
+app.use('/api/movies/views', movieViewRoutes);
+app.use('/api/pricing', pricingRoutes);
+
 // ============================================================
 // LOCAL IP DETECTION
 // ============================================================

@@ -120,9 +120,25 @@ async function register(req, res) {
                     type: oracledb.NUMBER
                 }
             }
+
+            
         );
 
         const userId = userResult.outBinds.userId[0];
+
+        await connection.execute(
+            `
+            INSERT INTO USER_NOTIFICATION_PREFERENCES (
+                USER_ID
+            )
+            VALUES (
+                :userId
+            )
+            `,
+            {
+                userId
+            }
+        );
 
         // ----------------------------------------
         // CREATE CUSTOMER PROFILE

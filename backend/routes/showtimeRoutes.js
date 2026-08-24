@@ -6,8 +6,14 @@ const {
     getMovieShowtimes,
     getCinemaShowtimes,
     getScreenShowtimes,
-    getShowtimeSeats
+    getShowtimeSeats,
+    createShowtime
 } = require('../controllers/showtimeController');
+
+const {
+    authenticateToken,
+    requireRole
+} = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -16,6 +22,15 @@ const router = express.Router();
 // ============================================================
 
 router.get('/', getShowtimes);
+
+router.post('/', createShowtime);
+
+router.post(
+    '/',
+    authenticateToken,
+    requireRole('ADMIN', 'MANAGER'),
+    createShowtime
+);
 
 // ============================================================
 // SHOWTIMES FOR MOVIE

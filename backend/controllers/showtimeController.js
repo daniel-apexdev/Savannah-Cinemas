@@ -1,5 +1,6 @@
 const { getConnection } = require('../config/database');
 
+
 // ============================================================
 // GET ALL SHOWTIMES
 // ============================================================
@@ -903,6 +904,537 @@ async function getScreenShowtimes(req, res) {
     }
 }
 
+// ============================================================
+// CREATE SHOWTIME
+// ============================================================
+
+async function createShowtime(req, res) {
+
+    let connection;
+
+    try {
+
+        const {
+            movieId,
+            cinemaId,
+            screenId,
+            showDate,
+            startTime,
+            ticketPrice
+        } = req.body;
+
+        // ----------------------------------------------------
+        // VALIDATION
+        // ----------------------------------------------------
+
+        if (
+            !movieId ||
+            !cinemaId ||
+            !screenId ||
+            !showDate ||
+            !startTime ||
+            ticketPrice === undefined ||
+            ticketPrice === null
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Movie, cinema, screen, date, start time and ticket price are required'
+            });
+
+        }
+
+        const parsedMovieId = Number(movieId);
+        const parsedCinemaId = Number(cinemaId);
+        const parsedScreenId = Number(screenId);
+        const parsedTicketPrice = Number(ticketPrice);
+
+        if (
+            !Number.isInteger(parsedMovieId) ||
+            !Number.isInteger(parsedCinemaId) ||
+            !Number.isInteger(parsedScreenId)
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Movie, cinema and screen IDs must be valid numbers'
+            });
+
+        }
+
+        if (
+            !Number.isFinite(parsedTicketPrice) ||
+            parsedTicketPrice < 0
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Ticket price must be a valid positive number'
+            });
+
+        }
+
+        // ----------------------------------------------------
+        // VALIDATE DATE
+        // ----------------------------------------------------
+
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+        if (!datePattern.test(showDate)) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Show date must use YYYY-MM-DD format'
+            });
+
+        }
+
+        // ----------------------------------------------------
+        // VALIDATE TIME
+        // ----------------------------------------------------
+
+        const timePattern =
+            /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
+
+        const timeMatch =
+            startTime.match(timePattern);
+
+        if (!timeMatch) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Invalid start time. Use HH:MM or HH:MM:SS'
+            });
+
+        }
+
+        const hours = Number(timeMatch[1]);
+        const minutes = Number(timeMatch[2]);
+        const seconds = Number(timeMatch[3] || 0);
+
+        // ----------------------------------------------------
+        // DATABASE CONNECTION
+        // ----------------------------------------------------
+
+        connection = await getConnection();
+
+        // ----------------------------------------------------
+        // GET MOVIE RUNTIME
+        // ----------------------------------------------------
+
+        const movieResult = await connection.execute(
+            `
+            SELECT
+                MOVIE_ID,
+                TITLE,
+                RUNTIME_MINUTES,
+                STATUS
+            FROM MOVIES
+            WHERE MOVIE_ID = :movieId
+            `,
+            {
+                movieId: parsedMovieId
+            }
+        );
+
+        if (movieResult.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: 'Movie not found'
+            });
+
+        }
+
+        const movie = movieResult.rows[0];
+
+        const movieTitle = movie[1];
+        const runtimeMinutes = movie[2];
+
+        if (
+            runtimeMinutes === null ||
+            runtimeMinutes === undefined ||
+            Number(runtimeMinutes) <= 0
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    `Runtime is not available for "${movieTitle}". Update the movie runtime before creating a showtime.`
+            });
+
+        }
+
+        // ----------------------------------------------------
+        // CHECK CINEMA
+        // ----------------------------------------------------
+
+        const cinemaResult = await connection.execute(
+            `
+            SELECT
+                CINEMA_ID,
+                CINEMA_NAME,
+                IS_ACTIVE
+            FROM CINEMAS
+            WHERE CINEMA_ID = :cinemaId
+            `,
+            {
+                cinemaId: parsedCinemaId
+            }
+        );
+
+        if (cinemaResult.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: 'Cinema not found'
+            });
+
+        }
+
+        if (cinemaResult.rows[0][2] !== 'Y') {
+
+            return res.status(400).json({
+                success: false,
+                message: 'Cinema is not active'
+            });
+
+        }
+
+        // ----------------------------------------------------
+        // CHECK SCREEN
+        // ----------------------------------------------------
+
+        const screenResult = await connection.execute(
+            `
+            SELECT
+                SCREEN_ID,
+                SCREEN_NAME,
+                CINEMA_ID,
+                IS_ACTIVE
+            FROM SCREENS
+            WHERE SCREEN_ID = :screenId
+            `,
+            {
+                screenId: parsedScreenId
+            }
+        );
+
+        if (screenResult.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: 'Screen not found'
+            });
+
+        }
+
+        const screen = screenResult.rows[0];
+
+        if (screen[2] !== parsedCinemaId) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'The selected screen does not belong to the selected cinema'
+            });
+
+        }
+
+        if (screen[3] !== 'Y') {
+
+            return res.status(400).json({
+                success: false,
+                message: 'Screen is not active'
+            });
+
+        }
+
+        // ----------------------------------------------------
+        // CALCULATE END TIME
+        // ----------------------------------------------------
+
+        const startDateTime =
+            new Date(
+                `${showDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+            );
+
+        if (isNaN(startDateTime.getTime())) {
+
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid date or start time'
+            });
+
+        }
+
+        const endDateTime =
+            new Date(startDateTime);
+
+        endDateTime.setMinutes(
+            endDateTime.getMinutes() +
+            Number(runtimeMinutes)
+        );
+
+        // ----------------------------------------------------
+        // FORMAT ORACLE TIMESTAMP VALUES
+        // ----------------------------------------------------
+
+        const formatOracleTimestamp =
+            (date) => {
+
+                const year =
+                    date.getFullYear();
+
+                const month =
+                    String(date.getMonth() + 1)
+                        .padStart(2, '0');
+
+                const day =
+                    String(date.getDate())
+                        .padStart(2, '0');
+
+                const hour =
+                    String(date.getHours())
+                        .padStart(2, '0');
+
+                const minute =
+                    String(date.getMinutes())
+                        .padStart(2, '0');
+
+                const second =
+                    String(date.getSeconds())
+                        .padStart(2, '0');
+
+                return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+            };
+
+        const oracleStartTime =
+            formatOracleTimestamp(startDateTime);
+
+        const oracleEndTime =
+            formatOracleTimestamp(endDateTime);
+
+        // ----------------------------------------------------
+        // CHECK FOR SCREEN CONFLICT
+        // ----------------------------------------------------
+
+        const conflictResult =
+            await connection.execute(
+                `
+                SELECT
+                    SHOWTIME_ID,
+                    START_TIME,
+                    END_TIME
+                FROM SHOWTIMES
+                WHERE SCREEN_ID = :screenId
+                  AND SHOW_DATE = TO_DATE(
+                        :showDate,
+                        'YYYY-MM-DD'
+                  )
+                  AND IS_ACTIVE = 'Y'
+                  AND STATUS NOT IN ('CANCELLED', 'COMPLETED')
+                  AND START_TIME < TO_TIMESTAMP(
+                        :endTime,
+                        'YYYY-MM-DD HH24:MI:SS'
+                  )
+                  AND NVL(
+                        END_TIME,
+                        START_TIME
+                      ) > TO_TIMESTAMP(
+                        :startTime,
+                        'YYYY-MM-DD HH24:MI:SS'
+                  )
+                `,
+                {
+                    screenId: parsedScreenId,
+                    showDate,
+                    startTime: oracleStartTime,
+                    endTime: oracleEndTime
+                }
+            );
+
+        if (conflictResult.rows.length > 0) {
+
+            return res.status(409).json({
+                success: false,
+                message:
+                    'This screen already has a showtime that overlaps with the requested time',
+                conflictingShowtimeId:
+                    conflictResult.rows[0][0]
+            });
+
+        }
+
+        // ----------------------------------------------------
+        // INSERT SHOWTIME
+        // ----------------------------------------------------
+
+        const insertResult =
+            await connection.execute(
+                `
+                INSERT INTO SHOWTIMES (
+                    MOVIE_ID,
+                    CINEMA_ID,
+                    SCREEN_ID,
+                    SHOW_DATE,
+                    START_TIME,
+                    END_TIME,
+                    TICKET_PRICE,
+                    STATUS,
+                    IS_ACTIVE,
+                    CREATED_AT,
+                    UPDATED_AT
+                )
+                VALUES (
+                    :movieId,
+                    :cinemaId,
+                    :screenId,
+                    TO_DATE(
+                        :showDate,
+                        'YYYY-MM-DD'
+                    ),
+                    TO_TIMESTAMP(
+                        :startTime,
+                        'YYYY-MM-DD HH24:MI:SS'
+                    ),
+                    TO_TIMESTAMP(
+                        :endTime,
+                        'YYYY-MM-DD HH24:MI:SS'
+                    ),
+                    :ticketPrice,
+                    'SCHEDULED',
+                    'Y',
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP
+                )
+                RETURNING SHOWTIME_ID INTO :showtimeId
+                `,
+                {
+                    movieId: parsedMovieId,
+                    cinemaId: parsedCinemaId,
+                    screenId: parsedScreenId,
+                    showDate,
+                    startTime: oracleStartTime,
+                    endTime: oracleEndTime,
+                    ticketPrice: parsedTicketPrice,
+
+                    showtimeId: {
+                        dir: require('oracledb').BIND_OUT,
+                        type: require('oracledb').NUMBER
+                    }
+                }
+            );
+
+        const showtimeId =
+            insertResult.outBinds.showtimeId[0];
+
+        await connection.commit();
+
+        // ----------------------------------------------------
+        // RESPONSE
+        // ----------------------------------------------------
+
+        return res.status(201).json({
+
+            success: true,
+
+            message:
+                'Showtime created successfully',
+
+            showtime: {
+
+                showtimeId,
+
+                movieId: parsedMovieId,
+
+                movieTitle,
+
+                cinemaId:
+                    parsedCinemaId,
+
+                screenId:
+                    parsedScreenId,
+
+                showDate,
+
+                startTime:
+                    oracleStartTime,
+
+                endTime:
+                    oracleEndTime,
+
+                runtimeMinutes:
+                    Number(runtimeMinutes),
+
+                ticketPrice:
+                    parsedTicketPrice,
+
+                status:
+                    'SCHEDULED',
+
+                isActive:
+                    true
+
+            }
+
+        });
+
+    } catch (error) {
+
+        if (connection) {
+
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error(
+                    '❌ Rollback error:',
+                    rollbackError.message
+                );
+            }
+
+        }
+
+        console.error(
+            '❌ Create showtime error:',
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                'Server error creating showtime',
+
+            error:
+                error.message
+
+        });
+
+    } finally {
+
+        if (connection) {
+
+            try {
+                await connection.close();
+            } catch (error) {
+                console.error(
+                    '❌ Error closing showtime connection:',
+                    error.message
+                );
+            }
+
+        }
+
+    }
+
+}
 
 // ============================================================
 // EXPORTS
@@ -914,5 +1446,6 @@ module.exports = {
     getMovieShowtimes,
     getCinemaShowtimes,
     getScreenShowtimes,
-    getShowtimeSeats
+    getShowtimeSeats,
+    createShowtime
 };

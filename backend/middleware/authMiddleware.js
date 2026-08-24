@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const { getConnection } = require('../config/database');
 
-const JWT_SECRET = process.env.JWT_SECRET;
+
 
 
 // ============================================================
@@ -14,6 +14,8 @@ async function authenticateToken(req, res, next) {
     let connection;
 
     try {
+
+        const JWT_SECRET = process.env.JWT_SECRET;
 
         // ----------------------------------------
         // CHECK JWT SECRET
