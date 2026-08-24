@@ -970,6 +970,8 @@
             const dropdownStat = document.getElementById('dropdownStat');
             const settingsName = document.getElementById('settingsName');
             const settingsEmail = document.getElementById('settingsEmail');
+            const settingsPhone = document.getElementById('settingsPhone');
+            const settingsMemberSince = document.getElementById('settingsMemberSince');
             const statWatched = document.getElementById('statWatched');
             const statWatchlist = document.getElementById('statWatchlist');
             const statFavorites = document.getElementById('statFavorites');
@@ -979,25 +981,245 @@
             const statsGrid = document.getElementById('statsGrid');
             const genreTags = document.getElementById('genreTags');
 
-            // ===================== SET USER INFO =====================
-            function setUserInfo(user) {
-                const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
-                profileName.textContent = user.name;
-                profileAvatar.textContent = initials;
-                dropdownName.textContent = user.name;
-                settingsName.textContent = user.name;
-                settingsEmail.textContent = user.email;
-                const joinYear = user.memberSince ? new Date(user.memberSince).getFullYear() : new Date().getFullYear();
-                document.getElementById('profileMemberSince').textContent = `Member since ${joinYear} · Savannah Cinemas`;
+            // ===================== FETCH USER DETAILS FROM DATABASE =====================
+            let dbUserData = null;
+            let currentUserId = null;
+
+            async function fetchUserDetails() {
+                try {
+                    console.log('🔍 Fetching user details from:', `${API_BASE}/users/me`);
+                    
+                    const response = await fetch(`${API_BASE}/users/me`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('📦 User data from database:', data);
+
+                    // Handle different response formats
+                    dbUserData = data.user || data.data || data;
+                    
+                    if (!dbUserData) {
+                        throw new Error('No user data returned');
+                    }
+
+                    // Store user ID for later use
+                    currentUserId = dbUserData.userId || dbUserData.USER_ID || dbUserData.id;
+
+                    // Update UI with database user data
+                    updateUserUI(dbUserData);
+                    
+                    return dbUserData;
+                } catch (error) {
+                    console.error('❌ Error fetching user details:', error);
+                    // Fallback to localStorage data
+                    if (userData) {
+                        updateUserUI(userData);
+                        currentUserId = userData.userId || userData.USER_ID || userData.id;
+                    }
+                    return null;
+                }
             }
-            setUserInfo(userData);
+
+            // ===================== UPDATE USER UI =====================
+            function updateUserUI(user) {
+                console.log('🔄 Updating UI with user data:', user);
+
+                // Get user details from database
+                const forenames = user.forenames || user.FORENAMES || user.name || user.NAME || 'User';
+                const surname = user.surname || user.SURNAME || '';
+                const fullName = `${forenames} ${surname}`.trim() || 'User';
+                const email = user.email || user.EMAIL || '';
+                const phone = user.phoneNumber || user.PHONE_NUMBER || user.phone || '';
+                const createdAt = user.createdAt || user.CREATED_AT || user.memberSince;
+
+                // Set user initials
+                let initials = '';
+                if (forenames) {
+                    const firstWord = forenames.trim().split(' ')[0];
+                    if (firstWord && firstWord.length > 0) {
+                        initials = firstWord.substring(0, 2).toUpperCase();
+                    }
+                }
+                if (initials.length < 2 && surname) {
+                    const surnameFirst = surname.trim().charAt(0);
+                    if (surnameFirst) {
+                        initials += surnameFirst.toUpperCase();
+                    }
+                }
+                while (initials.length < 2) {
+                    initials += 'U';
+                }
+                initials = initials.substring(0, 2);
+
+                // Update all profile elements
+                if (profileName) profileName.textContent = fullName;
+                if (profileAvatar) profileAvatar.textContent = initials;
+                if (dropdownName) dropdownName.textContent = fullName;
+                if (settingsName) settingsName.textContent = fullName;
+                if (settingsEmail) settingsEmail.textContent = email;
+                if (settingsPhone) settingsPhone.textContent = phone || 'Not provided';
+
+                // Format member since date
+                let memberSinceText = 'Member since 2024';
+                if (createdAt) {
+                    try {
+                        const date = new Date(createdAt);
+                        if (!isNaN(date.getTime())) {
+                            const year = date.getFullYear();
+                            const month = date.toLocaleString('default', { month: 'long' });
+                            memberSinceText = `Member since ${month} ${year}`;
+                        }
+                    } catch (e) {
+                        console.warn('Could not parse createdAt date:', createdAt);
+                    }
+                }
+                if (settingsMemberSince) settingsMemberSince.textContent = memberSinceText;
+
+                // Update profile page member since
+                const profileMemberSince = document.getElementById('profileMemberSince');
+                if (profileMemberSince) {
+                    profileMemberSince.textContent = memberSinceText + ' · Savannah Cinemas';
+                }
+
+                console.log('✅ UI updated for user:', fullName);
+                console.log('📧 Email:', email);
+                console.log('📅 Member since:', memberSinceText);
+            }
+
+            // ===================== FETCH BOOKINGS BY USER ID =====================
+            async function fetchBookings() {
+                try {
+                    console.log('🔍 Fetching bookings...');
+                    
+                    const response = await fetch(`${API_BASE}/bookings`, {
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const bookings = await response.json();
+                    console.log('📦 Bookings data:', bookings);
+                    
+                    if (!bookings || !bookings.length) {
+                        bookingList.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-ticket-alt"></i>
+                                <p>You haven't made any bookings yet. Book your first ticket!</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    renderBookings(bookings);
+                } catch (error) {
+                    console.error('❌ Error fetching bookings:', error);
+                    bookingList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Could not load bookings. Error: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // ===================== RENDER BOOKINGS =====================
+            function renderBookings(bookings) {
+                // Sort bookings by date (newest first)
+                const sortedBookings = [...bookings].sort((a, b) => {
+                    const dateA = new Date(a.bookingDate || a.createdAt || a.BOOKING_DATE);
+                    const dateB = new Date(b.bookingDate || b.createdAt || b.BOOKING_DATE);
+                    return dateB - dateA;
+                });
+
+                bookingList.innerHTML = sortedBookings.map(booking => {
+                    // Extract booking details
+                    const bookingRef = booking.bookingRef || booking.BOOKING_REF || booking.reference || 'N/A';
+                    const filmTitle = booking.filmTitle || booking.title || booking.FILM_TITLE || 'Untitled';
+                    const showtime = booking.showtime || booking.SHOWTIME || booking.startTime || 'TBA';
+                    const screen = booking.screen || booking.SCREEN || 'Screen 1';
+                    const seats = booking.seats || booking.SEATS || 'N/A';
+                    const status = booking.status || booking.STATUS || 'upcoming';
+                    const totalAmount = booking.totalAmount || booking.TOTAL_AMOUNT || booking.total || 0;
+                    const bookingDate = booking.bookingDate || booking.BOOKING_DATE || booking.createdAt || new Date();
+                    
+                    // Format date
+                    let formattedDate = 'N/A';
+                    try {
+                        const date = new Date(bookingDate);
+                        if (!isNaN(date.getTime())) {
+                            formattedDate = date.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                            });
+                        }
+                    } catch (e) {}
+
+                    // Format status
+                    let statusDisplay = 'Upcoming';
+                    let statusClass = 'upcoming';
+                    if (status === 'completed' || status === 'COMPLETED') {
+                        statusDisplay = '✓ Watched';
+                        statusClass = 'completed';
+                    } else if (status === 'cancelled' || status === 'CANCELLED') {
+                        statusDisplay = '✗ Cancelled';
+                        statusClass = 'cancelled';
+                    } else if (status === 'confirmed' || status === 'CONFIRMED') {
+                        statusDisplay = '🎟️ Confirmed';
+                        statusClass = 'confirmed';
+                    }
+
+                    // Format seats as array if string
+                    let seatDisplay = seats;
+                    if (typeof seats === 'string' && seats.includes(',')) {
+                        seatDisplay = seats.split(',').map(s => s.trim()).join(', ');
+                    } else if (Array.isArray(seats)) {
+                        seatDisplay = seats.join(', ');
+                    }
+
+                    return `
+                        <div class="booking-item">
+                            <div class="booking-poster">
+                                <div class="no-poster"><i class="fas fa-film"></i></div>
+                            </div>
+                            <div class="booking-info">
+                                <div class="title">${filmTitle}</div>
+                                <div class="details">
+                                    <span><i class="fas fa-calendar-alt"></i> ${formattedDate}</span>
+                                    <span><i class="fas fa-clock"></i> ${showtime}</span>
+                                    <span><i class="fas fa-video"></i> ${screen}</span>
+                                </div>
+                                <div class="details">
+                                    <span><i class="fas fa-chair"></i> Seats: ${seatDisplay}</span>
+                                    <span><i class="fas fa-ticket-alt"></i> Ref: ${bookingRef}</span>
+                                    <span><i class="fas fa-money-bill-wave"></i> ₵${totalAmount.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <span class="booking-status ${statusClass}">${statusDisplay}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
 
             // ===================== FETCH WATCHLIST =====================
             let watchlist = [];
 
             async function fetchWatchlist() {
                 try {
-                    console.log('🔍 Fetching watchlist from:', `${API_BASE}/watchlist`);
+                    console.log('🔍 Fetching watchlist...');
                     
                     const res = await fetch(`${API_BASE}/watchlist`, {
                         headers: { 
@@ -1337,55 +1559,6 @@
                 }
             }
 
-            // ===================== FETCH BOOKINGS =====================
-            async function fetchBookings() {
-                try {
-                    console.log('🔍 Fetching bookings from:', `${API_BASE}/bookings`);
-                    const res = await fetch(`${API_BASE}/bookings`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (!res.ok) throw new Error('Failed to fetch bookings');
-                    const bookings = await res.json();
-                    console.log('📦 Bookings data:', bookings);
-                    
-                    if (!bookings || !bookings.length) {
-                        bookingList.innerHTML = `<div class="empty-state"><i class="fas fa-ticket-alt"></i><p>You haven't made any bookings yet. Book your first ticket!</p></div>`;
-                        return;
-                    }
-                    
-                    // The IMAGE_BASE for TMDB posters
-                    const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
-                    
-                    bookingList.innerHTML = bookings.map(b => {
-                        // Try to get poster from the booking data
-                        let posterHtml = '';
-                        if (b.poster) {
-                            posterHtml = `<div class="booking-poster" style="background-image: url('${b.poster}');"></div>`;
-                        } else {
-                            // Try to fetch poster from TMDB using the film title
-                            posterHtml = `<div class="booking-poster"><div class="no-poster"><i class="fas fa-film"></i></div></div>`;
-                        }
-                        
-                        return `
-                            <div class="booking-item">
-                                ${posterHtml}
-                                <div class="booking-info">
-                                    <div class="title">${b.filmTitle || b.title || 'Untitled'}</div>
-                                    <div class="details">${b.showtime || b.date || ''} · ${b.screen || ''} · Seats: ${Array.isArray(b.seats) ? b.seats.join(', ') : b.seats || 'N/A'}</div>
-                                    <div class="booking-ref">Ref: ${b.bookingRef || 'N/A'}</div>
-                                </div>
-                                <span class="booking-status ${b.status || 'upcoming'}">
-                                    ${b.status === 'past' ? '✓ Watched' : '🎟️ ' + (b.status || 'Upcoming')}
-                                </span>
-                            </div>
-                        `;
-                    }).join('');
-                } catch (err) {
-                    console.error(err);
-                    bookingList.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Could not load bookings.</p></div>`;
-                }
-            }
-
             // ===================== UPDATE STATS =====================
             function updateStats() {
                 const watched = watchlist.filter(f => f.watched).length;
@@ -1420,6 +1593,87 @@
                     if (genreCountDisplay) {
                         genreCountDisplay.textContent = genreCount || '0';
                     }
+                }
+            }
+
+            // ===================== TOGGLE WATCHLIST BUTTON =====================
+            window.toggleWatchlist = async function(movieId, movieData) {
+                if (!token || !userData) {
+                    showToast('Please sign in to add to watchlist', 'error');
+                    setTimeout(() => window.location.href = 'login.html', 1500);
+                    return;
+                }
+
+                try {
+                    const isInWatchlist = watchlist.some(item => item.id == movieId);
+                    
+                    let endpoint, method, body, successMessage, errorMessage;
+
+                    if (isInWatchlist) {
+                        endpoint = `${API_BASE}/watchlist/${movieId}`;
+                        method = 'DELETE';
+                        body = null;
+                        successMessage = `Removed "${movieData.title || 'Movie'}" from watchlist`;
+                        errorMessage = 'Failed to remove from watchlist';
+                    } else {
+                        endpoint = `${API_BASE}/watchlist`;
+                        method = 'POST';
+                        body = JSON.stringify({
+                            filmId: movieId,
+                            title: movieData.title || 'Untitled',
+                            poster: movieData.poster || movieData.posterUrl || '',
+                            year: movieData.year || (movieData.releaseDate ? movieData.releaseDate.substring(0, 4) : ''),
+                            rating: movieData.rating || movieData.vote_average || 0
+                        });
+                        successMessage = `Added "${movieData.title || 'Movie'}" to watchlist ❤️`;
+                        errorMessage = 'Failed to add to watchlist';
+                    }
+
+                    const response = await fetch(endpoint, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: body
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || errorMessage);
+                    }
+
+                    showToast(successMessage, 'success');
+                    await fetchWatchlist();
+                    updateWatchlistButtonUI(movieId);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Toggle watchlist error:', error);
+                    showToast(error.message || 'Could not update watchlist. Please try again.', 'error');
+                    return false;
+                }
+            };
+
+            // ===================== UPDATE WATCHLIST BUTTON UI =====================
+            function updateWatchlistButtonUI(movieId) {
+                const watchlistBtn = document.querySelector('.watchlist-btn');
+                const watchlistLabel = document.querySelector('.watchlist-label');
+                
+                if (!watchlistBtn) return;
+
+                const isInWatchlist = watchlist.some(item => item.id == movieId);
+                
+                if (isInWatchlist) {
+                    watchlistBtn.classList.add('in-watchlist');
+                    watchlistBtn.querySelector('i').className = 'fas fa-heart';
+                    if (watchlistLabel) watchlistLabel.textContent = 'In Watchlist';
+                    watchlistBtn.title = 'Remove from Watchlist';
+                } else {
+                    watchlistBtn.classList.remove('in-watchlist');
+                    watchlistBtn.querySelector('i').className = 'far fa-heart';
+                    if (watchlistLabel) watchlistLabel.textContent = 'Add to Watchlist';
+                    watchlistBtn.title = 'Add to Watchlist';
                 }
             }
 
@@ -1477,6 +1731,8 @@
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
+                localStorage.removeItem('userData');
+                sessionStorage.clear();
                 window.location.href = 'logout.html';
             }
             document.getElementById('logoutBtn').addEventListener('click', (e) => { e.preventDefault(); logout(); });
@@ -1502,9 +1758,30 @@
             });
 
             // ===================== INIT =====================
-            console.log('🚀 Profile page initialized');
-            fetchWatchlist();
-            fetchBookings();
+            async function initializeProfile() {
+                console.log('🚀 Initializing profile page...');
+                
+                // Fetch user details from database
+                await fetchUserDetails();
+                
+                // Fetch watchlist and bookings
+                await fetchWatchlist();
+                await fetchBookings();
+
+                // If we're on a page with a watchlist button, update its state
+                const urlParams = new URLSearchParams(window.location.search);
+                const movieId = urlParams.get('id');
+                if (movieId) {
+                    setTimeout(() => {
+                        updateWatchlistButtonUI(parseInt(movieId));
+                    }, 500);
+                }
+                
+                console.log('✅ Profile page initialized successfully');
+            }
+
+            // Call the initialization function
+            initializeProfile();
         });
     </script>
 </body>

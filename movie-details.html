@@ -1741,18 +1741,11 @@
                             <div class="profile-menu" id="profileMenu">
                                 <div class="who">
                                     <div class="name">${fullName}</div>
-                                    <div class="email">${email}</div>
                                     <div class="stat" id="navStat">0 films watched</div>
                                 </div>
                                 <div class="profile-menu-divider"></div>
                                 <a href="profile.html">
                                     <i class="fas fa-user"></i> My Profile
-                                </a>
-                                <a href="watchlist.html">
-                                    <i class="fas fa-list"></i> My Watchlist
-                                </a>
-                                <a href="bookings.html">
-                                    <i class="fas fa-ticket-alt"></i> My Bookings
                                 </a>
                                 <div class="profile-menu-divider"></div>
                                 <a href="#" id="logoutBtn" style="color: var(--rust);">
@@ -1921,8 +1914,8 @@
                 document.body.style.overflow = '';
             }
 
-            // ============================================================
-            // WATCHLIST API
+                        // ============================================================
+            // WATCHLIST API - FULLY UPDATED
             // ============================================================
 
             let currentMovie = null;
@@ -1958,7 +1951,10 @@
                 }
                 try {
                     const watchlist = await fetchWatchlist();
-                    const found = watchlist.some(item => item.filmId == movieId || item.FILM_ID == movieId);
+                    const found = watchlist.some(item => {
+                        const itemId = item.filmId || item.FILM_ID || item.movieId || item.MOVIE_ID;
+                        return itemId == movieId;
+                    });
                     console.log(`Film ${movieId} in watchlist:`, found);
                     return found;
                 } catch (err) {
@@ -1979,10 +1975,12 @@
                     const payload = {
                         filmId: movieId,
                         title: movieData.title,
-                        poster: movieData.poster_path ? `${CONFIG.IMAGE_BASE}${movieData.poster_path}` : movieData.posterUrl || '',
+                        poster: movieData.posterUrl || movieData.poster_path || '',
                         year: movieData.releaseDate ? movieData.releaseDate.substring(0, 4) : 'N/A',
                         rating: movieData.rating || movieData.vote_average || 0
                     };
+
+                    console.log('📤 Adding to watchlist:', payload);
 
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
                         method: 'POST',
@@ -1993,17 +1991,15 @@
                         body: JSON.stringify(payload)
                     });
 
+                    const data = await res.json();
+
                     if (res.status === 409) {
-                        const data = await res.json();
                         showToast(data.message || 'This film is already in your watchlist', 'info');
-                        isInWatchlist = await checkWatchlistStatus(movieId);
-                        updateWatchlistUI(isInWatchlist);
-                        return false;
+                        return true;
                     }
 
                     if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        throw new Error(errData.message || 'Failed to add to watchlist');
+                        throw new Error(data.message || 'Failed to add to watchlist');
                     }
                     
                     return true;
@@ -2020,6 +2016,8 @@
                     return false;
                 }
                 try {
+                    console.log('📤 Removing from watchlist:', movieId);
+
                     const res = await fetch(`${CONFIG.BACKEND_API}/watchlist/${movieId}`, {
                         method: 'DELETE',
                         headers: {
@@ -2027,17 +2025,15 @@
                         }
                     });
 
+                    const data = await res.json();
+
                     if (res.status === 404) {
-                        const data = await res.json();
                         showToast(data.message || 'Film not found in your watchlist', 'info');
-                        isInWatchlist = await checkWatchlistStatus(movieId);
-                        updateWatchlistUI(isInWatchlist);
-                        return false;
+                        return true;
                     }
 
                     if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        throw new Error(errData.message || 'Failed to remove from watchlist');
+                        throw new Error(data.message || 'Failed to remove from watchlist');
                     }
                     
                     return true;
@@ -2062,42 +2058,71 @@
                     return;
                 }
 
+                // Disable button during operation
                 DOM.watchlistBtn.disabled = true;
                 DOM.watchlistBtn.style.opacity = '0.6';
+                DOM.watchlistBtn.style.pointerEvents = 'none';
 
                 const movieId = currentMovie.movieId || currentMovie.id;
                 let success = false;
+
                 if (isInWatchlist) {
                     success = await removeFromWatchlist(movieId);
-                } else {
-                    success = await addToWatchlist(movieId, currentMovie);
-                }
-
-                DOM.watchlistBtn.disabled = false;
-                DOM.watchlistBtn.style.opacity = '1';
-
-                if (success) {
-                    isInWatchlist = await checkWatchlistStatus(movieId);
-                    updateWatchlistUI(isInWatchlist);
-
-                    if (isInWatchlist) {
-                        showToast(`"${currentMovie.title}" added to your watchlist `, 'added');
-                    } else {
+                    if (success) {
                         showToast(`"${currentMovie.title}" removed from watchlist`, 'removed');
                     }
+                } else {
+                    success = await addToWatchlist(movieId, currentMovie);
+                    if (success) {
+                        showToast(`"${currentMovie.title}" added to your watchlist ❤️`, 'success');
+                    }
+                }
+
+                // Re-enable button
+                DOM.watchlistBtn.disabled = false;
+                DOM.watchlistBtn.style.opacity = '1';
+                DOM.watchlistBtn.style.pointerEvents = 'auto';
+
+                if (success) {
+                    // Toggle the state
+                    isInWatchlist = !isInWatchlist;
+                    updateWatchlistUI(isInWatchlist);
+                } else {
+                    // If operation failed, re-check the actual state from server
+                    const actualStatus = await checkWatchlistStatus(movieId);
+                    isInWatchlist = actualStatus;
+                    updateWatchlistUI(isInWatchlist);
                 }
             }
 
             function updateWatchlistUI(inWatchlist) {
+                const icon = DOM.watchlistBtn.querySelector('i');
+                const label = DOM.watchlistLabel;
+                
                 if (inWatchlist) {
                     DOM.watchlistBtn.classList.add('in-watchlist');
-                    DOM.watchlistBtn.querySelector('i').className = 'fas fa-heart';
-                    DOM.watchlistLabel.textContent = 'In Watchlist';
+                    if (icon) {
+                        icon.className = 'fas fa-heart';
+                        icon.style.color = '#ff4757';
+                    }
+                    if (label) {
+                        label.textContent = 'In Watchlist';
+                        label.style.color = '#ff4757';
+                    }
+                    DOM.watchlistBtn.title = 'Remove from Watchlist';
                 } else {
                     DOM.watchlistBtn.classList.remove('in-watchlist');
-                    DOM.watchlistBtn.querySelector('i').className = 'far fa-heart';
-                    DOM.watchlistLabel.textContent = 'Add to Watchlist';
+                    if (icon) {
+                        icon.className = 'far fa-heart';
+                        icon.style.color = '';
+                    }
+                    if (label) {
+                        label.textContent = 'Add to Watchlist';
+                        label.style.color = '';
+                    }
+                    DOM.watchlistBtn.title = 'Add to Watchlist';
                 }
+                
                 if (currentMovie) {
                     DOM.watchlistBtn.dataset.filmId = currentMovie.movieId || currentMovie.id;
                 }

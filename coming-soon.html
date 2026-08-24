@@ -1323,25 +1323,61 @@
 
             function renderNav() {
                 if (isAuthenticated && userData) {
-                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    // Get user initials
+                    const forenames = userData.forenames || userData.FORENAMES || userData.name || userData.NAME || 'User';
+                    const surname = userData.surname || userData.SURNAME || '';
+                    const fullName = `${forenames} ${surname}`.trim() || 'User';
+                    
+                    let initials = '';
+                    if (forenames) {
+                        const firstWord = forenames.trim().split(' ')[0];
+                        if (firstWord && firstWord.length > 0) {
+                            initials = firstWord.substring(0, 2).toUpperCase();
+                        }
+                    }
+                    if (initials.length < 2 && surname) {
+                        const surnameFirst = surname.trim().charAt(0);
+                        if (surnameFirst) {
+                            initials += surnameFirst.toUpperCase();
+                        }
+                    }
+                    while (initials.length < 2) {
+                        initials += 'U';
+                    }
+                    initials = initials.substring(0, 2);
                     
                     DOM.navRight.innerHTML = `
                         <div class="profile-wrapper" id="profileWrapper">
-                            <div class="avatar" id="avatarBtn">${initials}</div>
+                            <div class="avatar" id="avatarBtn" title="${fullName}">${initials}</div>
                             <div class="profile-menu" id="profileMenu">
                                 <div class="who">
-                                    <div class="name">${userData.name}</div>
+                                    <div class="name">${fullName}</div>
                                     <div class="stat" id="navStat">0 films watched</div>
                                 </div>
+                                <div class="profile-menu-divider"></div>
                                 <a href="profile.html">My Profile</a>
+                                <a href="watchlist.html">My Watchlist</a>
+                                <a href="bookings.html">My Bookings</a>
+                                <div class="profile-menu-divider"></div>
                                 <a href="#" id="logoutBtn">Sign out</a>
                             </div>
                         </div>
                     `;
                     
+                    // Clear existing mobile auth links
+                    const existingAuthLinks = DOM.mobileMenuLinks.querySelectorAll('.mobile-auth-link');
+                    existingAuthLinks.forEach(el => el.remove());
+                    
+                    const mobileProfile = document.createElement('li');
+                    mobileProfile.className = 'mobile-auth-link';
+                    mobileProfile.innerHTML = `<a href="profile.html"><i class="fas fa-user"></i> ${fullName}</a>`;
+                    DOM.mobileMenuLinks.appendChild(mobileProfile);
+                    
                     const logoutLink = document.createElement('li');
+                    logoutLink.className = 'mobile-auth-link';
                     logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
                     DOM.mobileMenuLinks.appendChild(logoutLink);
+                    
                     if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
                     
                     setupProfileDropdown();
@@ -1417,7 +1453,7 @@
                     
                     if (response.ok) {
                         const watchlist = await response.json();
-                        const watchedCount = watchlist.filter(item => item.watched).length;
+                        const watchedCount = watchlist.filter(item => item.watched === 'Y' || item.watched === true).length;
                         const statEl = document.getElementById('navStat');
                         if (statEl) {
                             statEl.textContent = `${watchedCount} films watched`;
@@ -1435,21 +1471,20 @@
             function logout() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
+                localStorage.removeItem('userData');
+                sessionStorage.clear();
                 window.location.href = 'logout.html';
             }
 
             // ============================================================
-            // TOAST - NO EMOJIS
+            // TOAST
             // ============================================================
 
             let toastTimeout = null;
 
             function showToast(message, type) {
-                
                 DOM.toastMessage.textContent = message;
-                
                 DOM.toast.classList.add('show');
-                
                 clearTimeout(toastTimeout);
                 toastTimeout = setTimeout(() => {
                     DOM.toast.classList.remove('show');
@@ -1502,122 +1537,54 @@
             };
 
             // ============================================================
-            // WATCHLIST API - Backend Integration
+            // FETCH UPCOMING FILMS FROM DATABASE
             // ============================================================
 
-            async function fetchWatchlistFromBackend() {
-                if (!isAuthenticated) return [];
+            async function fetchUpcomingFilmsFromDatabase() {
                 try {
-                    const res = await fetch(`${BACKEND_API}/watchlist`, {
-                        headers: { 
-                            'Authorization': `Bearer ${token}`,
+                    console.log('🔍 Fetching upcoming films from database...');
+                    
+                    const response = await fetch(`${BACKEND_API}/movies/upcoming`, {
+                        headers: {
                             'Content-Type': 'application/json'
                         }
                     });
-                    
-                    if (!res.ok) {
-                        console.error('Failed to fetch watchlist:', res.status);
-                        return [];
-                    }
-                    
-                    const watchlist = await res.json();
-                    return watchlist || [];
-                } catch (err) {
-                    console.error('Fetch watchlist error:', err);
-                    return [];
-                }
-            }
 
-            async function isInWatchlistBackend(movieId) {
-                if (!isAuthenticated) return false;
-                try {
-                    const watchlist = await fetchWatchlistFromBackend();
-                    return watchlist.some(item => item.filmId == movieId);
-                } catch (err) {
-                    console.error('Check watchlist error:', err);
-                    return false;
-                }
-            }
-
-            async function addToWatchlistBackend(movie) {
-                if (!isAuthenticated) {
-                    showToast('Please create an account or sign in to add films to your watchlist', 'info');
-                    setTimeout(() => {
-                        window.location.href = 'logout.html';
-                    }, 1500);
-                    return { success: false, message: 'Not authenticated' };
-                }
-
-                try {
-                    const payload = {
-                        filmId: movie.id,
-                        title: movie.title,
-                        poster: movie.poster_path ? `${IMAGE_BASE}${movie.poster_path}` : '',
-                        year: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
-                        rating: movie.vote_average || 0
-                    };
-
-                    const res = await fetch(`${BACKEND_API}/watchlist`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (res.status === 409) {
-                        const data = await res.json();
-                        return { success: false, message: data.message || 'Already in watchlist' };
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
 
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        return { success: false, message: errData.message || 'Failed to add to watchlist' };
-                    }
+                    const data = await response.json();
+                    console.log('📦 Upcoming films from database:', data);
+
+                    // Handle different response formats
+                    let movies = data.movies || data.data || [];
                     
-                    return { success: true, message: 'Added to watchlist' };
-                } catch (err) {
-                    console.error('Add to watchlist error:', err);
-                    return { success: false, message: 'Could not add to watchlist. Please try again.' };
-                }
-            }
-
-            async function removeFromWatchlistBackend(movieId) {
-                if (!isAuthenticated) {
-                    showToast('Please sign in to manage your watchlist', 'error');
-                    return { success: false, message: 'Not authenticated' };
-                }
-
-                try {
-                    const res = await fetch(`${BACKEND_API}/watchlist/${movieId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
+                    if (Array.isArray(movies)) {
+                        return movies;
+                    } else if (typeof movies === 'object' && movies !== null) {
+                        // If it's an object with movie data
+                        const values = Object.values(movies);
+                        if (values.length > 0 && values.every(v => typeof v === 'object' && v !== null)) {
+                            return values;
                         }
-                    });
-
-                    if (res.status === 404) {
-                        return { success: false, message: 'Film not found in your watchlist' };
-                    }
-
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        return { success: false, message: errData.message || 'Failed to remove from watchlist' };
                     }
                     
-                    return { success: true, message: 'Removed from watchlist' };
-                } catch (err) {
-                    console.error('Remove from watchlist error:', err);
-                    return { success: false, message: 'Could not remove from watchlist. Please try again.' };
+                    return [];
+                } catch (error) {
+                    console.error('❌ Error fetching upcoming films from database:', error);
+                    
+                    // Fallback: Try TMDB API if database fails
+                    console.log('🔄 Falling back to TMDB API...');
+                    return await fetchUpcomingFilmsFromTMDB();
                 }
             }
 
             // ============================================================
-            // FETCH UPCOMING FILMS - All films with release date > today
+            // FETCH UPCOMING FILMS FROM TMDB (Fallback)
             // ============================================================
 
-            async function fetchUpcomingFilms(page = 1) {
+            async function fetchUpcomingFilmsFromTMDB(page = 1) {
                 try {
                     const response = await fetch(
                         `https://api.themoviedb.org/3/movie/upcoming?api_key=${API_KEY}&language=en-US&page=${page}`
@@ -1632,84 +1599,71 @@
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
 
-                    // Filter: only keep films with release date > today
                     const upcoming = data.results.filter(film => {
                         if (!film.release_date) return false;
                         const releaseDate = new Date(film.release_date);
-                        // Include tomorrow and all future dates
                         return releaseDate > today;
                     });
 
-                    return {
-                        films: upcoming,
-                        totalPages: data.total_pages,
-                        currentPage: data.page,
-                        totalResults: data.total_results
-                    };
+                    return upcoming;
                 } catch (error) {
-                    console.error('Error fetching upcoming films:', error);
-                    return { films: [], totalPages: 0, currentPage: 1, totalResults: 0 };
+                    console.error('Error fetching upcoming films from TMDB:', error);
+                    return [];
                 }
             }
 
             // ============================================================
-            // FETCH ALL PAGES - Keep fetching until no more films with deduplication
+            // FETCH ALL PAGES FROM DATABASE
             // ============================================================
 
             async function fetchAllUpcomingFilms() {
-                let allFilms = [];
-                let page = 1;
-                let hasMorePages = true;
-                const seenIds = new Set(); // Track seen film IDs for deduplication
-                
                 DOM.scrollLoader.classList.add('show');
                 DOM.scrollLoader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading films...';
 
-                while (hasMorePages) {
-                    const result = await fetchUpcomingFilms(page);
-                    
-                    if (result.films.length === 0) {
-                        hasMorePages = false;
-                        break;
-                    }
-                    
-                    // Filter out duplicates before adding
-                    const uniqueFilms = result.films.filter(film => {
-                        if (seenIds.has(film.id)) {
-                            return false; // Skip duplicate
-                        }
-                        seenIds.add(film.id);
-                        return true;
-                    });
-                    
-                    allFilms = [...allFilms, ...uniqueFilms];
-                    
-                    // Check if we've reached the last page
-                    if (page >= result.totalPages) {
-                        hasMorePages = false;
-                    }
-                    
-                    page++;
-                    
-                    // Safety limit: max 10 pages to prevent infinite loops
-                    if (page > 10) {
-                        hasMorePages = false;
-                    }
+                // Fetch from database
+                let films = await fetchUpcomingFilmsFromDatabase();
+                
+                // If database returns empty, try TMDB
+                if (films.length === 0) {
+                    console.log('📭 No films in database, trying TMDB...');
+                    films = await fetchUpcomingFilmsFromTMDB();
                 }
 
+                // If still empty, show message
+                if (films.length === 0) {
+                    DOM.scrollLoader.classList.remove('show');
+                    return [];
+                }
+
+                // Map database films to the expected format
+                const mappedFilms = films.map(film => ({
+                    id: film.movieId || film.id,
+                    title: film.title,
+                    original_title: film.originalTitle || film.original_title || film.title,
+                    overview: film.description || film.overview || '',
+                    release_date: film.releaseDate || film.release_date || null,
+                    poster_path: film.posterUrl ? film.posterUrl.replace('https://image.tmdb.org/t/p/w500', '') : null,
+                    backdrop_path: film.backdropUrl ? film.backdropUrl.replace('https://image.tmdb.org/t/p/original', '') : null,
+                    vote_average: film.rating || 0,
+                    vote_count: 0,
+                    status: film.status || 'UPCOMING',
+                    runtime: film.runtimeMinutes || film.runtime || null,
+                    age_rating: film.ageRating || film.age_rating || null
+                }));
+
                 // Sort by release date (earliest first)
-                allFilms.sort((a, b) => {
+                mappedFilms.sort((a, b) => {
                     if (!a.release_date) return 1;
                     if (!b.release_date) return -1;
                     return new Date(a.release_date) - new Date(b.release_date);
                 });
 
                 DOM.scrollLoader.classList.remove('show');
-                return allFilms;
+                return mappedFilms;
             }
 
             // ============================================================
-            // RENDER FUNCTIONS - NO EMOJIS
+            // RENDER FUNCTIONS
             // ============================================================
 
             async function renderFilms(films) {
@@ -1735,12 +1689,12 @@
                 if (isAuthenticated) {
                     const watchlist = await fetchWatchlistFromBackend();
                     films.forEach(film => {
-                        watchlistStatus[film.id] = watchlist.some(item => item.filmId == film.id);
+                        watchlistStatus[film.id] = watchlist.some(item => item.filmId == film.id || item.id == film.id);
                     });
                 }
 
                 grid.innerHTML = films.map(film => {
-                    const posterUrl = film.poster_path ? `${IMAGE_BASE}${film.poster_path}` : '';
+                    const posterUrl = film.poster_path ? `${IMAGE_BASE}${film.poster_path}` : (film.posterUrl || '');
                     const releaseDate = film.release_date ? new Date(film.release_date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -1849,6 +1803,118 @@
             }
 
             // ============================================================
+            // WATCHLIST API - Backend Integration
+            // ============================================================
+
+            async function fetchWatchlistFromBackend() {
+                if (!isAuthenticated) return [];
+                try {
+                    const res = await fetch(`${BACKEND_API}/watchlist`, {
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!res.ok) {
+                        console.error('Failed to fetch watchlist:', res.status);
+                        return [];
+                    }
+                    
+                    const watchlist = await res.json();
+                    return watchlist || [];
+                } catch (err) {
+                    console.error('Fetch watchlist error:', err);
+                    return [];
+                }
+            }
+
+            async function isInWatchlistBackend(movieId) {
+                if (!isAuthenticated) return false;
+                try {
+                    const watchlist = await fetchWatchlistFromBackend();
+                    return watchlist.some(item => item.filmId == movieId || item.id == movieId);
+                } catch (err) {
+                    console.error('Check watchlist error:', err);
+                    return false;
+                }
+            }
+
+            async function addToWatchlistBackend(movie) {
+                if (!isAuthenticated) {
+                    showToast('Please create an account or sign in to add films to your watchlist', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'logout.html';
+                    }, 1500);
+                    return { success: false, message: 'Not authenticated' };
+                }
+
+                try {
+                    const payload = {
+                        filmId: movie.id,
+                        title: movie.title,
+                        poster: movie.poster_path ? `${IMAGE_BASE}${movie.poster_path}` : (movie.posterUrl || ''),
+                        year: movie.release_date ? movie.release_date.substring(0, 4) : 'N/A',
+                        rating: movie.vote_average || 0
+                    };
+
+                    const res = await fetch(`${BACKEND_API}/watchlist`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.status === 409) {
+                        const data = await res.json();
+                        return { success: false, message: data.message || 'Already in watchlist' };
+                    }
+
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        return { success: false, message: errData.message || 'Failed to add to watchlist' };
+                    }
+                    
+                    return { success: true, message: 'Added to watchlist' };
+                } catch (err) {
+                    console.error('Add to watchlist error:', err);
+                    return { success: false, message: 'Could not add to watchlist. Please try again.' };
+                }
+            }
+
+            async function removeFromWatchlistBackend(movieId) {
+                if (!isAuthenticated) {
+                    showToast('Please sign in to manage your watchlist', 'error');
+                    return { success: false, message: 'Not authenticated' };
+                }
+
+                try {
+                    const res = await fetch(`${BACKEND_API}/watchlist/${movieId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (res.status === 404) {
+                        return { success: false, message: 'Film not found in your watchlist' };
+                    }
+
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        return { success: false, message: errData.message || 'Failed to remove from watchlist' };
+                    }
+                    
+                    return { success: true, message: 'Removed from watchlist' };
+                } catch (err) {
+                    console.error('Remove from watchlist error:', err);
+                    return { success: false, message: 'Could not remove from watchlist. Please try again.' };
+                }
+            }
+
+            // ============================================================
             // WATCHLIST FUNCTIONS
             // ============================================================
 
@@ -1886,7 +1952,7 @@
             };
 
             // ============================================================
-            // NOTIFY FUNCTION - NO EMOJIS
+            // NOTIFY FUNCTION
             // ============================================================
 
             window.toggleNotify = function(title, button) {
@@ -1936,7 +2002,7 @@
                 renderNav();
                 setupMobileMenu();
 
-                // Fetch all pages of films with release date > today
+                // Fetch all pages of films from database
                 allUpcomingFilms = await fetchAllUpcomingFilms();
 
                 if (allUpcomingFilms.length === 0) {
