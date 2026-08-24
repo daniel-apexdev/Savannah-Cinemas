@@ -1003,23 +1003,19 @@
                     const data = await response.json();
                     console.log('📦 User data from database:', data);
 
-                    // Handle different response formats
                     dbUserData = data.user || data.data || data;
                     
                     if (!dbUserData) {
                         throw new Error('No user data returned');
                     }
 
-                    // Store user ID for later use
                     currentUserId = dbUserData.userId || dbUserData.USER_ID || dbUserData.id;
 
-                    // Update UI with database user data
                     updateUserUI(dbUserData);
                     
                     return dbUserData;
                 } catch (error) {
                     console.error('❌ Error fetching user details:', error);
-                    // Fallback to localStorage data
                     if (userData) {
                         updateUserUI(userData);
                         currentUserId = userData.userId || userData.USER_ID || userData.id;
@@ -1032,7 +1028,6 @@
             function updateUserUI(user) {
                 console.log('🔄 Updating UI with user data:', user);
 
-                // Get user details from database
                 const forenames = user.forenames || user.FORENAMES || user.name || user.NAME || 'User';
                 const surname = user.surname || user.SURNAME || '';
                 const fullName = `${forenames} ${surname}`.trim() || 'User';
@@ -1040,7 +1035,6 @@
                 const phone = user.phoneNumber || user.PHONE_NUMBER || user.phone || '';
                 const createdAt = user.createdAt || user.CREATED_AT || user.memberSince;
 
-                // Set user initials
                 let initials = '';
                 if (forenames) {
                     const firstWord = forenames.trim().split(' ')[0];
@@ -1059,7 +1053,6 @@
                 }
                 initials = initials.substring(0, 2);
 
-                // Update all profile elements
                 if (profileName) profileName.textContent = fullName;
                 if (profileAvatar) profileAvatar.textContent = initials;
                 if (dropdownName) dropdownName.textContent = fullName;
@@ -1067,7 +1060,6 @@
                 if (settingsEmail) settingsEmail.textContent = email;
                 if (settingsPhone) settingsPhone.textContent = phone || 'Not provided';
 
-                // Format member since date
                 let memberSinceText = 'Member since 2024';
                 if (createdAt) {
                     try {
@@ -1083,18 +1075,15 @@
                 }
                 if (settingsMemberSince) settingsMemberSince.textContent = memberSinceText;
 
-                // Update profile page member since
                 const profileMemberSince = document.getElementById('profileMemberSince');
                 if (profileMemberSince) {
                     profileMemberSince.textContent = memberSinceText + ' · Savannah Cinemas';
                 }
 
                 console.log('✅ UI updated for user:', fullName);
-                console.log('📧 Email:', email);
-                console.log('📅 Member since:', memberSinceText);
             }
 
-            // ===================== FETCH BOOKINGS BY USER ID =====================
+            // ===================== FETCH BOOKINGS =====================
             async function fetchBookings() {
                 try {
                     console.log('🔍 Fetching bookings...');
@@ -1137,7 +1126,6 @@
 
             // ===================== RENDER BOOKINGS =====================
             function renderBookings(bookings) {
-                // Sort bookings by date (newest first)
                 const sortedBookings = [...bookings].sort((a, b) => {
                     const dateA = new Date(a.bookingDate || a.createdAt || a.BOOKING_DATE);
                     const dateB = new Date(b.bookingDate || b.createdAt || b.BOOKING_DATE);
@@ -1145,7 +1133,6 @@
                 });
 
                 bookingList.innerHTML = sortedBookings.map(booking => {
-                    // Extract booking details
                     const bookingRef = booking.bookingRef || booking.BOOKING_REF || booking.reference || 'N/A';
                     const filmTitle = booking.filmTitle || booking.title || booking.FILM_TITLE || 'Untitled';
                     const showtime = booking.showtime || booking.SHOWTIME || booking.startTime || 'TBA';
@@ -1155,7 +1142,6 @@
                     const totalAmount = booking.totalAmount || booking.TOTAL_AMOUNT || booking.total || 0;
                     const bookingDate = booking.bookingDate || booking.BOOKING_DATE || booking.createdAt || new Date();
                     
-                    // Format date
                     let formattedDate = 'N/A';
                     try {
                         const date = new Date(bookingDate);
@@ -1168,7 +1154,6 @@
                         }
                     } catch (e) {}
 
-                    // Format status
                     let statusDisplay = 'Upcoming';
                     let statusClass = 'upcoming';
                     if (status === 'completed' || status === 'COMPLETED') {
@@ -1182,7 +1167,6 @@
                         statusClass = 'confirmed';
                     }
 
-                    // Format seats as array if string
                     let seatDisplay = seats;
                     if (typeof seats === 'string' && seats.includes(',')) {
                         seatDisplay = seats.split(',').map(s => s.trim()).join(', ');
@@ -1228,8 +1212,6 @@
                         }
                     });
                     
-                    console.log('📡 Response status:', res.status);
-                    
                     if (!res.ok) {
                         console.error('❌ Failed to fetch watchlist:', res.status);
                         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -1238,7 +1220,6 @@
                     const data = await res.json();
                     console.log('📦 Raw watchlist data:', data);
                     
-                    // Handle different response formats
                     let watchlistData = [];
                     
                     if (Array.isArray(data)) {
@@ -1259,17 +1240,14 @@
                         }
                     }
                     
-                    console.log('📊 Final watchlist data:', watchlistData);
-                    
-                    // Map the data to the expected format
                     watchlist = watchlistData.map(item => ({
                         id: item.filmId || item.id || item._id,
                         title: item.title || 'Untitled',
                         year: item.year || '',
                         rating: item.rating || 0,
                         poster: item.poster || 'https://via.placeholder.com/200x300?text=No+Poster',
-                        watched: item.watched || false,
-                        favorite: item.favorite || false,
+                        watched: item.watched === 'Y' || item.watched === true,
+                        favorite: item.favorite === 'Y' || item.favorite === true,
                         watchedDate: item.watchedDate || null,
                         addedDate: item.addedDate || new Date().toISOString()
                     }));
@@ -1285,9 +1263,6 @@
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle"></i>
                             <p>Could not load watchlist. Error: ${err.message}</p>
-                            <p style="font-size:12px;margin-top:8px;color:var(--paper-dim);">
-                                Make sure the backend server is running at ${API_BASE}
-                            </p>
                         </div>
                     `;
                 }
@@ -1341,10 +1316,8 @@
                     const sortedGenres = Object.values(genreMap).sort((a, b) => b.count - a.count);
                     genreCount = sortedGenres.length;
                     
-                    // Update statGenres with unique genre count
                     statGenres.textContent = genreCount;
 
-                    // Render genre tags
                     if (sortedGenres.length === 0) {
                         genreTags.innerHTML = `
                             <div style="color:var(--paper-dim);font-weight:300;font-size:clamp(13px,0.9vw,15px);">
@@ -1391,13 +1364,11 @@
                 return films;
             }
 
-            // Toggle dropdown menu
             function toggleDropdown(menuBtn) {
                 const card = menuBtn.closest('.watchlist-card');
                 const dropdown = card.querySelector('.dropdown-menu');
                 const isOpen = dropdown.classList.contains('open');
                 
-                // Close all dropdowns first
                 document.querySelectorAll('.dropdown-menu.open').forEach(d => {
                     if (d !== dropdown) d.classList.remove('open');
                 });
@@ -1409,7 +1380,6 @@
                 }
             }
 
-            // Close dropdowns when clicking outside
             document.addEventListener('click', function(e) {
                 if (!e.target.closest('.watchlist-card')) {
                     document.querySelectorAll('.dropdown-menu.open').forEach(d => {
@@ -1417,6 +1387,67 @@
                     });
                 }
             });
+
+            // ===================== UPDATE WATCHLIST ITEM UI =====================
+            function updateWatchlistItemUI(filmId, updates) {
+                const card = document.querySelector(`.watchlist-card[data-id="${filmId}"]`);
+                if (!card) return;
+
+                // Update the card classes - just add/remove watched class for faded effect
+                if (updates.watched !== undefined) {
+                    if (updates.watched) {
+                        card.classList.add('watched');
+                    } else {
+                        card.classList.remove('watched');
+                    }
+                }
+
+                if (updates.favorite !== undefined) {
+                    if (updates.favorite) {
+                        card.classList.add('favorited');
+                    } else {
+                        card.classList.remove('favorited');
+                    }
+                }
+
+                // Update the dropdown items
+                const dropdownItems = card.querySelectorAll('.dropdown-item');
+                dropdownItems.forEach(item => {
+                    const action = item.dataset.action;
+                    
+                    if (action === 'watch' || action === 'unwatch') {
+                        const isWatched = updates.watched !== undefined ? updates.watched : watchlist.find(f => f.id == filmId)?.watched;
+                        const watchIcon = isWatched ? 'fa-undo' : 'fa-check';
+                        const watchText = isWatched ? 'Mark as Unwatched' : 'Mark as Watched';
+                        item.innerHTML = `<i class="fas ${watchIcon}"></i> ${watchText}`;
+                        item.className = `dropdown-item ${isWatched ? 'watched-active' : ''}`;
+                        item.dataset.action = isWatched ? 'unwatch' : 'watch';
+                    }
+                    
+                    if (action === 'favorite') {
+                        const isFavorite = updates.favorite !== undefined ? updates.favorite : watchlist.find(f => f.id == filmId)?.favorite;
+                        const favIcon = isFavorite ? 'fa-heart' : 'fa-heart';
+                        const favText = isFavorite ? 'Remove from Favorites' : 'Add to Favorites';
+                        item.innerHTML = `<i class="fas ${favIcon}"></i> ${favText}`;
+                        item.className = `dropdown-item ${isFavorite ? 'favorited-active' : ''}`;
+                    }
+                });
+
+                // Update the poster overlay - remove any existing overlay and add faded effect
+                const poster = card.querySelector('.poster');
+                if (poster) {
+                    // Remove existing overlay
+                    const existingOverlay = poster.querySelector('.watched-overlay');
+                    if (existingOverlay) existingOverlay.remove();
+                    
+                    // Add overlay with just the faded effect (no text or icon)
+                    if (updates.watched !== undefined && updates.watched) {
+                        const overlay = document.createElement('div');
+                        overlay.className = 'watched-overlay';
+                        poster.appendChild(overlay);
+                    }
+                }
+            }
 
             function renderWatchlist() {
                 const films = getFilteredAndSorted();
@@ -1435,7 +1466,6 @@
                     const watchedClass = film.watched ? 'watched' : '';
                     const favoritedClass = film.favorite ? 'favorited' : '';
                     
-                    // Dropdown item states
                     const watchActive = film.watched ? 'watched-active' : '';
                     const favActive = film.favorite ? 'favorited-active' : '';
                     const watchIcon = film.watched ? 'fa-undo' : 'fa-check';
@@ -1446,12 +1476,10 @@
                     return `
                         <div class="watchlist-card ${watchedClass} ${favoritedClass}" data-id="${film.id}">
                             <div class="poster" style="background-image: url('${film.poster}');">
-                                <!-- Three-Dot Menu Button - Top Right -->
+                                ${film.watched ? `<div class="watched-overlay"></div>` : ''}
                                 <button class="menu-btn" data-id="${film.id}" title="Actions">
                                     <i class="fas fa-ellipsis-v"></i>
                                 </button>
-                                
-                                <!-- Dropdown Menu - Overlay on top -->
                                 <div class="dropdown-menu">
                                     <button class="dropdown-item ${watchActive}" data-id="${film.id}" data-action="${film.watched ? 'unwatch' : 'watch'}">
                                         <i class="fas ${watchIcon}"></i> ${watchText}
@@ -1481,7 +1509,6 @@
                         const action = this.dataset.action;
                         const id = this.dataset.id;
                         
-                        // Close the dropdown
                         const dropdown = this.closest('.dropdown-menu');
                         if (dropdown) dropdown.classList.remove('open');
                         
@@ -1492,7 +1519,6 @@
                 // Click card to go to movie details
                 document.querySelectorAll('.watchlist-card').forEach(card => {
                     card.addEventListener('click', function(e) {
-                        // Don't navigate if clicking on menu button or dropdown items
                         if (e.target.closest('.menu-btn') || e.target.closest('.dropdown-menu')) return;
                         const id = this.dataset.id;
                         if (id) window.location.href = `movie-details.html?id=${id}`;
@@ -1500,9 +1526,8 @@
                 });
             }
 
-            // ===================== WATCHLIST ACTIONS =====================
+            // ===================== WATCHLIST ACTIONS WITH DYNAMIC UI UPDATE =====================
             async function handleWatchlistAction(filmId, action) {
-                // Find the film in the watchlist
                 const film = watchlist.find(f => f.id == filmId);
                 if (!film) {
                     showToast('Film not found in watchlist', 'error');
@@ -1520,14 +1545,23 @@
                         body = { filmId, favorite: newFav };
                         endpoint = `${API_BASE}/watchlist/toggle-favorite`;
                         actionMessage = newFav ? `Added "${film.title}" to favorites ❤️` : `Removed "${film.title}" from favorites`;
+                        
+                        film.favorite = newFav;
+                        updateWatchlistItemUI(filmId, { favorite: newFav });
                     } else if (action === 'watch') {
                         body = { filmId, watched: true };
                         endpoint = `${API_BASE}/watchlist/toggle-watched`;
                         actionMessage = `Marked "${film.title}" as watched ✓`;
+                        
+                        film.watched = true;
+                        updateWatchlistItemUI(filmId, { watched: true });
                     } else if (action === 'unwatch') {
                         body = { filmId, watched: false };
                         endpoint = `${API_BASE}/watchlist/toggle-watched`;
                         actionMessage = `Marked "${film.title}" as unwatched`;
+                        
+                        film.watched = false;
+                        updateWatchlistItemUI(filmId, { watched: false });
                     } else {
                         showToast('Invalid action', 'error');
                         return;
@@ -1543,15 +1577,22 @@
                     });
 
                     if (!res.ok) {
+                        // Revert local changes if API call fails
+                        if (action === 'favorite') film.favorite = !film.favorite;
+                        else if (action === 'watch') film.watched = false;
+                        else if (action === 'unwatch') film.watched = true;
+                        
+                        updateWatchlistItemUI(filmId, { 
+                            favorite: film.favorite, 
+                            watched: film.watched 
+                        });
+                        
                         const errData = await res.json().catch(() => ({}));
                         throw new Error(errData.message || 'Action failed');
                     }
 
-                    // Show success toast
                     showToast(actionMessage, 'success');
-                    
-                    // Refresh the watchlist
-                    await fetchWatchlist();
+                    updateStats();
                     
                 } catch (err) {
                     console.error('Watchlist action error:', err);
@@ -1568,7 +1609,6 @@
                 statWatched.textContent = watched;
                 statWatchlist.textContent = total;
                 statFavorites.textContent = favorites;
-                // statGenres is updated in fetchGenresForWatchlist
                 dropdownStat.textContent = `${watched} films watched`;
 
                 if (total === 0) {
@@ -1588,7 +1628,6 @@
                         <div class="stat-card"><div class="stat-number" id="statGenresDisplay">${genreCount}</div><div class="stat-label">Genres Explored</div></div>
                     `;
                     
-                    // Update genres display in stats grid
                     const genreCountDisplay = document.getElementById('statGenresDisplay');
                     if (genreCountDisplay) {
                         genreCountDisplay.textContent = genreCount || '0';
@@ -1760,15 +1799,10 @@
             // ===================== INIT =====================
             async function initializeProfile() {
                 console.log('🚀 Initializing profile page...');
-                
-                // Fetch user details from database
                 await fetchUserDetails();
-                
-                // Fetch watchlist and bookings
                 await fetchWatchlist();
                 await fetchBookings();
 
-                // If we're on a page with a watchlist button, update its state
                 const urlParams = new URLSearchParams(window.location.search);
                 const movieId = urlParams.get('id');
                 if (movieId) {
@@ -1776,11 +1810,9 @@
                         updateWatchlistButtonUI(parseInt(movieId));
                     }, 500);
                 }
-                
                 console.log('✅ Profile page initialized successfully');
             }
 
-            // Call the initialization function
             initializeProfile();
         });
     </script>
