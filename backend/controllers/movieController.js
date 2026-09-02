@@ -855,6 +855,93 @@ async function getMovieDetails(req, res) {
 
 
 // ============================================================
+// GET POPULAR MOVIES
+// GET /api/movies/popular
+// ============================================================
+
+async function getPopularMovies(req, res) {
+    try {
+        const result = await pool.query(`
+            SELECT
+                m.movie_id,
+                m.tmdb_id,
+                m.title,
+                m.original_title,
+                m.description,
+                m.release_date,
+                m.runtime_minutes,
+                m.age_rating,
+                m.poster_url,
+                m.backdrop_url,
+                m.trailer_url,
+                m.rating,
+                m.status,
+                m.studio_id,
+                s.studio_name
+            FROM movies m
+            LEFT JOIN studios s
+                ON s.studio_id = m.studio_id
+            WHERE m.rating IS NOT NULL
+            ORDER BY
+                CASE m.status
+                    WHEN 'NOW_SHOWING' THEN 1
+                    WHEN 'UPCOMING' THEN 2
+                    WHEN 'COMING_SOON' THEN 3
+                    WHEN 'ENDED' THEN 4
+                    WHEN 'ARCHIVED' THEN 5
+                    ELSE 6
+                END,
+                m.rating DESC,
+                m.release_date DESC NULLS LAST,
+                m.title ASC
+            LIMIT 20
+        `);
+
+        const movies = result.rows.map(movie => ({
+            movieId: movie.movie_id,
+            tmdbId: movie.tmdb_id,
+            title: movie.title || 'Untitled',
+            originalTitle: movie.original_title || movie.title || 'Untitled',
+            description: movie.description || '',
+            releaseDate: movie.release_date,
+            runtimeMinutes: movie.runtime_minutes,
+            ageRating: movie.age_rating,
+            posterUrl: movie.poster_url,
+            backdropUrl: movie.backdrop_url,
+            trailerUrl: movie.trailer_url,
+            rating: movie.rating,
+            status: movie.status || 'UNKNOWN',
+
+            studio: movie.studio_id
+                ? {
+                    studioId: movie.studio_id,
+                    studioName: movie.studio_name
+                }
+                : null
+        }));
+
+        console.log(`✅ Popular movies returned: ${movies.length}`);
+
+        return res.json({
+            success: true,
+            count: movies.length,
+            movies
+        });
+
+    } catch (error) {
+        console.error('❌ Get popular movies error:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Server error fetching popular movies',
+            error: error.message
+        });
+    }
+}
+
+
+
+// ============================================================
 // GET TOP RATED MOVIES
 // GET /api/movies/top-rated
 // ============================================================
@@ -929,5 +1016,6 @@ module.exports = {
     searchMovies,
     getComingSoonMovies,
     getMovieDetails,
-    getTopRatedMovies
+    getTopRatedMovies,
+    getPopularMovies
 };

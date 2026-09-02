@@ -295,7 +295,6 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: column;
         }
 
         .mobile-menu-links li {
@@ -1188,6 +1187,7 @@
     TOAST NOTIFICATION
     ============================================================ -->
     <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">ℹ️</span>
         <span id="toastMessage">Added to watchlist</span>
     </div>
 
@@ -1216,14 +1216,14 @@
     DISCOVERY GRID
     ============================================================ -->
     <div class="discovery-grid" id="discoveryGrid">
-        <div class="loading-state">
+        <div class="loading-state" id="initialLoading">
             <i class="fas fa-spinner fa-spin"></i>
             Loading films...
         </div>
     </div>
 
     <!-- ============================================================
-    INFINITE SCROLL LOADER
+    INFINITE SCROLL LOADER - Only shows on scroll
     ============================================================ -->
     <div class="scroll-loader" id="scrollLoader">
         <i class="fas fa-spinner fa-spin"></i> Loading more films...
@@ -1275,1293 +1275,2353 @@
     JAVASCRIPT
     ============================================================ -->
     <script src="backend/config.js"></script>
+<!-- ============================================================
+JAVASCRIPT
+============================================================ -->
+<script src="backend/config.js"></script>
+<!-- ============================================================
+JAVASCRIPT
+============================================================ -->
+<script src="backend/config.js"></script>
+
 <script>
-    (function() {
-        'use strict';
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
 
-        // ============================================================
-        // CONFIGURATION
-        // ============================================================
+    /* ============================================================
+       API / AUTH CONFIG
+       ============================================================ */
 
-        /*
-         * IMPORTANT:
-         * Replace the IP address below with the Network IP shown
-         * when your Node.js server starts.
-         *
-         * Example:
-         * 📍 Network: http://192.168.1.100:5000
-         */
+    const API_BASE =
+        window.API_BASE ||
+        'http://localhost:5000/api';
 
-        const API_BASE_URL = 'http://localhost:5000';
+    const WATCHLIST_URL =
+        window.WATCHLIST_URL ||
+        `${API_BASE}/watchlist`;
 
-        /*
-         * TMDB configuration
-         *
-         * NOTE:
-         * We will eventually move the TMDB API key completely
-         * behind the Node.js backend so it is not exposed here.
-         */
+    const token =
+        localStorage.getItem('token');
 
-        const API_KEY = 'a0b31df2c8c2865ebe236c9e1eb7cbd9';
+    let userData = null;
 
-        const IMAGE_BASE =
-            'https://image.tmdb.org/t/p/w500';
+    try {
+        userData = JSON.parse(
+            localStorage.getItem('user') || 'null'
+        );
+    } catch (error) {
+        console.warn(
+            '⚠️ Could not parse stored user data'
+        );
 
-        const STORAGE_KEY =
-            'savannah_watchlist';
+        userData = null;
+    }
 
-        const ITEMS_PER_PAGE = 20;
+    const isAuthenticated =
+        !!token && !!userData;
 
-        // ============================================================
-        // AUTHENTICATION
-        // ============================================================
 
-        const token =
-            localStorage.getItem('token');
+    /* ============================================================
+       DOM ELEMENTS
+       ============================================================ */
 
-        const userData =
-            JSON.parse(
-                localStorage.getItem('user') || 'null'
-            );
+    const navRight =
+        document.getElementById('navRight');
 
-        const isAuthenticated =
-            !!token && !!userData;
+    const mobileMenuLinks =
+        document.getElementById('mobileMenuLinks');
 
-        // ============================================================
-        // DOM REFS
-        // ============================================================
+    const mobileDivider =
+        document.getElementById('mobileDivider');
 
-        const DOM = {
+    const menuToggle =
+        document.getElementById('menuToggle');
 
-            grid:
-                document.getElementById(
-                    'discoveryGrid'
-                ),
+    const mobileMenu =
+        document.getElementById('mobileMenu');
 
-            searchInput:
-                document.getElementById(
-                    'searchInput'
-                ),
+    const mobileOverlay =
+        document.getElementById('mobileOverlay');
 
-            clearBtn:
-                document.getElementById(
-                    'clearBtn'
-                ),
+    const mobileMenuClose =
+        document.getElementById('mobileMenuClose');
 
-            resultCount:
-                document.getElementById(
-                    'resultCount'
-                ),
+    const resultCount =
+        document.getElementById('resultCount');
 
-            scrollLoader:
-                document.getElementById(
-                    'scrollLoader'
-                ),
+    const searchInput =
+        document.getElementById('searchInput');
 
-            toast:
-                document.getElementById(
-                    'toast'
-                ),
+    const clearBtn =
+        document.getElementById('clearBtn');
 
-            toastIcon:
-                document.getElementById(
-                    'toastIcon'
-                ),
+    const discoveryGrid =
+        document.getElementById('discoveryGrid');
 
-            toastMessage:
-                document.getElementById(
-                    'toastMessage'
-                ),
+    const scrollLoader =
+        document.getElementById('scrollLoader');
 
-            menuToggle:
-                document.getElementById(
-                    'menuToggle'
-                ),
+    const initialLoading =
+        document.getElementById('initialLoading');
 
-            mobileMenu:
-                document.getElementById(
-                    'mobileMenu'
-                ),
 
-            mobileOverlay:
-                document.getElementById(
-                    'mobileOverlay'
-                ),
+    /* ============================================================
+       USER INFORMATION
+       ============================================================ */
 
-            mobileMenuClose:
-                document.getElementById(
-                    'mobileMenuClose'
-                ),
+    function getUserName() {
 
-            navRight:
-                document.getElementById(
-                    'navRight'
-                ),
+        if (!userData) {
 
-            mobileMenuLinks:
-                document.getElementById(
-                    'mobileMenuLinks'
-                ),
-
-            mobileDivider:
-                document.getElementById(
-                    'mobileDivider'
-                )
-
-        };
-
-        // ============================================================
-        // NAV RENDER
-        // ============================================================
-
-        function renderNav() {
-
-            if (
-                isAuthenticated &&
-                userData
-            ) {
-
-                const initials =
-                    userData.name
-                        .split(' ')
-                        .map(
-                            n => n[0]
-                        )
-                        .join('')
-                        .toUpperCase()
-                        .slice(0, 2);
-
-                DOM.navRight.innerHTML = `
-                    <div
-                        class="profile-wrapper"
-                        id="profileWrapper"
-                    >
-
-                        <div
-                            class="avatar"
-                            id="avatarBtn"
-                        >
-                            ${initials}
-                        </div>
-
-                        <div
-                            class="profile-menu"
-                            id="profileMenu"
-                        >
-
-                            <div class="who">
-
-                                <div class="name">
-                                    ${userData.name}
-                                </div>
-
-                                <div
-                                    class="stat"
-                                    id="navStat"
-                                >
-                                    0 films watched
-                                </div>
-
-                            </div>
-
-                            <a href="profile.html">
-                                My Profile
-                            </a>
-
-                            <a
-                                href="#"
-                                id="logoutBtn"
-                            >
-                                Sign out
-                            </a>
-
-                        </div>
-
-                    </div>
-                `;
-
-                const logoutLink =
-                    document.createElement('li');
-
-                logoutLink.innerHTML = `
-                    <a
-                        href="#"
-                        class="mobile-logout"
-                        id="mobileLogoutBtn"
-                    >
-                        <i class="fas fa-sign-out-alt"></i>
-                        Sign out
-                    </a>
-                `;
-
-                DOM.mobileMenuLinks.appendChild(
-                    logoutLink
-                );
-
-                if (DOM.mobileDivider) {
-                    DOM.mobileDivider.style.display =
-                        'block';
-                }
-
-                setupProfileDropdown();
-
-                document
-                    .getElementById('logoutBtn')
-                    .addEventListener(
-                        'click',
-                        function(e) {
-
-                            e.preventDefault();
-
-                            logout();
-
-                        }
-                    );
-
-                document
-                    .getElementById('mobileLogoutBtn')
-                    .addEventListener(
-                        'click',
-                        function(e) {
-
-                            e.preventDefault();
-
-                            logout();
-
-                        }
-                    );
-
-                fetchWatchCount();
-
-            } else {
-
-                DOM.navRight.innerHTML = `
-                    <a
-                        href="logout.html"
-                        class="btn-signin"
-                    >
-                        <i class="fas fa-sign-in-alt"></i>
-                        Sign In
-                    </a>
-                `;
-
-                const signInLink =
-                    document.createElement('li');
-
-                signInLink.innerHTML = `
-                    <a
-                        href="logout.html"
-                        style="color:var(--gold);"
-                    >
-                        <i class="fas fa-sign-in-alt"></i>
-                        Sign In / Create Account
-                    </a>
-                `;
-
-                DOM.mobileMenuLinks.appendChild(
-                    signInLink
-                );
-
-                if (DOM.mobileDivider) {
-                    DOM.mobileDivider.style.display =
-                        'block';
-                }
-
-            }
-
-        }
-
-        // ============================================================
-        // PROFILE DROPDOWN
-        // ============================================================
-
-        function setupProfileDropdown() {
-
-            const profileWrapper =
-                document.getElementById(
-                    'profileWrapper'
-                );
-
-            const avatarBtn =
-                document.getElementById(
-                    'avatarBtn'
-                );
-
-            if (
-                !profileWrapper ||
-                !avatarBtn
-            ) {
-                return;
-            }
-
-            let closeTimer;
-
-            profileWrapper.addEventListener(
-                'mouseenter',
-                function() {
-
-                    clearTimeout(
-                        closeTimer
-                    );
-
-                    this.classList.add(
-                        'is-open'
-                    );
-
-                }
-            );
-
-            profileWrapper.addEventListener(
-                'mouseleave',
-                function() {
-
-                    closeTimer =
-                        setTimeout(
-                            () => {
-
-                                this.classList.remove(
-                                    'is-open'
-                                );
-
-                            },
-                            150
-                        );
-
-                }
-            );
-
-            avatarBtn.addEventListener(
-                'click',
-                function(e) {
-
-                    e.stopPropagation();
-
-                    profileWrapper.classList.toggle(
-                        'is-open'
-                    );
-
-                }
-            );
-
-            document.addEventListener(
-                'click',
-                function(e) {
-
-                    if (
-                        !profileWrapper.contains(
-                            e.target
-                        )
-                    ) {
-
-                        profileWrapper.classList.remove(
-                            'is-open'
-                        );
-
-                    }
-
-                }
-            );
-
-        }
-
-        // ============================================================
-        // FETCH WATCH COUNT
-        // ============================================================
-
-        async function fetchWatchCount() {
-
-            if (!token) {
-                return;
-            }
-
-            try {
-
-                const response =
-                    await fetch(
-                        `${API_BASE_URL}/api/watchlist`,
-                        {
-                            headers: {
-                                'Authorization':
-                                    `Bearer ${token}`
-                            }
-                        }
-                    );
-
-                if (response.ok) {
-
-                    const watchlist =
-                        await response.json();
-
-                    const watchedCount =
-                        watchlist.filter(
-                            item =>
-                                item.watched
-                        ).length;
-
-                    const statEl =
-                        document.getElementById(
-                            'navStat'
-                        );
-
-                    if (statEl) {
-
-                        statEl.textContent =
-                            `${watchedCount} films watched`;
-
-                    }
-
-                }
-
-            } catch (error) {
-
-                console.error(
-                    'Error fetching watch count:',
-                    error
-                );
-
-            }
-
-        }
-
-        // ============================================================
-        // LOGOUT
-        // ============================================================
-
-        function logout() {
-
-            localStorage.removeItem(
-                'token'
-            );
-
-            localStorage.removeItem(
-                'user'
-            );
-
-            window.location.href =
-                'logout.html';
-
-        }
-
-        // ============================================================
-        // STATE
-        // ============================================================
-
-        let allFilms = [];
-
-        let currentPage = 1;
-
-        let totalPages = 0;
-
-        let isLoading = false;
-
-        let searchQuery = '';
-
-        let debounceTimer = null;
-
-        let hasMore = true;
-
-        let isInitialLoad = true;
-
-        let seenIds = new Set();
-
-        // ============================================================
-        // WATCHLIST STORAGE
-        // ============================================================
-
-        function getWatchlist() {
-
-            try {
-
-                const data =
-                    localStorage.getItem(
-                        STORAGE_KEY
-                    );
-
-                return data
-                    ? JSON.parse(data)
-                    : [];
-
-            } catch (e) {
-
-                return [];
-
-            }
-
-        }
-
-        function saveWatchlist(
-            watchlist
-        ) {
-
-            localStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify(
-                    watchlist
-                )
-            );
-
-        }
-
-        function isInWatchlist(
-            movieId
-        ) {
-
-            const watchlist =
-                getWatchlist();
-
-            return watchlist.some(
-                item =>
-                    item.id === movieId
-            );
-
-        }
-
-        // ============================================================
-        // TOAST
-        // ============================================================
-
-        let toastTimeout = null;
-
-        function showToast(
-            message,
-            type
-        ) {
-
-            const iconMap = {
-
-                success: '✅',
-
-                info: 'ℹ️',
-
-                error: '❌'
-
+            return {
+                forenames: 'User',
+                surname: '',
+                fullName: 'User'
             };
-
-            DOM.toastIcon.textContent =
-                iconMap[type] || 'ℹ️';
-
-            DOM.toastIcon.className =
-                `toast-icon ${type}`;
-
-            DOM.toastMessage.textContent =
-                message;
-
-            DOM.toast.classList.add(
-                'show'
-            );
-
-            clearTimeout(
-                toastTimeout
-            );
-
-            toastTimeout =
-                setTimeout(
-                    () => {
-
-                        DOM.toast.classList.remove(
-                            'show'
-                        );
-
-                    },
-                    3000
-                );
-
         }
 
-        // ============================================================
-        // MOBILE MENU
-        // ============================================================
 
-        function setupMobileMenu() {
+        const forenames =
+            userData.forenames ||
+            userData.FORENAMES ||
+            userData.name ||
+            userData.NAME ||
+            'User';
 
-            DOM.menuToggle.addEventListener(
-                'click',
-                function(e) {
 
-                    e.stopPropagation();
+        const surname =
+            userData.surname ||
+            userData.SURNAME ||
+            '';
 
-                    DOM.mobileMenu.classList.toggle(
-                        'open'
-                    );
 
-                    DOM.mobileOverlay.classList.toggle(
-                        'active'
-                    );
+        const fullName =
+            `${forenames} ${surname}`.trim() ||
+            'User';
 
-                    DOM.menuToggle.classList.toggle(
-                        'active'
-                    );
 
-                    document.body.style.overflow =
-                        DOM.mobileMenu.classList.contains(
-                            'open'
-                        )
-                            ? 'hidden'
-                            : '';
+        return {
+            forenames,
+            surname,
+            fullName
+        };
+    }
 
-                }
-            );
 
-            DOM.mobileMenuClose.addEventListener(
-                'click',
-                closeMobileMenu
-            );
+    /* ============================================================
+       PROFILE INITIALS
+       ============================================================ */
 
-            DOM.mobileOverlay.addEventListener(
-                'click',
-                closeMobileMenu
-            );
+    function getInitials() {
 
-            DOM.mobileMenu
-                .querySelectorAll('a')
-                .forEach(
-                    function(link) {
+        const {
+            forenames,
+            surname
+        } = getUserName();
 
-                        link.addEventListener(
-                            'click',
-                            closeMobileMenu
-                        );
 
-                    }
-                );
+        const nameParts =
+            String(forenames)
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean);
 
-            document.addEventListener(
-                'keydown',
-                function(e) {
 
-                    if (
-                        e.key === 'Escape' &&
-                        DOM.mobileMenu.classList.contains(
-                            'open'
-                        )
-                    ) {
+        let initials = '';
 
-                        closeMobileMenu();
 
-                    }
+        /* First initial */
 
-                }
-            );
+        if (nameParts.length > 0) {
 
+            initials +=
+                nameParts[0]
+                    .charAt(0)
+                    .toUpperCase();
         }
 
-        function closeMobileMenu() {
 
-            DOM.mobileMenu.classList.remove(
-                'open'
-            );
+        /* Surname initial */
 
-            DOM.mobileOverlay.classList.remove(
-                'active'
-            );
+        if (surname) {
 
-            DOM.menuToggle.classList.remove(
-                'active'
-            );
-
-            document.body.style.overflow =
-                '';
-
+            initials +=
+                surname
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase();
         }
 
-        // ============================================================
-        // FETCH FILMS WITH DEDUPLICATION
-        // ============================================================
 
-        async function fetchFilms(
-            page = 1,
-            query = ''
+        /* Second forename if required */
+
+        if (
+            initials.length < 2 &&
+            nameParts.length > 1
         ) {
 
-            let url;
-
-            if (
-                query.trim()
-            ) {
-
-                url =
-                    `https://api.themoviedb.org/3/search/movie` +
-                    `?api_key=${API_KEY}` +
-                    `&language=en-US` +
-                    `&page=${page}` +
-                    `&query=${encodeURIComponent(
-                        query.trim()
-                    )}`;
-
-            } else {
-
-                url =
-                    `https://api.themoviedb.org/3/movie/popular` +
-                    `?api_key=${API_KEY}` +
-                    `&language=en-US` +
-                    `&page=${page}`;
-
-            }
-
-            try {
-
-                const response =
-                    await fetch(url);
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        `API Error: ${response.status}`
-                    );
-
-                }
-
-                const data =
-                    await response.json();
-
-                totalPages =
-                    data.total_pages;
-
-                // ----------------------------------------------------
-                // Filter films
-                // ----------------------------------------------------
-
-                const films =
-                    data.results.filter(
-                        film => {
-
-                            // Must have a poster
-                            if (
-                                !film.poster_path
-                            ) {
-                                return false;
-                            }
-
-                            // Remove duplicates
-                            if (
-                                seenIds.has(
-                                    film.id
-                                )
-                            ) {
-                                return false;
-                            }
-
-                            seenIds.add(
-                                film.id
-                            );
-
-                            return true;
-
-                        }
-                    );
-
-                return films;
-
-            } catch (error) {
-
-                console.error(
-                    'Error fetching films:',
-                    error
-                );
-
-                return [];
-
-            }
-
+            initials +=
+                nameParts[1]
+                    .charAt(0)
+                    .toUpperCase();
         }
 
-        // ============================================================
-        // RENDER FILMS
-        // ============================================================
 
-        function renderFilms(
-            films,
-            append = false
+        /* Fallback */
+
+        while (initials.length < 2) {
+            initials += 'U';
+        }
+
+
+        return initials.substring(0, 2);
+    }
+
+
+    /* ============================================================
+       RENDER NAVIGATION
+       ============================================================ */
+
+    function renderNav() {
+
+        if (
+            !navRight ||
+            !mobileMenuLinks
         ) {
+            return;
+        }
 
-            const grid =
-                DOM.grid;
 
-            if (!append) {
+        /* ========================================================
+           AUTHENTICATED USER
+           ======================================================== */
 
-                grid.innerHTML =
-                    '';
+        if (isAuthenticated) {
 
-            }
+            const {
+                fullName
+            } = getUserName();
 
-            if (
-                films.length === 0 &&
-                !append
-            ) {
 
-                grid.innerHTML = `
-                    <div class="empty-state">
+            const initials =
+                getInitials();
 
-                        <i class="fas fa-film"></i>
 
-                        <h3>
-                            No Films Found
-                        </h3>
+            /* ====================================================
+               DESKTOP PROFILE
+               ==================================================== */
 
-                        <p>
-                            ${
-                                searchQuery
-                                    ? `No results found for "${searchQuery}".`
-                                    : 'Try adjusting your search to find more films.'
-                            }
-                        </p>
+            navRight.innerHTML = `
+
+                <div
+                    class="profile-wrapper"
+                    id="profileWrapper"
+                >
+
+                    <button
+                        class="avatar"
+                        id="avatarBtn"
+                        type="button"
+                        title="${escapeHtml(fullName)}"
+                        aria-label="Open profile menu"
+                        aria-expanded="false"
+                    >
+                        ${initials}
+                    </button>
+
+
+                    <div
+                        class="profile-menu"
+                        id="profileMenu"
+                    >
+
+                        <div class="who">
+
+                            <div class="name">
+                                ${escapeHtml(fullName)}
+                            </div>
+
+                            <div
+                                class="stat"
+                                id="navStat"
+                            >
+                                Loading...
+                            </div>
+
+                        </div>
+
+
+                        <div class="profile-menu-divider"></div>
+
+
+                        <a href="profile.html">
+
+                            <i class="fas fa-user"></i>
+
+                            My Profile
+
+                        </a>
+
+
+                        <a href="watchlist.html">
+
+                            <i class="fas fa-heart"></i>
+
+                            My Watchlist
+
+                        </a>
+
+
+                        <a href="bookings.html">
+
+                            <i class="fas fa-ticket-alt"></i>
+
+                            My Bookings
+
+                        </a>
+
+
+                        <div class="profile-menu-divider"></div>
+
+
+                        <a
+                            href="#"
+                            id="logoutBtn"
+                        >
+
+                            <i class="fas fa-sign-out-alt"></i>
+
+                            Sign out
+
+                        </a>
 
                     </div>
-                `;
 
-                DOM.resultCount.textContent =
-                    '0';
+                </div>
+            `;
 
-                DOM.scrollLoader.classList.remove(
-                    'show'
-                );
 
-                return;
+            /* ====================================================
+               MOBILE AUTH LINKS
+               ==================================================== */
 
+            mobileMenuLinks
+                .querySelectorAll('.mobile-auth-link')
+                .forEach(element => {
+                    element.remove();
+                });
+
+
+            /* Mobile Profile */
+
+            const mobileProfile =
+                document.createElement('li');
+
+            mobileProfile.className =
+                'mobile-auth-link';
+
+            mobileProfile.innerHTML = `
+
+                <a href="profile.html">
+
+                    <span
+                        class="mobile-profile-avatar"
+                    >
+                        ${initials}
+                    </span>
+
+                    <span>
+                        ${escapeHtml(fullName)}
+                    </span>
+
+                </a>
+            `;
+
+            mobileMenuLinks.appendChild(
+                mobileProfile
+            );
+
+
+            /* Mobile Watchlist */
+
+            const mobileWatchlist =
+                document.createElement('li');
+
+            mobileWatchlist.className =
+                'mobile-auth-link';
+
+            mobileWatchlist.innerHTML = `
+
+                <a href="watchlist.html">
+
+                    <i class="fas fa-heart"></i>
+
+                    My Watchlist
+
+                </a>
+            `;
+
+            mobileMenuLinks.appendChild(
+                mobileWatchlist
+            );
+
+
+            /* Mobile Bookings */
+
+            const mobileBookings =
+                document.createElement('li');
+
+            mobileBookings.className =
+                'mobile-auth-link';
+
+            mobileBookings.innerHTML = `
+
+                <a href="bookings.html">
+
+                    <i class="fas fa-ticket-alt"></i>
+
+                    My Bookings
+
+                </a>
+            `;
+
+            mobileMenuLinks.appendChild(
+                mobileBookings
+            );
+
+
+            /* Mobile Sign Out */
+
+            const mobileLogout =
+                document.createElement('li');
+
+            mobileLogout.className =
+                'mobile-auth-link';
+
+            mobileLogout.innerHTML = `
+
+                <a
+                    href="#"
+                    class="mobile-logout"
+                    id="mobileLogoutBtn"
+                >
+
+                    <i class="fas fa-sign-out-alt"></i>
+
+                    Sign out
+
+                </a>
+            `;
+
+            mobileMenuLinks.appendChild(
+                mobileLogout
+            );
+
+
+            if (mobileDivider) {
+                mobileDivider.style.display = 'block';
             }
 
-            DOM.resultCount.textContent =
-                allFilms.length;
 
-            const filmsHTML =
-                films.map(
-                    film => {
+            /* Setup dropdown */
 
-                        const posterUrl =
-                            film.poster_path
-                                ? `${IMAGE_BASE}${film.poster_path}`
-                                : '';
+            setupProfileDropdown();
 
-                        const rating =
-                            film.vote_average
-                                ? film.vote_average.toFixed(1)
-                                : 'N/A';
 
-                        const inWatchlist =
-                            isInWatchlist(
-                                film.id
-                            );
+            /* Desktop logout */
 
-                        return `
-                            <div
-                                class="movie-card"
-                                onclick="viewMovie(${film.id})"
-                            >
+            const logoutBtn =
+                document.getElementById(
+                    'logoutBtn'
+                );
 
-                                <div
-                                    class="poster"
-                                    style="
-                                        background-image:
-                                            url('${posterUrl}');
-                                        background-color:
-                                            var(--ink-raised);
-                                    "
-                                >
 
-                                    ${
-                                        inWatchlist
-                                            ? `
-                                                <div class="watchlist-badge">
-                                                    <i class="fas fa-heart"></i>
-                                                </div>
-                                            `
-                                            : ''
-                                    }
+            if (logoutBtn) {
 
-                                </div>
+                logoutBtn.addEventListener(
+                    'click',
+                    function (event) {
 
-                            </div>
-                        `;
+                        event.preventDefault();
 
+                        logout();
                     }
-                ).join('');
-
-            if (append) {
-
-                grid.insertAdjacentHTML(
-                    'beforeend',
-                    filmsHTML
                 );
-
-            } else {
-
-                grid.innerHTML =
-                    filmsHTML;
-
             }
 
-            // ========================================================
-            // UPDATE SCROLL LOADER
-            // ========================================================
 
-            if (
-                hasMore &&
-                currentPage <= totalPages
-            ) {
+            /* Mobile logout */
 
-                DOM.scrollLoader.classList.add(
-                    'show'
+            const mobileLogoutBtn =
+                document.getElementById(
+                    'mobileLogoutBtn'
                 );
 
-                DOM.scrollLoader.innerHTML = `
-                    <i class="fas fa-spinner fa-spin"></i>
-                    Loading more films...
-                `;
 
-            } else {
+            if (mobileLogoutBtn) {
 
-                DOM.scrollLoader.classList.remove(
-                    'show'
+                mobileLogoutBtn.addEventListener(
+                    'click',
+                    function (event) {
+
+                        event.preventDefault();
+
+                        logout();
+                    }
                 );
-
             }
+
+
+            /* Fetch watch count */
+
+            fetchWatchCount();
 
         }
 
-        // ============================================================
-        // LOAD FILMS FUNCTION
-        // ============================================================
 
-        async function loadFilms(
-            reset = true
+        /* ========================================================
+           LOGGED OUT USER
+           ======================================================== */
+
+        else {
+
+            navRight.innerHTML = `
+
+                <a
+                    href="logout.html"
+                    class="btn-signin"
+                >
+
+                    <i class="fas fa-user"></i>
+
+                    Sign In
+
+                </a>
+            `;
+
+
+            mobileMenuLinks
+                .querySelectorAll('.mobile-auth-link')
+                .forEach(element => {
+                    element.remove();
+                });
+
+
+            const signInLink =
+                document.createElement('li');
+
+            signInLink.className =
+                'mobile-auth-link';
+
+            signInLink.innerHTML = `
+
+                <a
+                    href="logout.html"
+                    class="mobile-signin-link"
+                >
+
+                    <i class="fas fa-user"></i>
+
+                    Sign In / Create Account
+
+                </a>
+            `;
+
+            mobileMenuLinks.appendChild(
+                signInLink
+            );
+
+
+            if (mobileDivider) {
+                mobileDivider.style.display = 'block';
+            }
+        }
+    }
+
+
+    /* ============================================================
+       PROFILE DROPDOWN
+       ============================================================ */
+
+    function setupProfileDropdown() {
+
+        const profileWrapper =
+            document.getElementById(
+                'profileWrapper'
+            );
+
+        const avatarBtn =
+            document.getElementById(
+                'avatarBtn'
+            );
+
+
+        if (
+            !profileWrapper ||
+            !avatarBtn
         ) {
+            return;
+        }
 
-            if (isLoading) {
-                return;
-            }
 
-            if (
-                !hasMore &&
-                !reset
-            ) {
-                return;
-            }
+        let closeTimer = null;
 
-            isLoading =
-                true;
 
-            if (reset) {
+        /* --------------------------------------------------------
+           DESKTOP HOVER
+           -------------------------------------------------------- */
 
-                currentPage =
-                    1;
+        profileWrapper.addEventListener(
+            'mouseenter',
+            function () {
 
-                allFilms =
-                    [];
-
-                hasMore =
-                    true;
-
-                isInitialLoad =
-                    true;
-
-                seenIds =
-                    new Set();
-
-            }
-
-            const films =
-                await fetchFilms(
-                    currentPage,
-                    searchQuery
+                clearTimeout(
+                    closeTimer
                 );
 
-                if (DOM.loadingState) {
-    DOM.loadingState.style.display = 'none';
-}
 
-            if (
-                films.length > 0
-            ) {
-
-                allFilms =
-                    reset
-                        ? films
-                        : [
-                            ...allFilms,
-                            ...films
-                        ];
-
-                renderFilms(
-                    films,
-                    !reset
+                profileWrapper.classList.add(
+                    'is-open'
                 );
 
-                currentPage++;
 
-                // ----------------------------------------------------
-                // Check for more pages
-                // ----------------------------------------------------
+                avatarBtn.setAttribute(
+                    'aria-expanded',
+                    'true'
+                );
+            }
+        );
+
+
+        profileWrapper.addEventListener(
+            'mouseleave',
+            function () {
+
+                closeTimer =
+                    setTimeout(
+                        function () {
+
+                            profileWrapper.classList.remove(
+                                'is-open'
+                            );
+
+
+                            avatarBtn.setAttribute(
+                                'aria-expanded',
+                                'false'
+                            );
+
+                        },
+                        150
+                    );
+            }
+        );
+
+
+        /* --------------------------------------------------------
+           CLICK
+           -------------------------------------------------------- */
+
+        avatarBtn.addEventListener(
+            'click',
+            function (event) {
+
+                event.stopPropagation();
+
+
+                const isOpen =
+                    profileWrapper.classList.contains(
+                        'is-open'
+                    );
+
+
+                profileWrapper.classList.toggle(
+                    'is-open'
+                );
+
+
+                avatarBtn.setAttribute(
+                    'aria-expanded',
+                    String(!isOpen)
+                );
+            }
+        );
+
+
+        /* --------------------------------------------------------
+           CLICK OUTSIDE
+           -------------------------------------------------------- */
+
+        document.addEventListener(
+            'click',
+            function (event) {
 
                 if (
-                    currentPage >
-                    totalPages
+                    !profileWrapper.contains(
+                        event.target
+                    )
                 ) {
 
-                    hasMore =
-                        false;
-
-                    DOM.scrollLoader.innerHTML = `
-                        <span class="end-message">
-                            You've reached the end
-                        </span>
-                    `;
-
-                    DOM.scrollLoader.classList.add(
-                        'show'
+                    profileWrapper.classList.remove(
+                        'is-open'
                     );
+
+
+                    avatarBtn.setAttribute(
+                        'aria-expanded',
+                        'false'
+                    );
+                }
+            }
+        );
+    }
+
+
+    /* ============================================================
+       WATCHLIST COUNT
+       ============================================================ */
+
+    async function fetchWatchCount() {
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    WATCHLIST_URL,
+                    {
+                        method: 'GET',
+
+                        headers: {
+                            'Authorization':
+                                `Bearer ${token}`,
+
+                            'Content-Type':
+                                'application/json',
+
+                            'Accept':
+                                'application/json'
+                        }
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                console.warn(
+                    '⚠️ Could not load watchlist count:',
+                    response.status
+                );
+
+                return;
+            }
+
+
+            const data =
+                await response.json();
+
+
+            /*
+             * Current PostgreSQL response:
+             *
+             * {
+             *     success: true,
+             *     watchlist: [...]
+             * }
+             */
+
+            const watchlist =
+                Array.isArray(data.watchlist)
+                    ? data.watchlist
+                    : [];
+
+
+            const watchedCount =
+                watchlist.filter(
+                    item =>
+                        item.watched === true ||
+                        item.watched === 'Y'
+                ).length;
+
+
+            const statEl =
+                document.getElementById(
+                    'navStat'
+                );
+
+
+            if (statEl) {
+
+                statEl.textContent =
+                    `${watchedCount} ${
+                        watchedCount === 1
+                            ? 'film'
+                            : 'films'
+                    } watched`;
+            }
+
+        }
+
+        catch (error) {
+
+            console.error(
+                '❌ Error fetching watch count:',
+                error
+            );
+
+
+            const statEl =
+                document.getElementById(
+                    'navStat'
+                );
+
+
+            if (statEl) {
+
+                statEl.textContent =
+                    'My Savannah account';
+            }
+        }
+    }
+
+
+    /* ============================================================
+       LOGOUT
+       ============================================================ */
+
+    function logout() {
+
+        localStorage.removeItem(
+            'token'
+        );
+
+        localStorage.removeItem(
+            'user'
+        );
+
+        localStorage.removeItem(
+            'userData'
+        );
+
+
+        sessionStorage.clear();
+
+
+        window.location.href =
+            'logout.html';
+    }
+
+
+    /* ============================================================
+       MOBILE MENU
+       ============================================================ */
+
+    function openMobileMenu() {
+
+        if (
+            !mobileMenu ||
+            !mobileOverlay ||
+            !menuToggle
+        ) {
+            return;
+        }
+
+
+        mobileMenu.classList.add(
+            'open'
+        );
+
+
+        mobileOverlay.classList.add(
+            'active'
+        );
+
+
+        menuToggle.classList.add(
+            'active'
+        );
+
+
+        document.body.style.overflow =
+            'hidden';
+    }
+
+
+    function closeMobileMenu() {
+
+        if (
+            !mobileMenu ||
+            !mobileOverlay ||
+            !menuToggle
+        ) {
+            return;
+        }
+
+
+        mobileMenu.classList.remove(
+            'open'
+        );
+
+
+        mobileOverlay.classList.remove(
+            'active'
+        );
+
+
+        menuToggle.classList.remove(
+            'active'
+        );
+
+
+        document.body.style.overflow =
+            '';
+    }
+
+
+    if (menuToggle) {
+
+        menuToggle.addEventListener(
+            'click',
+            function (event) {
+
+                event.stopPropagation();
+
+
+                if (
+                    mobileMenu &&
+                    mobileMenu.classList.contains(
+                        'open'
+                    )
+                ) {
+
+                    closeMobileMenu();
 
                 } else {
 
-                    DOM.scrollLoader.classList.add(
+                    openMobileMenu();
+                }
+            }
+        );
+    }
+
+
+    if (mobileMenuClose) {
+
+        mobileMenuClose.addEventListener(
+            'click',
+            closeMobileMenu
+        );
+    }
+
+
+    if (mobileOverlay) {
+
+        mobileOverlay.addEventListener(
+            'click',
+            closeMobileMenu
+        );
+    }
+
+
+    document.addEventListener(
+        'keydown',
+        function (event) {
+
+            if (
+                event.key === 'Escape' &&
+                mobileMenu &&
+                mobileMenu.classList.contains(
+                    'open'
+                )
+            ) {
+
+                closeMobileMenu();
+            }
+        }
+    );
+
+
+    document
+        .querySelectorAll(
+            '.mobile-menu-links a'
+        )
+        .forEach(link => {
+
+            link.addEventListener(
+                'click',
+                closeMobileMenu
+            );
+        });
+
+
+    /* ============================================================
+       TOAST
+       ============================================================ */
+
+    let toastTimeout = null;
+
+
+    function showToast(
+        message,
+        type = 'info'
+    ) {
+
+        const toast =
+            document.getElementById(
+                'toast'
+            );
+
+        const toastIcon =
+            document.getElementById(
+                'toastIcon'
+            );
+
+        const toastMessage =
+            document.getElementById(
+                'toastMessage'
+            );
+
+
+        if (
+            !toast ||
+            !toastIcon ||
+            !toastMessage
+        ) {
+            return;
+        }
+
+
+        const iconMap = {
+
+            success: '✅',
+
+            info: 'ℹ️',
+
+            error: '❌',
+
+            added: '❤️',
+
+            removed: '💔'
+        };
+
+
+        toastIcon.textContent =
+            iconMap[type] ||
+            iconMap.info;
+
+
+        toastIcon.className =
+            `toast-icon ${type}`;
+
+
+        toastMessage.textContent =
+            message;
+
+
+        toast.classList.add(
+            'show'
+        );
+
+
+        clearTimeout(
+            toastTimeout
+        );
+
+
+        toastTimeout =
+            setTimeout(
+                function () {
+
+                    toast.classList.remove(
                         'show'
                     );
 
-                    DOM.scrollLoader.innerHTML = `
-                        <i class="fas fa-spinner fa-spin"></i>
-                        Loading more films...
-                    `;
+                },
+                3000
+            );
+    }
 
+
+    /* ============================================================
+       ESCAPING HELPERS
+       ============================================================ */
+
+    function escapeHtml(value) {
+
+        return String(
+            value ?? ''
+        )
+        .replace(
+            /&/g,
+            '&amp;'
+        )
+        .replace(
+            /</g,
+            '&lt;'
+        )
+        .replace(
+            />/g,
+            '&gt;'
+        )
+        .replace(
+            /"/g,
+            '&quot;'
+        )
+        .replace(
+            /'/g,
+            '&#039;'
+        );
+    }
+
+
+    function escapeAttribute(value) {
+
+        return String(
+            value ?? ''
+        )
+        .replace(
+            /'/g,
+            '%27'
+        )
+        .replace(
+            /"/g,
+            '%22'
+        );
+    }
+
+
+    /* ============================================================
+       DISCOVERY STATE
+       ============================================================ */
+
+    let allMovies = [];
+
+    let currentPage = 1;
+
+    let isLoading = false;
+
+    let hasMore = true;
+
+    let searchQuery = '';
+
+    let debounceTimer = null;
+
+    let cachedWatchlist = [];
+
+
+    /*
+     * Only used as a fallback for old records that
+     * may still contain TMDB poster_path.
+     *
+     * New database records should use posterUrl.
+     */
+
+    const IMAGE_BASE =
+        'https://image.tmdb.org/t/p/w500';
+
+
+    /* ============================================================
+       FETCH MOVIES FROM POSTGRESQL DATABASE
+       ============================================================ */
+
+    async function fetchAllMoviesFromDatabase() {
+
+        try {
+
+            console.log(
+                '🔍 Fetching movies from PostgreSQL...'
+            );
+
+
+            const response =
+                await fetch(
+                    `${API_BASE}/movies`,
+                    {
+                        method: 'GET',
+
+                        headers: {
+                            'Content-Type':
+                                'application/json',
+
+                            'Accept':
+                                'application/json'
+                        }
+                    }
+                );
+
+
+            console.log(
+                '📡 Movies API status:',
+                response.status
+            );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `HTTP ${response.status}: ${response.statusText}`
+                );
+            }
+
+
+            const data =
+                await response.json();
+
+
+            console.log(
+                '📦 Movies API response:',
+                data
+            );
+
+
+            let movies = [];
+
+
+            /*
+             * Current backend response:
+             *
+             * {
+             *     success: true,
+             *     count: 20,
+             *     movies: [...]
+             * }
+             */
+
+            if (
+                data &&
+                Array.isArray(
+                    data.movies
+                )
+            ) {
+
+                movies =
+                    data.movies;
+
+            }
+
+            else if (
+                data &&
+                Array.isArray(
+                    data.data
+                )
+            ) {
+
+                movies =
+                    data.data;
+
+            }
+
+            else if (
+                Array.isArray(data)
+            ) {
+
+                movies =
+                    data;
+            }
+
+
+            console.log(
+                `📊 ${movies.length} movies loaded`
+            );
+
+
+            if (movies.length > 0) {
+
+                console.log(
+                    '📽️ First movie:',
+                    movies[0]
+                );
+            }
+
+
+            return movies;
+
+        }
+
+        catch (error) {
+
+            console.error(
+                '❌ Error fetching movies:',
+                error
+            );
+
+
+            throw error;
+        }
+    }
+
+
+    /* ============================================================
+       GET WATCHLIST
+       ============================================================ */
+
+    async function getWatchlistFromBackend() {
+
+        if (!isAuthenticated) {
+
+            cachedWatchlist = [];
+
+            return [];
+        }
+
+
+        if (
+            Array.isArray(cachedWatchlist) &&
+            cachedWatchlist.length > 0
+        ) {
+
+            return cachedWatchlist;
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    WATCHLIST_URL,
+                    {
+                        method: 'GET',
+
+                        headers: {
+                            'Authorization':
+                                `Bearer ${token}`,
+
+                            'Content-Type':
+                                'application/json',
+
+                            'Accept':
+                                'application/json'
+                        }
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                console.error(
+                    '❌ Failed to fetch watchlist:',
+                    response.status
+                );
+
+                cachedWatchlist = [];
+
+                return [];
+            }
+
+
+            const data =
+                await response.json();
+
+
+            /*
+             * PostgreSQL response:
+             *
+             * {
+             *     success: true,
+             *     watchlist: [...]
+             * }
+             */
+
+            if (
+                data &&
+                Array.isArray(
+                    data.watchlist
+                )
+            ) {
+
+                cachedWatchlist =
+                    data.watchlist;
+
+            }
+
+            else {
+
+                cachedWatchlist = [];
+            }
+
+
+            console.log(
+                '📋 Watchlist items:',
+                cachedWatchlist.length
+            );
+
+
+            return cachedWatchlist;
+
+        }
+
+        catch (error) {
+
+            console.error(
+                '❌ Fetch watchlist error:',
+                error
+            );
+
+
+            cachedWatchlist = [];
+
+            return [];
+        }
+    }
+
+
+    /* ============================================================
+       LOAD FILMS
+       ============================================================ */
+
+    async function loadFilms(
+        reset = true
+    ) {
+
+        if (isLoading) {
+            return;
+        }
+
+
+        isLoading = true;
+
+
+        if (reset) {
+
+            currentPage = 1;
+
+            allMovies = [];
+
+            hasMore = true;
+
+            cachedWatchlist = [];
+
+
+            if (initialLoading) {
+
+                initialLoading.style.display =
+                    'block';
+            }
+
+
+            if (scrollLoader) {
+
+                scrollLoader.classList.remove(
+                    'show'
+                );
+            }
+        }
+
+
+        try {
+
+            /*
+             * Load watchlist first so the
+             * cards know whether a movie
+             * has already been saved.
+             */
+
+            if (isAuthenticated) {
+
+                await getWatchlistFromBackend();
+            }
+
+
+            const movies =
+                await fetchAllMoviesFromDatabase();
+
+
+            if (
+                movies &&
+                movies.length > 0
+            ) {
+
+                allMovies =
+                    reset
+                        ? movies
+                        : [
+                            ...allMovies,
+                            ...movies
+                        ];
+
+
+                renderMovies(
+                    allMovies
+                );
+
+
+                /*
+                 * /movies currently returns
+                 * all available movies in one
+                 * request, so infinite scrolling
+                 * isn't needed yet.
+                 */
+
+                hasMore = false;
+
+
+                if (initialLoading) {
+
+                    initialLoading.style.display =
+                        'none';
                 }
 
-            } else {
+
+                if (scrollLoader) {
+
+                    scrollLoader.classList.remove(
+                        'show'
+                    );
+                }
+
+            }
+
+            else {
 
                 if (reset) {
 
-                    renderFilms(
-                        []
-                    );
-
+                    renderMovies([]);
                 }
 
-                hasMore =
-                    false;
 
-                DOM.scrollLoader.innerHTML = `
-                    <span class="end-message">
-                        You've reached the end
-                    </span>
-                `;
+                hasMore = false;
 
-                DOM.scrollLoader.classList.add(
-                    'show'
-                );
 
+                if (initialLoading) {
+
+                    initialLoading.style.display =
+                        'none';
+                }
             }
-
-            isLoading =
-                false;
-
-            isInitialLoad =
-                false;
 
         }
 
-        // ============================================================
-        // INFINITE SCROLL
-        // ============================================================
+        catch (error) {
 
-        function handleScroll() {
+            console.error(
+                '❌ Error loading films:',
+                error
+            );
+
+
+            if (initialLoading) {
+
+                initialLoading.style.display =
+                    'none';
+            }
+
+
+            if (discoveryGrid) {
+
+                discoveryGrid.innerHTML = `
+
+                    <div
+                        class="error-state"
+                        style="
+                            grid-column:1/-1;
+                            text-align:center;
+                            padding:60px 20px;
+                        "
+                    >
+
+                        <i
+                            class="fas fa-exclamation-circle"
+                            style="
+                                font-size:42px;
+                                color:var(--rust);
+                                margin-bottom:16px;
+                                display:block;
+                            "
+                        ></i>
+
+
+                        <h3
+                            style="
+                                color:var(--paper);
+                                font-size:20px;
+                                margin-bottom:8px;
+                            "
+                        >
+                            Failed to Load Movies
+                        </h3>
+
+
+                        <p
+                            style="
+                                color:var(--paper-dim);
+                            "
+                        >
+                            ${
+                                escapeHtml(
+                                    error.message ||
+                                    'Unable to connect to the movie server.'
+                                )
+                            }
+                        </p>
+
+
+                        <button
+                            onclick="location.reload()"
+                            style="
+                                margin-top:16px;
+                                padding:8px 24px;
+                                background:var(--gold);
+                                color:var(--ink);
+                                border:none;
+                                border-radius:8px;
+                                cursor:pointer;
+                                font-weight:600;
+                            "
+                        >
+
+                            <i class="fas fa-sync"></i>
+
+                            Retry
+
+                        </button>
+
+                    </div>
+                `;
+            }
+
+        }
+
+        finally {
+
+            isLoading = false;
+        }
+    }
+
+
+    /* ============================================================
+       NORMALIZE MOVIE POSTER
+       ============================================================ */
+
+    function getPosterUrl(movie) {
+
+        /*
+         * Primary source:
+         * PostgreSQL poster_url
+         */
+
+        if (
+            movie.posterUrl &&
+            String(movie.posterUrl).trim()
+        ) {
+
+            return movie.posterUrl;
+        }
+
+
+        /*
+         * Backwards compatibility:
+         * old API records may still expose
+         * poster_path.
+         */
+
+        if (
+            movie.poster_path &&
+            String(movie.poster_path).trim()
+        ) {
+
+            const posterPath =
+                String(
+                    movie.poster_path
+                ).trim();
+
 
             if (
-                isLoading ||
-                !hasMore
+                posterPath.startsWith(
+                    'http://'
+                ) ||
+                posterPath.startsWith(
+                    'https://'
+                )
             ) {
+
+                return posterPath;
+            }
+
+
+            return `${IMAGE_BASE}${posterPath}`;
+        }
+
+
+        return '';
+    }
+
+
+    /* ============================================================
+       MOVIE STATUS LABEL
+       ============================================================ */
+
+    function getStatusLabel(status) {
+
+        switch (
+            String(status || '')
+                .toUpperCase()
+        ) {
+
+            case 'NOW_SHOWING':
+                return 'NOW SHOWING';
+
+            case 'UPCOMING':
+                return 'UPCOMING';
+
+            case 'COMING_SOON':
+                return 'COMING SOON';
+
+            case 'ENDED':
+                return 'ENDED';
+
+            case 'ARCHIVED':
+                return 'ARCHIVED';
+
+            default:
+                return 'UNKNOWN';
+        }
+    }
+
+
+    /* ============================================================
+       MOVIE STATUS CLASS
+       ============================================================ */
+
+    function getStatusClass(status) {
+
+        switch (
+            String(status || '')
+                .toUpperCase()
+        ) {
+
+            case 'NOW_SHOWING':
+                return 'now-showing';
+
+            case 'UPCOMING':
+                return 'upcoming';
+
+            case 'COMING_SOON':
+                return 'coming-soon';
+
+            case 'ENDED':
+                return 'ended';
+
+            case 'ARCHIVED':
+                return 'archived';
+
+            default:
+                return 'unknown';
+        }
+    }
+
+
+    /* ============================================================
+       RENDER MOVIES
+       ============================================================ */
+
+    function renderMovies(movies) {
+
+        const grid =
+            discoveryGrid;
+
+
+        if (!grid) {
+
+            console.error(
+                '❌ Discovery grid not found.'
+            );
+
+            return;
+        }
+
+
+        console.log(
+            '🎨 Rendering',
+            movies.length,
+            'movies'
+        );
+
+
+        /* --------------------------------------------------------
+           EMPTY STATE
+           -------------------------------------------------------- */
+
+        if (
+            !movies ||
+            movies.length === 0
+        ) {
+
+            grid.innerHTML = `
+
+                <div
+                    class="empty-state"
+                    style="
+                        grid-column:1/-1;
+                        text-align:center;
+                        padding:60px 20px;
+                    "
+                >
+
+                    <i
+                        class="fas fa-film"
+                        style="
+                            font-size:48px;
+                            color:var(--gold);
+                            margin-bottom:16px;
+                            display:block;
+                        "
+                    ></i>
+
+
+                    <h3
+                        style="
+                            color:var(--paper);
+                            font-size:20px;
+                            margin-bottom:8px;
+                        "
+                    >
+                        No Films Found
+                    </h3>
+
+
+                    <p
+                        style="
+                            color:var(--paper-dim);
+                        "
+                    >
+                        ${
+                            searchQuery
+                                ? `No results found for "${escapeHtml(searchQuery)}".`
+                                : 'No movies available in the database yet.'
+                        }
+                    </p>
+
+                </div>
+            `;
+
+
+            if (resultCount) {
+
+                resultCount.textContent =
+                    '0';
+            }
+
+
+            return;
+        }
+
+
+        if (resultCount) {
+
+            resultCount.textContent =
+                movies.length;
+        }
+
+
+        const watchlistArray =
+            Array.isArray(
+                cachedWatchlist
+            )
+                ? cachedWatchlist
+                : [];
+
+
+        /* --------------------------------------------------------
+           CREATE WATCHLIST MAP
+           -------------------------------------------------------- */
+
+        const watchlistStatus = {};
+
+
+        watchlistArray.forEach(
+            function (item) {
+
+                const itemId =
+                    item.filmId ??
+                    item.movieId ??
+                    item.id;
+
+
+                if (itemId !== undefined) {
+
+                    watchlistStatus[
+                        String(itemId)
+                    ] = true;
+                }
+            }
+        );
+
+
+        /* --------------------------------------------------------
+           RENDER MOVIES
+           -------------------------------------------------------- */
+
+        const moviesHTML =
+            movies.map(
+                function (film) {
+
+                    const movieId =
+                        film.movieId ??
+                        film.movie_id ??
+                        film.id;
+
+
+                    const title =
+                        film.title ||
+                        film.originalTitle ||
+                        film.original_title ||
+                        'Untitled';
+
+
+                    const ratingValue =
+                        Number(
+                            film.rating ??
+                            film.vote_average ??
+                            0
+                        );
+
+
+                    const ratingDisplay =
+                        Number.isFinite(
+                            ratingValue
+                        ) &&
+                        ratingValue > 0
+                            ? ratingValue.toFixed(1)
+                            : 'N/A';
+
+
+                    const inWatchlist =
+                        watchlistStatus[
+                            String(movieId)
+                        ] === true;
+
+
+                    const status =
+                        String(
+                            film.status ||
+                            'UNKNOWN'
+                        ).toUpperCase();
+
+
+                    const statusLabel =
+                        getStatusLabel(
+                            status
+                        );
+
+
+                    const statusClass =
+                        getStatusClass(
+                            status
+                        );
+
+
+                    let posterUrl =
+                        getPosterUrl(
+                            film
+                        );
+
+
+                    if (!posterUrl) {
+
+                        posterUrl =
+                            'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"%3E%3Crect fill="%23222" width="200" height="300"/%3E%3Ctext x="100" y="150" fill="%23666" font-family="Arial" font-size="16" text-anchor="middle"%3ENo Poster%3C/text%3E%3C/svg%3E';
+                    }
+
+
+                    const safeTitle =
+                        escapeHtml(
+                            title
+                        );
+
+
+                    const safePoster =
+                        escapeAttribute(
+                            posterUrl
+                        );
+
+
+                    return `
+
+                        <div
+                            class="movie-card"
+                            onclick="viewMovie(${Number(movieId) || 0})"
+                            style="cursor:pointer;"
+                        >
+
+                            <div
+                                class="poster"
+                                style="
+                                    background-image:url('${safePoster}');
+                                    background-color:var(--ink-raised);
+                                    background-size:cover;
+                                    background-position:center;
+                                    background-repeat:no-repeat;
+                                    border-radius:8px;
+                                    aspect-ratio:2/3;
+                                    position:relative;
+                                "
+                            >
+
+                                ${
+                                    inWatchlist
+                                        ? `
+                                            <div
+                                                class="watchlist-badge"
+                                                title="In your watchlist"
+                                                style="
+                                                    position:absolute;
+                                                    top:8px;
+                                                    left:8px;
+                                                    background:rgba(231,76,60,0.9);
+                                                    color:#fff;
+                                                    width:28px;
+                                                    height:28px;
+                                                    border-radius:50%;
+                                                    display:flex;
+                                                    align-items:center;
+                                                    justify-content:center;
+                                                    font-size:11px;
+                                                "
+                                            >
+                                                <i class="fas fa-heart"></i>
+                                            </div>
+                                        `
+                                        : ''
+                                }
+
+
+                            </div>
+
+                            </div>
+
+                        </div>
+                    `;
+                }
+            ).join('');
+
+
+        grid.innerHTML =
+            moviesHTML;
+
+
+        console.log(
+            '✅ Rendering complete:',
+            movies.length,
+            'movies displayed'
+        );
+    }
+
+
+    /* ============================================================
+       VIEW MOVIE
+       ============================================================ */
+
+    window.viewMovie =
+        function (movieId) {
+
+            if (
+                movieId === undefined ||
+                movieId === null ||
+                Number(movieId) <= 0
+            ) {
+
+                console.warn(
+                    '⚠️ Invalid movie ID:',
+                    movieId
+                );
+
                 return;
             }
 
-            const scrollPosition =
-                window.innerHeight +
-                window.scrollY;
 
-            const threshold =
-                document.documentElement.scrollHeight -
-                400;
+            window.location.href =
+                `movie-details.html?id=${encodeURIComponent(movieId)}`;
+        };
 
-            if (
-                scrollPosition >=
-                threshold
-            ) {
 
-                loadFilms(
-                    false
-                );
+    /* ============================================================
+       SEARCH
+       ============================================================ */
 
-            }
+    function handleSearch() {
 
-        }
+        clearTimeout(
+            debounceTimer
+        );
 
-        // ============================================================
-        // VIEW MOVIE
-        // ============================================================
 
-        window.viewMovie =
-            function(movieId) {
+        debounceTimer =
+            setTimeout(
+                function () {
 
-                window.location.href =
-                    `movie-details.html?id=${movieId}`;
+                    searchQuery =
+                        searchInput
+                            ? searchInput.value.trim()
+                            : '';
 
-            };
 
-        // ============================================================
-        // SEARCH FUNCTIONALITY
-        // ============================================================
+                    if (clearBtn) {
 
-        function handleSearch() {
-
-            clearTimeout(
-                debounceTimer
-            );
-
-            debounceTimer =
-                setTimeout(
-                    () => {
-
-                        searchQuery =
-                            DOM.searchInput.value;
-
-                        DOM.clearBtn.classList.toggle(
+                        clearBtn.classList.toggle(
                             'visible',
                             searchQuery.length > 0
                         );
+                    }
 
-                        currentPage =
-                            1;
 
-                        allFilms =
-                            [];
+                    /*
+                     * The current backend
+                     * /movies endpoint returns
+                     * all movies.
+                     *
+                     * For now we filter locally.
+                     */
 
-                        hasMore =
-                            true;
+                    applyLocalSearch();
 
-                        seenIds =
-                            new Set();
+                },
+                300
+            );
+    }
 
-                        loadFilms(
-                            true
-                        );
 
-                    },
-                    500
-                );
+    /* ============================================================
+       LOCAL SEARCH
+       ============================================================ */
 
+    function applyLocalSearch() {
+
+        if (!searchQuery) {
+
+            renderMovies(
+                allMovies
+            );
+
+            return;
         }
 
-        function clearSearch() {
 
-            DOM.searchInput.value =
-                '';
+        const query =
+            searchQuery.toLowerCase();
 
-            DOM.clearBtn.classList.remove(
+
+        const filtered =
+            allMovies.filter(
+                function (movie) {
+
+                    const title =
+                        String(
+                            movie.title ||
+                            ''
+                        ).toLowerCase();
+
+
+                    const originalTitle =
+                        String(
+                            movie.originalTitle ||
+                            movie.original_title ||
+                            ''
+                        ).toLowerCase();
+
+
+                    const description =
+                        String(
+                            movie.description ||
+                            ''
+                        ).toLowerCase();
+
+
+                    return (
+                        title.includes(query) ||
+                        originalTitle.includes(query) ||
+                        description.includes(query)
+                    );
+                }
+            );
+
+
+        renderMovies(
+            filtered
+        );
+    }
+
+
+    /* ============================================================
+       CLEAR SEARCH
+       ============================================================ */
+
+    function clearSearch() {
+
+        if (searchInput) {
+
+            searchInput.value = '';
+        }
+
+
+        if (clearBtn) {
+
+            clearBtn.classList.remove(
                 'visible'
             );
-
-            searchQuery =
-                '';
-
-            currentPage =
-                1;
-
-            allFilms =
-                [];
-
-            hasMore =
-                true;
-
-            seenIds =
-                new Set();
-
-            loadFilms(
-                true
-            );
-
-            DOM.searchInput.focus();
-
         }
 
-        // ============================================================
-        // EVENT LISTENERS
-        // ============================================================
 
-        DOM.searchInput.addEventListener(
+        searchQuery = '';
+
+
+        renderMovies(
+            allMovies
+        );
+
+
+        if (searchInput) {
+
+            searchInput.focus();
+        }
+    }
+
+
+    /* ============================================================
+       SEARCH EVENT LISTENERS
+       ============================================================ */
+
+    if (searchInput) {
+
+        searchInput.addEventListener(
             'input',
             handleSearch
         );
+    }
 
-        DOM.clearBtn.addEventListener(
+
+    if (clearBtn) {
+
+        clearBtn.addEventListener(
             'click',
             clearSearch
         );
+    }
 
-        // ============================================================
-        // THROTTLED SCROLL LISTENER
-        // ============================================================
 
-        let scrollTimeout =
-            null;
+    /* ============================================================
+       INFINITE SCROLL
+       ============================================================ */
 
-        window.addEventListener(
-            'scroll',
-            function() {
+    let scrollTimeout = null;
 
-                if (
-                    scrollTimeout
-                ) {
-                    return;
-                }
 
-                scrollTimeout =
-                    setTimeout(
-                        () => {
+    window.addEventListener(
+        'scroll',
+        function () {
 
-                            handleScroll();
-
-                            scrollTimeout =
-                                null;
-
-                        },
-                        100
-                    );
-
+            if (scrollTimeout) {
+                return;
             }
-        );
 
-        // ============================================================
-        // INITIALIZE
-        // ============================================================
 
-        async function init() {
+            scrollTimeout =
+                setTimeout(
+                    function () {
 
-            renderNav();
+                        handleScroll();
 
-            setupMobileMenu();
+                        scrollTimeout =
+                            null;
 
-            await loadFilms(
-                true
-            );
-
+                    },
+                    100
+                );
         }
+    );
 
-        // ============================================================
-        // START
-        // ============================================================
+
+    function handleScroll() {
 
         if (
-            document.readyState === 'complete' ||
-            document.readyState === 'interactive'
+            isLoading ||
+            !hasMore
         ) {
-
-            init();
-
-        } else {
-
-            document.addEventListener(
-                'DOMContentLoaded',
-                init
-            );
-
+            return;
         }
 
-    })();
+
+        const scrollPosition =
+            window.innerHeight +
+            window.scrollY;
+
+
+        const threshold =
+            document.documentElement
+                .scrollHeight -
+            400;
+
+
+        if (
+            scrollPosition >= threshold &&
+            allMovies.length > 0
+        ) {
+
+            if (scrollLoader) {
+
+                scrollLoader.classList.add(
+                    'show'
+                );
+
+
+                scrollLoader.innerHTML = `
+
+                    <i class="fas fa-check"></i>
+
+                    All films loaded
+
+                `;
+            }
+
+
+            hasMore = false;
+        }
+    }
+
+
+    /* ============================================================
+       INITIALIZE
+       ============================================================ */
+
+    console.log(
+        '🚀 Initializing Discovery page...'
+    );
+
+
+    console.log(
+        '🔐 Authentication:',
+        isAuthenticated
+            ? '✅ Logged In'
+            : '❌ Not Logged In'
+    );
+
+
+    if (
+        isAuthenticated &&
+        userData
+    ) {
+
+        console.log(
+            '👤 User:',
+            getUserName().fullName
+        );
+    }
+
+
+    renderNav();
+
+
+    loadFilms(true);
+
+
+    console.log(
+        '✅ Discovery page initialized'
+    );
+
+});
 </script>
 </body>
 </html>

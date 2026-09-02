@@ -3,15 +3,42 @@
 // SAVANNAH CINEMAS - FRONTEND CONFIGURATION
 // ============================================================
 
-// Server Configuration - Update this with your server IP
-const SERVER_IP = 'localhost';  // Your computer's IP address
-const SERVER_PORT = '5000';        // Server port
 
-// Build API URLs
-const API_BASE = `http://${SERVER_IP}:${SERVER_PORT}/api`;
+// ============================================================
+// SERVER CONFIGURATION
+// ============================================================
+
+// IMPORTANT:
+// Use the computer's local network IP when accessing
+// Savannah Cinemas from another device.
+//
+// Example:
+// const SERVER_IP = '192.168.1.10';
+//
+// For testing only on the same computer:
+// const SERVER_IP = 'localhost';
+
+const SERVER_IP = 'localhost';
+const SERVER_PORT = '5000';
+
+
+// ============================================================
+// API BASE
+// ============================================================
+
+const API_BASE =
+    `http://${SERVER_IP}:${SERVER_PORT}/api`;
+
+// Make API_BASE available to all frontend scripts
+window.API_BASE = API_BASE;
+
 const API_URL = API_BASE;
 
-// Authentication Endpoints
+
+// ============================================================
+// AUTHENTICATION ENDPOINTS
+// ============================================================
+
 const AUTH_LOGIN =
     `${API_BASE}/auth/login`;
 
@@ -35,9 +62,14 @@ const AUTH_RESET_PASSWORD =
 const MOVIES_URL =
     `${API_BASE}/movies`;
 
-const MOVIES_NOW_SHOWING = `${API_BASE}/movies/now-showing`;
-const MOVIES_POPULAR = `${API_BASE}/movies/popular`;
-const MOVIES_UPCOMING = `${API_BASE}/movies/upcoming`;
+const MOVIES_NOW_SHOWING =
+    `${MOVIES_URL}/now-showing`;
+
+const MOVIES_POPULAR =
+    `${MOVIES_URL}/popular`;
+
+const MOVIES_UPCOMING =
+    `${MOVIES_URL}/upcoming`;
 
 const MOVIES_TOP_RATED =
     `${API_BASE}/top-rated`;
@@ -72,9 +104,6 @@ const TMDB_IMPORT_UPCOMING =
     `${TMDB_IMPORT_URL}/upcoming`;
 
 
-
-
-
 // ============================================================
 // WATCHLIST ENDPOINTS
 // ============================================================
@@ -87,6 +116,7 @@ const WATCHLIST_TOGGLE_WATCHED =
 
 const WATCHLIST_TOGGLE_FAVORITE =
     `${WATCHLIST_URL}/toggle-favorite`;
+
 
 // ============================================================
 // BOOKING ENDPOINTS

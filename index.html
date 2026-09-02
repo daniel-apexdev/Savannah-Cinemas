@@ -2369,9 +2369,6 @@ async function fetchHeroSlides() {
             slidesContainer.innerHTML = heroSlides.map((slide) => `
                 <div class="hero-slide" style="background-image: url('${slide.image}'); background-color: var(--ink-raised);">
                     <div class="hero-content">
-                        <div class="hero-eyebrow">
-                            ${slide.subtitle} ${slide.rating ? '⭐ ' + slide.rating : ''}
-                        </div>
                         <h2>${slide.title}</h2>
                         <p>${slide.description}</p>
                         <a href="${slide.link}" class="btn-hero">
@@ -2498,14 +2495,8 @@ async function fetchHeroSlides() {
                     return `
                         <div class="movie-card" onclick="viewMovie(${movie.movieId || movie.id})">
                             <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
-                                <span class="rating-badge">
-                                    ⭐ ${rating}
-                                </span>
                             </div>
-                            <div class="card-body">
-                                <div class="title">${movie.title || 'Untitled'}</div>
-                                <div class="year">${year}</div>
-                            </div>
+                            
                         </div>
                     `;
                 }).join('');
@@ -2574,12 +2565,8 @@ async function fetchHeroSlides() {
                     return `
                         <div class="upcoming-card" onclick="viewMovie(${movie.movieId || movie.id})">
                             <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
-                                <span class="rating-badge">⭐ ${rating}</span>
+                                
                                 <span class="release-badge"><i class="far fa-calendar-alt"></i> ${releaseDate}</span>
-                            </div>
-                            <div class="card-body">
-                                <div class="title">${movie.title || 'Untitled'}</div>
-                                <div class="year">${year}</div>
                             </div>
                         </div>
                     `;

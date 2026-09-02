@@ -1,63 +1,58 @@
 const express = require('express');
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
 
 // ============================================================
 // GET WATCHLIST
 // ============================================================
 
 router.get('/', authenticateToken, async (req, res) => {
-    let connection;
-
     try {
         console.log(
             `📋 GET /api/watchlist - User ID: ${req.user.userId}`
         );
 
-        connection = await getConnection();
-
-        const result = await connection.execute(
+        const result = await pool.query(
             `
             SELECT
-                WATCHLIST_ID,
-                FILM_ID,
-                TITLE,
-                YEAR,
-                POSTER_URL,
-                RATING,
-                WATCHED,
-                FAVORITE,
-                ADDED_DATE,
-                WATCHED_DATE
-            FROM WATCHLIST
-            WHERE USER_ID = :userId
-            ORDER BY ADDED_DATE DESC
+                watchlist_id,
+                film_id,
+                title,
+                year,
+                poster_url,
+                rating,
+                watched,
+                favorite,
+                added_date,
+                watched_date
+            FROM watchlist
+            WHERE user_id = $1
+            ORDER BY added_date DESC
             `,
-            {
-                userId: req.user.userId
-            }
+            [req.user.userId]
         );
 
         const watchlist = result.rows.map(row => ({
-            watchlistId: row[0],
-            filmId: row[1],
-            title: row[2],
-            year: row[3],
-            poster: row[4],
-            rating: row[5],
-            watched: row[6] === 'Y',
-            favorite: row[7] === 'Y',
-            addedDate: row[8],
-            watchedDate: row[9]
+            watchlistId: row.watchlist_id,
+            filmId: row.film_id,
+            title: row.title,
+            year: row.year,
+            poster: row.poster_url,
+            rating: row.rating,
+            watched: row.watched === 'Y',
+            favorite: row.favorite === 'Y',
+            addedDate: row.added_date,
+            watchedDate: row.watched_date
         }));
 
         console.log(
             `✅ Watchlist returned: ${watchlist.length} item(s)`
         );
 
-        res.json({
+        return res.json({
             success: true,
             watchlist
         });
@@ -66,23 +61,10 @@ router.get('/', authenticateToken, async (req, res) => {
 
         console.error('❌ Get watchlist error:', error);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Server error fetching watchlist'
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing watchlist connection:',
-                    error.message
-                );
-            }
-        }
     }
 });
 
@@ -92,8 +74,6 @@ router.get('/', authenticateToken, async (req, res) => {
 // ============================================================
 
 router.post('/', authenticateToken, async (req, res) => {
-
-    let connection;
 
     try {
 
@@ -123,7 +103,6 @@ router.post('/', authenticateToken, async (req, res) => {
                 success: false,
                 message: 'filmId is required'
             });
-
         }
 
         if (!title) {
@@ -132,30 +111,23 @@ router.post('/', authenticateToken, async (req, res) => {
                 success: false,
                 message: 'title is required'
             });
-
         }
-
-        // ----------------------------------------------------
-        // DATABASE CONNECTION
-        // ----------------------------------------------------
-
-        connection = await getConnection();
 
         // ----------------------------------------------------
         // CHECK DUPLICATE
         // ----------------------------------------------------
 
-        const existing = await connection.execute(
+        const existing = await pool.query(
             `
-            SELECT WATCHLIST_ID
-            FROM WATCHLIST
-            WHERE USER_ID = :userId
-              AND FILM_ID = :filmId
+            SELECT watchlist_id
+            FROM watchlist
+            WHERE user_id = $1
+              AND film_id = $2
             `,
-            {
-                userId: req.user.userId,
+            [
+                req.user.userId,
                 filmId
-            }
+            ]
         );
 
         if (existing.rows.length > 0) {
@@ -164,112 +136,75 @@ router.post('/', authenticateToken, async (req, res) => {
                 success: false,
                 message: 'Movie already exists in your watchlist'
             });
-
         }
 
         // ----------------------------------------------------
         // INSERT
         // ----------------------------------------------------
 
-        const result = await connection.execute(
+        const result = await pool.query(
             `
-            INSERT INTO WATCHLIST (
-                USER_ID,
-                FILM_ID,
-                TITLE,
-                YEAR,
-                POSTER_URL,
-                RATING,
-                WATCHED,
-                FAVORITE,
-                ADDED_DATE
+            INSERT INTO watchlist (
+                user_id,
+                film_id,
+                title,
+                year,
+                poster_url,
+                rating,
+                watched,
+                favorite,
+                added_date
             )
             VALUES (
-                :userId,
-                :filmId,
-                :title,
-                :year,
-                :poster,
-                :rating,
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
                 'N',
                 'N',
                 CURRENT_TIMESTAMP
             )
+            RETURNING
+                watchlist_id,
+                user_id,
+                film_id
             `,
-            {
-                userId: req.user.userId,
+            [
+                req.user.userId,
                 filmId,
-                title: title.trim(),
-                year: year || null,
-                poster: poster || null,
-                rating: rating || null
-            },
-            {
-                autoCommit: true
-            }
+                title.trim(),
+                year || null,
+                poster || null,
+                rating || null
+            ]
         );
 
         console.log(
-            `✅ Watchlist INSERT successful. Rows affected: ${result.rowsAffected}`
+            `✅ Watchlist INSERT successful. Rows returned: ${result.rows.length}`
         );
-
-        // ----------------------------------------------------
-        // VERIFY INSERT
-        // ----------------------------------------------------
-
-        const verify = await connection.execute(
-            `
-            SELECT
-                WATCHLIST_ID,
-                USER_ID,
-                FILM_ID,
-                TITLE
-            FROM WATCHLIST
-            WHERE USER_ID = :userId
-              AND FILM_ID = :filmId
-            `,
-            {
-                userId: req.user.userId,
-                filmId
-            }
-        );
-
-        console.log(
-            '🔎 Verification rows:',
-            verify.rows.length
-        );
-
-        if (verify.rows.length === 0) {
-
-            console.error(
-                '❌ INSERT reported success but verification found no row'
-            );
-
-            return res.status(500).json({
-                success: false,
-                message: 'Watchlist item could not be verified after insertion'
-            });
-
-        }
-
-        console.log(
-            '🎬 Watchlist item:',
-            verify.rows[0]
-        );
-
-        console.log('==============================================');
-        console.log('');
 
         // ----------------------------------------------------
         // RESPONSE
         // ----------------------------------------------------
 
-        res.status(201).json({
+        const inserted = result.rows[0];
+
+        console.log(
+            '🎬 Watchlist item:',
+            inserted
+        );
+
+        console.log('==============================================');
+        console.log('');
+
+        return res.status(201).json({
             success: true,
             message: 'Movie added to watchlist',
-            watchlistId: verify.rows[0][0],
-            userId: verify.rows[0][1],
-            filmId: verify.rows[0][2]
+            watchlistId: inserted.watchlist_id,
+            userId: inserted.user_id,
+            filmId: inserted.film_id
         });
 
     } catch (error) {
@@ -279,26 +214,11 @@ router.post('/', authenticateToken, async (req, res) => {
         console.error(error);
         console.error('');
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Server error adding movie to watchlist',
             error: error.message
         });
-
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing watchlist connection:',
-                    error.message
-                );
-            }
-
-        }
     }
 });
 
@@ -309,43 +229,35 @@ router.post('/', authenticateToken, async (req, res) => {
 
 router.delete('/:filmId', authenticateToken, async (req, res) => {
 
-    let connection;
-
     try {
 
         const filmId = req.params.filmId;
 
-        connection = await getConnection();
-
-        const result = await connection.execute(
+        const result = await pool.query(
             `
-            DELETE FROM WATCHLIST
-            WHERE USER_ID = :userId
-              AND FILM_ID = :filmId
+            DELETE FROM watchlist
+            WHERE user_id = $1
+              AND film_id = $2
             `,
-            {
-                userId: req.user.userId,
+            [
+                req.user.userId,
                 filmId
-            },
-            {
-                autoCommit: true
-            }
+            ]
         );
 
-        if (result.rowsAffected === 0) {
+        if (result.rowCount === 0) {
 
             return res.status(404).json({
                 success: false,
                 message: 'Movie not found in watchlist'
             });
-
         }
 
         console.log(
             `🗑️ Removed film ${filmId} from user ${req.user.userId} watchlist`
         );
 
-        res.json({
+        return res.json({
             success: true,
             message: 'Movie removed from watchlist'
         });
@@ -354,18 +266,10 @@ router.delete('/:filmId', authenticateToken, async (req, res) => {
 
         console.error('❌ Remove watchlist error:', error);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Server error removing movie from watchlist'
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {}
-        }
     }
 });
 
@@ -376,8 +280,6 @@ router.delete('/:filmId', authenticateToken, async (req, res) => {
 
 router.post('/toggle-watched', authenticateToken, async (req, res) => {
 
-    let connection;
-
     try {
 
         const {
@@ -385,42 +287,37 @@ router.post('/toggle-watched', authenticateToken, async (req, res) => {
             watched
         } = req.body;
 
-        connection = await getConnection();
+        const watchedValue = watched ? 'Y' : 'N';
 
-        const result = await connection.execute(
+        const result = await pool.query(
             `
-            UPDATE WATCHLIST
+            UPDATE watchlist
             SET
-                WATCHED = :watched,
-                WATCHED_DATE =
-                    CASE
-                        WHEN :watched = 'Y'
-                        THEN CURRENT_TIMESTAMP
-                        ELSE NULL
-                    END
-            WHERE USER_ID = :userId
-              AND FILM_ID = :filmId
+                watched = $1,
+                watched_date = CASE
+                    WHEN $1 = 'Y'
+                    THEN CURRENT_TIMESTAMP
+                    ELSE NULL
+                END
+            WHERE user_id = $2
+              AND film_id = $3
             `,
-            {
-                watched: watched ? 'Y' : 'N',
-                userId: req.user.userId,
+            [
+                watchedValue,
+                req.user.userId,
                 filmId
-            },
-            {
-                autoCommit: true
-            }
+            ]
         );
 
-        if (result.rowsAffected === 0) {
+        if (result.rowCount === 0) {
 
             return res.status(404).json({
                 success: false,
                 message: 'Movie not found in watchlist'
             });
-
         }
 
-        res.json({
+        return res.json({
             success: true,
             message: watched
                 ? 'Movie marked as watched'
@@ -431,18 +328,10 @@ router.post('/toggle-watched', authenticateToken, async (req, res) => {
 
         console.error('❌ Toggle watched error:', error);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Server error updating watched status'
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {}
-        }
     }
 });
 
@@ -453,8 +342,6 @@ router.post('/toggle-watched', authenticateToken, async (req, res) => {
 
 router.post('/toggle-favorite', authenticateToken, async (req, res) => {
 
-    let connection;
-
     try {
 
         const {
@@ -462,35 +349,31 @@ router.post('/toggle-favorite', authenticateToken, async (req, res) => {
             favorite
         } = req.body;
 
-        connection = await getConnection();
+        const favoriteValue = favorite ? 'Y' : 'N';
 
-        const result = await connection.execute(
+        const result = await pool.query(
             `
-            UPDATE WATCHLIST
-            SET FAVORITE = :favorite
-            WHERE USER_ID = :userId
-              AND FILM_ID = :filmId
+            UPDATE watchlist
+            SET favorite = $1
+            WHERE user_id = $2
+              AND film_id = $3
             `,
-            {
-                favorite: favorite ? 'Y' : 'N',
-                userId: req.user.userId,
+            [
+                favoriteValue,
+                req.user.userId,
                 filmId
-            },
-            {
-                autoCommit: true
-            }
+            ]
         );
 
-        if (result.rowsAffected === 0) {
+        if (result.rowCount === 0) {
 
             return res.status(404).json({
                 success: false,
                 message: 'Movie not found in watchlist'
             });
-
         }
 
-        res.json({
+        return res.json({
             success: true,
             message: favorite
                 ? 'Movie added to favorites'
@@ -501,18 +384,10 @@ router.post('/toggle-favorite', authenticateToken, async (req, res) => {
 
         console.error('❌ Toggle favorite error:', error);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Server error updating favorite status'
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {}
-        }
     }
 });
 

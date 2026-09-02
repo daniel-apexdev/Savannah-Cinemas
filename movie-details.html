@@ -1600,1047 +1600,2240 @@
     JAVASCRIPT
     ============================================================ -->
     <script src="backend/config.js"></script>
-    <script>
-        (function() {
-            'use strict';
+<script>
+(function () {
+    'use strict';
 
-            const CONFIG = {
-                API_KEY: 'a0b31df2c8c2865ebe236c9e1eb7cbd9',
-                IMAGE_BASE: 'https://image.tmdb.org/t/p/w500',
-                BACKDROP_BASE: 'https://image.tmdb.org/t/p/original',
-                BACKEND_API: `http://${SERVER_IP}:${SERVER_PORT}/api`
-            };
+    // ============================================================
+    // CONFIGURATION
+    // ============================================================
 
-            const token = localStorage.getItem('token');
-            let userData = null;
-            
-            try {
-                const userString = localStorage.getItem('user');
-                if (userString) {
-                    userData = JSON.parse(userString);
-                }
-            } catch (e) {
-                console.error('Error parsing user data:', e);
-                localStorage.removeItem('user');
+    const CONFIG = {
+        BACKEND_API: `${window.API_BASE || `http://${SERVER_IP}:${SERVER_PORT}/api`}`
+    };
+
+    const token = localStorage.getItem('token');
+    let userData = null;
+
+    try {
+        const userString = localStorage.getItem('user');
+
+        if (userString) {
+            userData = JSON.parse(userString);
+        }
+    } catch (error) {
+        console.error('❌ Error parsing user data:', error);
+        localStorage.removeItem('user');
+    }
+
+
+    // ============================================================
+    // AUTHENTICATION
+    // ============================================================
+
+    function isAuthenticated() {
+        return !!(
+            token &&
+            userData &&
+            (userData.userId || userData.USER_ID)
+        );
+    }
+
+
+    // ============================================================
+    // USER HELPERS
+    // ============================================================
+
+    function getUserInitials() {
+        if (!userData) return 'U';
+
+        const forenames =
+            userData.forenames ||
+            userData.FORENAMES ||
+            userData.name ||
+            userData.NAME ||
+            '';
+
+        const surname =
+            userData.surname ||
+            userData.SURNAME ||
+            '';
+
+        let initials = '';
+
+        if (forenames) {
+            const firstWord = forenames.trim().split(' ')[0];
+
+            if (firstWord) {
+                initials = firstWord.substring(0, 2).toUpperCase();
             }
+        }
 
-            function isAuthenticated() {
-                return !!token && !!userData && (userData.userId || userData.USER_ID);
+        if (initials.length < 2 && surname) {
+            const surnameFirst = surname.trim().charAt(0);
+
+            if (surnameFirst) {
+                initials += surnameFirst.toUpperCase();
             }
+        }
 
-            function getUserInitials() {
-                if (!userData) return 'U';
-                
-                const forenames = userData.forenames || userData.FORENAMES || userData.name || userData.NAME || '';
-                const surname = userData.surname || userData.SURNAME || '';
-                
-                let initials = '';
-                
-                if (forenames) {
-                    const firstWord = forenames.trim().split(' ')[0];
-                    if (firstWord && firstWord.length > 0) {
-                        initials = firstWord.substring(0, 2).toUpperCase();
-                    }
-                }
-                
-                if (initials.length < 2 && surname) {
-                    const surnameFirst = surname.trim().charAt(0);
-                    if (surnameFirst) {
-                        initials += surnameFirst.toUpperCase();
-                    }
-                }
-                
-                while (initials.length < 2) {
-                    initials += 'U';
-                }
-                
-                return initials.substring(0, 2);
+        while (initials.length < 2) {
+            initials += 'U';
+        }
+
+        return initials.substring(0, 2);
+    }
+
+
+    function getUserFullName() {
+        if (!userData) return 'User';
+
+        const forenames =
+            userData.forenames ||
+            userData.FORENAMES ||
+            userData.name ||
+            userData.NAME ||
+            '';
+
+        const surname =
+            userData.surname ||
+            userData.SURNAME ||
+            '';
+
+        return `${forenames} ${surname}`.trim() || 'User';
+    }
+
+
+    function getUserEmail() {
+        if (!userData) return '';
+
+        return userData.email || userData.EMAIL || '';
+    }
+
+
+    // ============================================================
+    // DOM ELEMENTS
+    // ============================================================
+
+    const DOM = {
+        loadingState: document.getElementById('loadingState'),
+        movieContent: document.getElementById('movieContent'),
+
+        heroSection: document.getElementById('heroSection'),
+        posterImg: document.getElementById('posterImg'),
+
+        movieTitle: document.getElementById('movieTitle'),
+        movieTagline: document.getElementById('movieTagline'),
+        movieYear: document.getElementById('movieYear'),
+        movieRuntime: document.getElementById('movieRuntime'),
+        movieStatus: document.getElementById('movieStatus'),
+
+        movieStars: document.getElementById('movieStars'),
+        movieRating: document.getElementById('movieRating'),
+        voteCount: document.getElementById('voteCount'),
+
+        genresContainer: document.getElementById('genresContainer'),
+        movieOverview: document.getElementById('movieOverview'),
+
+        showtimesContainer: document.getElementById('showtimesContainer'),
+        castContainer: document.getElementById('castContainer'),
+
+        bookBtn: document.getElementById('bookBtn'),
+        trailerBtn: document.getElementById('trailerBtn'),
+
+        watchlistBtn: document.getElementById('watchlistBtn'),
+        watchlistLabel: document.getElementById('watchlistLabel'),
+
+        navRight: document.getElementById('navRight'),
+        mobileMenuLinks: document.getElementById('mobileMenuLinks'),
+        mobileDivider: document.getElementById('mobileDivider'),
+
+        menuToggle: document.getElementById('menuToggle'),
+        mobileMenu: document.getElementById('mobileMenu'),
+        mobileOverlay: document.getElementById('mobileOverlay'),
+        mobileMenuClose: document.getElementById('mobileMenuClose'),
+
+        trailerModal: document.getElementById('trailerModal'),
+        trailerModalClose: document.getElementById('trailerModalClose'),
+        trailerLoading: document.getElementById('trailerLoading'),
+        trailerIframe: document.getElementById('trailerIframe'),
+        noTrailer: document.getElementById('noTrailer'),
+
+        toast: document.getElementById('toast'),
+        toastIcon: document.getElementById('toastIcon'),
+        toastMessage: document.getElementById('toastMessage')
+    };
+
+
+    // ============================================================
+    // TOAST
+    // ============================================================
+
+    let toastTimeout = null;
+
+    function showToast(message, type = 'info') {
+
+        if (!DOM.toast || !DOM.toastMessage) return;
+
+        DOM.toastMessage.textContent = message;
+
+        if (DOM.toastIcon) {
+
+            if (type === 'success') {
+                DOM.toastIcon.className = 'fas fa-check-circle';
+            } else if (type === 'error') {
+                DOM.toastIcon.className = 'fas fa-exclamation-circle';
+            } else if (type === 'removed') {
+                DOM.toastIcon.className = 'fas fa-heart-broken';
+            } else {
+                DOM.toastIcon.className = 'fas fa-info-circle';
             }
+        }
 
-            function getUserFullName() {
-                if (!userData) return 'User';
-                const forenames = userData.forenames || userData.FORENAMES || userData.name || userData.NAME || '';
-                const surname = userData.surname || userData.SURNAME || '';
-                return `${forenames} ${surname}`.trim() || 'User';
-            }
+        DOM.toast.classList.add('show');
 
-            function getUserEmail() {
-                if (!userData) return '';
-                return userData.email || userData.EMAIL || '';
-            }
+        clearTimeout(toastTimeout);
 
-            const DOM = {
-                loadingState: document.getElementById('loadingState'),
-                movieContent: document.getElementById('movieContent'),
-                heroSection: document.getElementById('heroSection'),
-                posterImg: document.getElementById('posterImg'),
-                movieTitle: document.getElementById('movieTitle'),
-                movieTagline: document.getElementById('movieTagline'),
-                movieYear: document.getElementById('movieYear'),
-                movieRuntime: document.getElementById('movieRuntime'),
-                movieStatus: document.getElementById('movieStatus'),
-                movieStars: document.getElementById('movieStars'),
-                movieRating: document.getElementById('movieRating'),
-                voteCount: document.getElementById('voteCount'),
-                genresContainer: document.getElementById('genresContainer'),
-                movieOverview: document.getElementById('movieOverview'),
-                showtimesContainer: document.getElementById('showtimesContainer'),
-                castContainer: document.getElementById('castContainer'),
-                bookBtn: document.getElementById('bookBtn'),
-                trailerBtn: document.getElementById('trailerBtn'),
-                watchlistBtn: document.getElementById('watchlistBtn'),
-                watchlistLabel: document.getElementById('watchlistLabel'),
-                navRight: document.getElementById('navRight'),
-                mobileMenuLinks: document.getElementById('mobileMenuLinks'),
-                mobileDivider: document.getElementById('mobileDivider'),
-                menuToggle: document.getElementById('menuToggle'),
-                mobileMenu: document.getElementById('mobileMenu'),
-                mobileOverlay: document.getElementById('mobileOverlay'),
-                mobileMenuClose: document.getElementById('mobileMenuClose'),
-                trailerModal: document.getElementById('trailerModal'),
-                trailerModalClose: document.getElementById('trailerModalClose'),
-                trailerLoading: document.getElementById('trailerLoading'),
-                trailerIframe: document.getElementById('trailerIframe'),
-                noTrailer: document.getElementById('noTrailer'),
-                toast: document.getElementById('toast'),
-                toastIcon: document.getElementById('toastIcon'),
-                toastMessage: document.getElementById('toastMessage')
-            };
+        toastTimeout = setTimeout(() => {
+            DOM.toast.classList.remove('show');
+        }, 3500);
+    }
 
-            // ============================================================
-            // TOAST
-            // ============================================================
 
-            let toastTimeout = null;
+    // ============================================================
+    // NAVIGATION
+    // ============================================================
 
-            function showToast(message, type) {
-                DOM.toastMessage.textContent = message;
-                DOM.toast.classList.add('show');
-                clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => {
-                    DOM.toast.classList.remove('show');
-                }, 3500);
-            }
+    function renderNav() {
 
-            // ============================================================
-            // NAVIGATION RENDER
-            // ============================================================
+        if (!DOM.navRight || !DOM.mobileMenuLinks) return;
 
-            function renderNav() {
-                if (isAuthenticated() && userData) {
-                    const initials = getUserInitials();
-                    const fullName = getUserFullName();
-                    const email = getUserEmail();
-                    
-                    DOM.navRight.innerHTML = `
-                        <div class="profile-wrapper" id="profileWrapper">
-                            <div class="avatar" id="avatarBtn" title="${fullName}">
-                                ${initials}
-                                <span class="avatar-status online"></span>
-                            </div>
-                            <div class="profile-menu" id="profileMenu">
-                                <div class="who">
-                                    <div class="name">${fullName}</div>
-                                    <div class="stat" id="navStat">0 films watched</div>
-                                </div>
-                                <div class="profile-menu-divider"></div>
-                                <a href="profile.html">
-                                    <i class="fas fa-user"></i> My Profile
-                                </a>
-                                <div class="profile-menu-divider"></div>
-                                <a href="#" id="logoutBtn" style="color: var(--rust);">
-                                    <i class="fas fa-sign-out-alt"></i> Sign Out
-                                </a>
+        if (isAuthenticated() && userData) {
+
+            const initials = getUserInitials();
+            const fullName = getUserFullName();
+            const email = getUserEmail();
+
+            DOM.navRight.innerHTML = `
+                <div class="profile-wrapper" id="profileWrapper">
+
+                    <div class="avatar" id="avatarBtn" title="${fullName}">
+                        ${initials}
+                        <span class="avatar-status online"></span>
+                    </div>
+
+                    <div class="profile-menu" id="profileMenu">
+
+                        <div class="who">
+                            <div class="name">${fullName}</div>
+                            <div class="stat" id="navStat">
+                                0 films watched
                             </div>
                         </div>
-                    `;
-                    
-                    const logoutLink = document.createElement('li');
-                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
-                    DOM.mobileMenuLinks.appendChild(logoutLink);
-                    
-                    const mobileProfile = document.createElement('li');
-                    mobileProfile.className = 'mobile-signin';
-                    mobileProfile.innerHTML = `
-                        <a href="profile.html" style="color: var(--gold);">
-                            <i class="fas fa-user"></i> ${fullName}
+
+                        <div class="profile-menu-divider"></div>
+
+                        <a href="profile.html">
+                            <i class="fas fa-user"></i>
+                            My Profile
                         </a>
-                    `;
-                    DOM.mobileMenuLinks.appendChild(mobileProfile);
-                    
-                    const mobileWatchlist = document.createElement('li');
-                    mobileWatchlist.innerHTML = `
-                        <a href="watchlist.html">
-                            <i class="fas fa-list"></i> My Watchlist
+
+                        <div class="profile-menu-divider"></div>
+
+                        <a href="#" id="logoutBtn" style="color:var(--rust);">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Sign Out
                         </a>
-                    `;
-                    DOM.mobileMenuLinks.appendChild(mobileWatchlist);
-                    
-                    const mobileBookings = document.createElement('li');
-                    mobileBookings.innerHTML = `
-                        <a href="bookings.html">
-                            <i class="fas fa-ticket-alt"></i> My Bookings
-                        </a>
-                    `;
-                    DOM.mobileMenuLinks.appendChild(mobileBookings);
-                    
-                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
-                    
-                    setupProfileDropdown();
-                    
-                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    
-                    fetchWatchCount();
-                    
-                } else {
-                    DOM.navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
-                            <i class="fas fa-sign-in-alt"></i> Sign In
-                        </a>
-                    `;
-                    
-                    const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
-                    DOM.mobileMenuLinks.appendChild(signInLink);
-                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
+
+                    </div>
+                </div>
+            `;
+
+
+            // Mobile logout
+
+            const logoutLink = document.createElement('li');
+
+            logoutLink.innerHTML = `
+                <a href="#" class="mobile-logout" id="mobileLogoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Sign out
+                </a>
+            `;
+
+            DOM.mobileMenuLinks.appendChild(logoutLink);
+
+
+            // Mobile profile
+
+            const mobileProfile = document.createElement('li');
+
+            mobileProfile.className = 'mobile-signin';
+
+            mobileProfile.innerHTML = `
+                <a href="profile.html" style="color:var(--gold);">
+                    <i class="fas fa-user"></i>
+                    ${fullName}
+                </a>
+            `;
+
+            DOM.mobileMenuLinks.appendChild(mobileProfile);
+
+
+            // Mobile watchlist
+
+            const mobileWatchlist = document.createElement('li');
+
+            mobileWatchlist.innerHTML = `
+                <a href="watchlist.html">
+                    <i class="fas fa-list"></i>
+                    My Watchlist
+                </a>
+            `;
+
+            DOM.mobileMenuLinks.appendChild(mobileWatchlist);
+
+
+            // Mobile bookings
+
+            const mobileBookings = document.createElement('li');
+
+            mobileBookings.innerHTML = `
+                <a href="bookings.html">
+                    <i class="fas fa-ticket-alt"></i>
+                    My Bookings
+                </a>
+            `;
+
+            DOM.mobileMenuLinks.appendChild(mobileBookings);
+
+
+            if (DOM.mobileDivider) {
+                DOM.mobileDivider.style.display = 'block';
+            }
+
+
+            setupProfileDropdown();
+
+
+            const logoutBtn = document.getElementById('logoutBtn');
+            const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    logout();
+                });
+            }
+
+            if (mobileLogoutBtn) {
+                mobileLogoutBtn.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    logout();
+                });
+            }
+
+
+            fetchWatchCount();
+
+        } else {
+
+            DOM.navRight.innerHTML = `
+                <a href="logout.html" class="btn-signin">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In
+                </a>
+            `;
+
+            const signInLink = document.createElement('li');
+
+            signInLink.innerHTML = `
+                <a href="logout.html" style="color:var(--gold);">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In / Create Account
+                </a>
+            `;
+
+            DOM.mobileMenuLinks.appendChild(signInLink);
+
+            if (DOM.mobileDivider) {
+                DOM.mobileDivider.style.display = 'block';
+            }
+        }
+    }
+
+
+    // ============================================================
+    // PROFILE DROPDOWN
+    // ============================================================
+
+    function setupProfileDropdown() {
+
+        const profileWrapper = document.getElementById('profileWrapper');
+        const avatarBtn = document.getElementById('avatarBtn');
+
+        if (!profileWrapper || !avatarBtn) return;
+
+        let closeTimer;
+
+        profileWrapper.addEventListener('mouseenter', function () {
+            clearTimeout(closeTimer);
+            this.classList.add('is-open');
+        });
+
+        profileWrapper.addEventListener('mouseleave', function () {
+            closeTimer = setTimeout(() => {
+                this.classList.remove('is-open');
+            }, 300);
+        });
+
+        avatarBtn.addEventListener('click', function (event) {
+            event.stopPropagation();
+            profileWrapper.classList.toggle('is-open');
+        });
+
+        document.addEventListener('click', function (event) {
+
+            if (!profileWrapper.contains(event.target)) {
+                profileWrapper.classList.remove('is-open');
+            }
+
+        });
+
+        document.addEventListener('keydown', function (event) {
+
+            if (event.key === 'Escape') {
+                profileWrapper.classList.remove('is-open');
+            }
+
+        });
+    }
+
+
+    // ============================================================
+    // WATCH COUNT
+    // ============================================================
+
+    async function fetchWatchCount() {
+
+        if (!isAuthenticated()) return;
+
+        try {
+
+            const response = await fetch(
+                `${CONFIG.BACKEND_API}/watchlist`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
                 }
+            );
+
+            if (!response.ok) return;
+
+            const data = await response.json();
+
+            const watchlist =
+                Array.isArray(data)
+                    ? data
+                    : data.watchlist || data.data || [];
+
+            const watchedCount = watchlist.filter(item =>
+                item.watched === 'Y' ||
+                item.watched === true
+            ).length;
+
+            const statEl = document.getElementById('navStat');
+
+            if (statEl) {
+
+                statEl.textContent =
+                    `${watchedCount} ${watchedCount === 1 ? 'film' : 'films'} watched`;
             }
 
-            // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
+        } catch (error) {
 
-            function setupProfileDropdown() {
-                const profileWrapper = document.getElementById('profileWrapper');
-                const avatarBtn = document.getElementById('avatarBtn');
-                if (!profileWrapper || !avatarBtn) return;
-                
-                let closeTimer;
-                profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-                profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(() => {
-                        this.classList.remove('is-open');
-                    }, 300);
-                });
-                avatarBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    profileWrapper.classList.toggle('is-open');
-                });
-                document.addEventListener('click', function(e) {
-                    if (!profileWrapper.contains(e.target)) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
+            console.error('❌ Error fetching watch count:', error);
+
+        }
+    }
+
+
+    // ============================================================
+    // LOGOUT
+    // ============================================================
+
+    function logout() {
+
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userData');
+
+        sessionStorage.clear();
+
+        window.location.href = 'logout.html';
+    }
+
+
+    // ============================================================
+    // MOBILE MENU
+    // ============================================================
+
+    function setupMobileMenu() {
+
+        if (!DOM.menuToggle ||
+            !DOM.mobileMenu ||
+            !DOM.mobileOverlay ||
+            !DOM.mobileMenuClose) {
+            return;
+        }
+
+        DOM.menuToggle.addEventListener('click', function (event) {
+
+            event.stopPropagation();
+
+            DOM.mobileMenu.classList.toggle('open');
+            DOM.mobileOverlay.classList.toggle('active');
+            DOM.menuToggle.classList.toggle('active');
+
+            document.body.style.overflow =
+                DOM.mobileMenu.classList.contains('open')
+                    ? 'hidden'
+                    : '';
+        });
+
+
+        DOM.mobileMenuClose.addEventListener(
+            'click',
+            closeMobileMenu
+        );
+
+        DOM.mobileOverlay.addEventListener(
+            'click',
+            closeMobileMenu
+        );
+
+
+        DOM.mobileMenu.querySelectorAll('a').forEach(link => {
+
+            link.addEventListener(
+                'click',
+                closeMobileMenu
+            );
+
+        });
+
+
+        document.addEventListener('keydown', function (event) {
+
+            if (
+                event.key === 'Escape' &&
+                DOM.mobileMenu.classList.contains('open')
+            ) {
+                closeMobileMenu();
             }
 
-            // ============================================================
-            // FETCH WATCH COUNT
-            // ============================================================
+        });
+    }
 
-            async function fetchWatchCount() {
-                try {
-                    const response = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (response.ok) {
-                        const watchlist = await response.json();
-                        const watchedCount = watchlist.filter(item => item.watched === 'Y' || item.watched === true).length;
-                        const statEl = document.getElementById('navStat');
-                        if (statEl) {
-                            statEl.textContent = `${watchedCount} ${watchedCount === 1 ? 'film' : 'films'} watched`;
-                        }
+
+    function closeMobileMenu() {
+
+        DOM.mobileMenu.classList.remove('open');
+        DOM.mobileOverlay.classList.remove('active');
+        DOM.menuToggle.classList.remove('active');
+
+        document.body.style.overflow = '';
+    }
+
+
+    // ============================================================
+    // WATCHLIST
+    // ============================================================
+
+    let currentMovie = null;
+    let isInWatchlist = false;
+
+
+    async function fetchWatchlist() {
+
+        if (!isAuthenticated()) return [];
+
+        try {
+
+            const response = await fetch(
+                `${CONFIG.BACKEND_API}/watchlist`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
-                } catch (error) {
-                    console.error('Error fetching watch count:', error);
                 }
+            );
+
+            if (!response.ok) {
+                console.error(
+                    '❌ Failed to fetch watchlist:',
+                    response.status
+                );
+
+                return [];
             }
 
-            // ============================================================
-            // LOGOUT
-            // ============================================================
+            const data = await response.json();
 
-            function logout() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                localStorage.removeItem('userData');
-                sessionStorage.clear();
+            console.log('📦 Watchlist data:', data);
+
+            return Array.isArray(data)
+                ? data
+                : data.watchlist || data.data || [];
+
+        } catch (error) {
+
+            console.error(
+                '❌ Fetch watchlist error:',
+                error
+            );
+
+            return [];
+        }
+    }
+
+
+    async function checkWatchlistStatus(movieId) {
+
+        if (!isAuthenticated()) {
+            return false;
+        }
+
+        try {
+
+            const watchlist = await fetchWatchlist();
+
+            return watchlist.some(item => {
+
+                const itemId =
+                    item.filmId ??
+                    item.film_id ??
+                    item.movieId ??
+                    item.movie_id;
+
+                return Number(itemId) === Number(movieId);
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                '❌ Check watchlist error:',
+                error
+            );
+
+            return false;
+        }
+    }
+
+
+    async function addToWatchlist(movieId, movieData) {
+
+        if (!isAuthenticated()) {
+
+            showToast(
+                'Please create an account or sign in to add films to your watchlist',
+                'info'
+            );
+
+            setTimeout(() => {
                 window.location.href = 'logout.html';
+            }, 2000);
+
+            return false;
+        }
+
+
+        try {
+
+            const payload = {
+                filmId: movieId,
+                title: movieData.title,
+                poster: movieData.posterUrl || '',
+                year: movieData.releaseDate
+                    ? movieData.releaseDate.substring(0, 4)
+                    : 'N/A',
+                rating: movieData.rating ?? 0
+            };
+
+
+            console.log(
+                '📤 Adding movie to watchlist:',
+                payload
+            );
+
+
+            const response = await fetch(
+                `${CONFIG.BACKEND_API}/watchlist`,
+                {
+                    method: 'POST',
+
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+
+                    body: JSON.stringify(payload)
+                }
+            );
+
+
+            const data = await response.json();
+
+
+            if (response.status === 409) {
+
+                showToast(
+                    data.message ||
+                    'This film is already in your watchlist',
+                    'info'
+                );
+
+                return true;
             }
 
-            // ============================================================
-            // MOBILE MENU
-            // ============================================================
 
-            function setupMobileMenu() {
-                DOM.menuToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    DOM.mobileMenu.classList.toggle('open');
-                    DOM.mobileOverlay.classList.toggle('active');
-                    DOM.menuToggle.classList.toggle('active');
-                    document.body.style.overflow = DOM.mobileMenu.classList.contains('open') ? 'hidden' : '';
-                });
-                DOM.mobileMenuClose.addEventListener('click', closeMobileMenu);
-                DOM.mobileOverlay.addEventListener('click', closeMobileMenu);
-                DOM.mobileMenu.querySelectorAll('a').forEach(function(link) {
-                    link.addEventListener('click', closeMobileMenu);
-                });
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && DOM.mobileMenu.classList.contains('open')) {
-                        closeMobileMenu();
-                    }
-                });
+            if (!response.ok) {
+                throw new Error(
+                    data.message ||
+                    'Failed to add movie to watchlist'
+                );
             }
 
-            function closeMobileMenu() {
-                DOM.mobileMenu.classList.remove('open');
-                DOM.mobileOverlay.classList.remove('active');
-                DOM.menuToggle.classList.remove('active');
-                document.body.style.overflow = '';
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                '❌ Add to watchlist error:',
+                error
+            );
+
+            showToast(
+                error.message ||
+                'Could not add to watchlist. Please try again.',
+                'error'
+            );
+
+            return false;
+        }
+    }
+
+
+    async function removeFromWatchlist(movieId) {
+
+        if (!isAuthenticated()) {
+
+            showToast(
+                'Please sign in to manage your watchlist',
+                'error'
+            );
+
+            return false;
+        }
+
+
+        try {
+
+            const response = await fetch(
+                `${CONFIG.BACKEND_API}/watchlist/${movieId}`,
+                {
+                    method: 'DELETE',
+
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+
+            const data = await response.json();
+
+
+            if (response.status === 404) {
+
+                showToast(
+                    data.message ||
+                    'Film not found in your watchlist',
+                    'info'
+                );
+
+                return true;
             }
 
-                        // ============================================================
-            // WATCHLIST API - FULLY UPDATED
-            // ============================================================
 
-            let currentMovie = null;
-            let isInWatchlist = false;
+            if (!response.ok) {
 
-            async function fetchWatchlist() {
-                if (!isAuthenticated()) return [];
-                try {
-                    const res = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
-                        headers: { 
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    if (!res.ok) {
-                        console.error('Failed to fetch watchlist:', res.status);
-                        return [];
-                    }
-                    
-                    const watchlist = await res.json();
-                    console.log('📦 Watchlist data:', watchlist);
-                    return watchlist || [];
-                } catch (err) {
-                    console.error('Fetch watchlist error:', err);
-                    return [];
-                }
+                throw new Error(
+                    data.message ||
+                    'Failed to remove from watchlist'
+                );
             }
 
-            async function checkWatchlistStatus(movieId) {
-                if (!isAuthenticated()) {
-                    return false;
-                }
-                try {
-                    const watchlist = await fetchWatchlist();
-                    const found = watchlist.some(item => {
-                        const itemId = item.filmId || item.FILM_ID || item.movieId || item.MOVIE_ID;
-                        return itemId == movieId;
-                    });
-                    console.log(`Film ${movieId} in watchlist:`, found);
-                    return found;
-                } catch (err) {
-                    console.error('Check watchlist error:', err);
-                    return false;
-                }
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                '❌ Remove from watchlist error:',
+                error
+            );
+
+            showToast(
+                error.message ||
+                'Could not remove from watchlist. Please try again.',
+                'error'
+            );
+
+            return false;
+        }
+    }
+
+
+    async function toggleWatchlist() {
+
+        if (!currentMovie) {
+            console.error('❌ No current movie set');
+            return;
+        }
+
+
+        if (!isAuthenticated()) {
+
+            showToast(
+                'Please create an account or sign in to add films to your watchlist',
+                'info'
+            );
+
+            setTimeout(() => {
+                window.location.href = 'logout.html';
+            }, 2000);
+
+            return;
+        }
+
+
+        DOM.watchlistBtn.disabled = true;
+        DOM.watchlistBtn.style.opacity = '0.6';
+        DOM.watchlistBtn.style.pointerEvents = 'none';
+
+
+        const movieId =
+            currentMovie.movieId ||
+            currentMovie.id;
+
+
+        let success = false;
+
+
+        if (isInWatchlist) {
+
+            success =
+                await removeFromWatchlist(movieId);
+
+            if (success) {
+
+                showToast(
+                    `"${currentMovie.title}" removed from watchlist`,
+                    'removed'
+                );
             }
 
-            async function addToWatchlist(movieId, movieData) {
-                if (!isAuthenticated()) {
-                    showToast('Please create an account or sign in to add films to your watchlist', 'info');
-                    setTimeout(() => {
-                        window.location.href = 'logout.html';
-                    }, 2000);
-                    return false;
-                }
-                try {
-                    const payload = {
-                        filmId: movieId,
-                        title: movieData.title,
-                        poster: movieData.posterUrl || movieData.poster_path || '',
-                        year: movieData.releaseDate ? movieData.releaseDate.substring(0, 4) : 'N/A',
-                        rating: movieData.rating || movieData.vote_average || 0
-                    };
+        } else {
 
-                    console.log('📤 Adding to watchlist:', payload);
+            success =
+                await addToWatchlist(
+                    movieId,
+                    currentMovie
+                );
 
-                    const res = await fetch(`${CONFIG.BACKEND_API}/watchlist`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(payload)
-                    });
+            if (success) {
 
-                    const data = await res.json();
+                showToast(
+                    `"${currentMovie.title}" added to your watchlist ❤️`,
+                    'success'
+                );
+            }
+        }
 
-                    if (res.status === 409) {
-                        showToast(data.message || 'This film is already in your watchlist', 'info');
-                        return true;
-                    }
 
-                    if (!res.ok) {
-                        throw new Error(data.message || 'Failed to add to watchlist');
-                    }
-                    
-                    return true;
-                } catch (err) {
-                    console.error('Add to watchlist error:', err);
-                    showToast(err.message || 'Could not add to watchlist. Please try again.', 'error');
-                    return false;
-                }
+        DOM.watchlistBtn.disabled = false;
+        DOM.watchlistBtn.style.opacity = '1';
+        DOM.watchlistBtn.style.pointerEvents = 'auto';
+
+
+        if (success) {
+
+            isInWatchlist = !isInWatchlist;
+
+            updateWatchlistUI(
+                isInWatchlist
+            );
+
+        } else {
+
+            const actualStatus =
+                await checkWatchlistStatus(movieId);
+
+            isInWatchlist =
+                actualStatus;
+
+            updateWatchlistUI(
+                isInWatchlist
+            );
+        }
+    }
+
+
+    function updateWatchlistUI(inWatchlist) {
+
+        if (!DOM.watchlistBtn) return;
+
+        const icon =
+            DOM.watchlistBtn.querySelector('i');
+
+        const label =
+            DOM.watchlistLabel;
+
+
+        if (inWatchlist) {
+
+            DOM.watchlistBtn.classList.add(
+                'in-watchlist'
+            );
+
+            if (icon) {
+
+                icon.className =
+                    'fas fa-heart';
+
+                icon.style.color =
+                    '#ff4757';
             }
 
-            async function removeFromWatchlist(movieId) {
-                if (!isAuthenticated()) {
-                    showToast('Please sign in to manage your watchlist', 'error');
-                    return false;
-                }
-                try {
-                    console.log('📤 Removing from watchlist:', movieId);
+            if (label) {
 
-                    const res = await fetch(`${CONFIG.BACKEND_API}/watchlist/${movieId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
+                label.textContent =
+                    'In Watchlist';
 
-                    const data = await res.json();
-
-                    if (res.status === 404) {
-                        showToast(data.message || 'Film not found in your watchlist', 'info');
-                        return true;
-                    }
-
-                    if (!res.ok) {
-                        throw new Error(data.message || 'Failed to remove from watchlist');
-                    }
-                    
-                    return true;
-                } catch (err) {
-                    console.error('Remove from watchlist error:', err);
-                    showToast(err.message || 'Could not remove from watchlist. Please try again.', 'error');
-                    return false;
-                }
+                label.style.color =
+                    '#ff4757';
             }
 
-            async function toggleWatchlist() {
-                if (!currentMovie) {
-                    console.error('No current movie set');
-                    return;
-                }
+            DOM.watchlistBtn.title =
+                'Remove from Watchlist';
 
-                if (!isAuthenticated()) {
-                    showToast('Please create an account or sign in to add films to your watchlist', 'info');
-                    setTimeout(() => {
-                        window.location.href = 'logout.html';
-                    }, 2000);
-                    return;
-                }
+        } else {
 
-                // Disable button during operation
-                DOM.watchlistBtn.disabled = true;
-                DOM.watchlistBtn.style.opacity = '0.6';
-                DOM.watchlistBtn.style.pointerEvents = 'none';
+            DOM.watchlistBtn.classList.remove(
+                'in-watchlist'
+            );
 
-                const movieId = currentMovie.movieId || currentMovie.id;
-                let success = false;
+            if (icon) {
 
-                if (isInWatchlist) {
-                    success = await removeFromWatchlist(movieId);
-                    if (success) {
-                        showToast(`"${currentMovie.title}" removed from watchlist`, 'removed');
-                    }
-                } else {
-                    success = await addToWatchlist(movieId, currentMovie);
-                    if (success) {
-                        showToast(`"${currentMovie.title}" added to your watchlist ❤️`, 'success');
-                    }
-                }
+                icon.className =
+                    'far fa-heart';
 
-                // Re-enable button
-                DOM.watchlistBtn.disabled = false;
-                DOM.watchlistBtn.style.opacity = '1';
-                DOM.watchlistBtn.style.pointerEvents = 'auto';
-
-                if (success) {
-                    // Toggle the state
-                    isInWatchlist = !isInWatchlist;
-                    updateWatchlistUI(isInWatchlist);
-                } else {
-                    // If operation failed, re-check the actual state from server
-                    const actualStatus = await checkWatchlistStatus(movieId);
-                    isInWatchlist = actualStatus;
-                    updateWatchlistUI(isInWatchlist);
-                }
+                icon.style.color = '';
             }
 
-            function updateWatchlistUI(inWatchlist) {
-                const icon = DOM.watchlistBtn.querySelector('i');
-                const label = DOM.watchlistLabel;
-                
-                if (inWatchlist) {
-                    DOM.watchlistBtn.classList.add('in-watchlist');
-                    if (icon) {
-                        icon.className = 'fas fa-heart';
-                        icon.style.color = '#ff4757';
-                    }
-                    if (label) {
-                        label.textContent = 'In Watchlist';
-                        label.style.color = '#ff4757';
-                    }
-                    DOM.watchlistBtn.title = 'Remove from Watchlist';
-                } else {
-                    DOM.watchlistBtn.classList.remove('in-watchlist');
-                    if (icon) {
-                        icon.className = 'far fa-heart';
-                        icon.style.color = '';
-                    }
-                    if (label) {
-                        label.textContent = 'Add to Watchlist';
-                        label.style.color = '';
-                    }
-                    DOM.watchlistBtn.title = 'Add to Watchlist';
+            if (label) {
+
+                label.textContent =
+                    'Add to Watchlist';
+
+                label.style.color = '';
+            }
+
+            DOM.watchlistBtn.title =
+                'Add to Watchlist';
+        }
+
+
+        if (currentMovie) {
+
+            DOM.watchlistBtn.dataset.filmId =
+                currentMovie.movieId;
+        }
+    }
+
+
+    // ============================================================
+    // TRAILER MODAL
+    // ============================================================
+
+    function setupTrailerModal() {
+
+        if (
+            !DOM.trailerModal ||
+            !DOM.trailerModalClose
+        ) {
+            return;
+        }
+
+
+        DOM.trailerModalClose.addEventListener(
+            'click',
+            closeTrailerModal
+        );
+
+
+        DOM.trailerModal.addEventListener(
+            'click',
+            function (event) {
+
+                if (event.target === this) {
+                    closeTrailerModal();
                 }
-                
-                if (currentMovie) {
-                    DOM.watchlistBtn.dataset.filmId = currentMovie.movieId || currentMovie.id;
+
+            }
+        );
+
+
+        document.addEventListener(
+            'keydown',
+            function (event) {
+
+                if (
+                    event.key === 'Escape' &&
+                    DOM.trailerModal.classList.contains('active')
+                ) {
+                    closeTrailerModal();
                 }
+
             }
+        );
+    }
 
-            // ============================================================
-            // TRAILER MODAL
-            // ============================================================
 
-            function setupTrailerModal() {
-                DOM.trailerModalClose.addEventListener('click', closeTrailerModal);
-                DOM.trailerModal.addEventListener('click', function(e) {
-                    if (e.target === this) closeTrailerModal();
-                });
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && DOM.trailerModal.classList.contains('active')) {
-                        closeTrailerModal();
-                    }
-                });
-            }
+    function openTrailerModal(trailerUrl) {
 
-            function openTrailerModal(movieId) {
-                DOM.trailerModal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                DOM.trailerLoading.style.display = 'block';
-                DOM.trailerIframe.classList.remove('active');
-                DOM.trailerIframe.src = '';
-                DOM.noTrailer.style.display = 'none';
-                fetchTrailer(movieId);
-            }
+        if (!trailerUrl) {
 
-            function closeTrailerModal() {
-                DOM.trailerModal.classList.remove('active');
-                document.body.style.overflow = '';
-                DOM.trailerIframe.src = '';
-                DOM.trailerIframe.classList.remove('active');
-            }
+            showToast(
+                'Trailer is not available for this movie.',
+                'info'
+            );
 
-            async function fetchTrailer(movieId) {
-                try {
-                    const response = await fetch(
-                        `https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${CONFIG.API_KEY}&language=en-US`
+            return;
+        }
+
+
+        DOM.trailerModal.classList.add('active');
+
+        document.body.style.overflow =
+            'hidden';
+
+        DOM.trailerLoading.style.display =
+            'none';
+
+        DOM.noTrailer.style.display =
+            'none';
+
+        DOM.trailerIframe.classList.add(
+            'active'
+        );
+
+        DOM.trailerIframe.src =
+            trailerUrl;
+    }
+
+
+    function closeTrailerModal() {
+
+        DOM.trailerModal.classList.remove(
+            'active'
+        );
+
+        document.body.style.overflow = '';
+
+        DOM.trailerIframe.src = '';
+
+        DOM.trailerIframe.classList.remove(
+            'active'
+        );
+    }
+
+
+    // ============================================================
+    // GET MOVIE ID FROM URL
+    // ============================================================
+
+    function getMovieIdFromURL() {
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        return params.get('id');
+    }
+
+
+    // ============================================================
+    // FETCH MOVIE DETAILS
+    // ============================================================
+
+    async function fetchMovieDetails(movieId) {
+
+        try {
+
+            console.log(
+                '📽️ Fetching movie details from PostgreSQL API:',
+                movieId
+            );
+
+
+            const response = await fetch(
+                `${CONFIG.BACKEND_API}/movies/${movieId}`
+            );
+
+
+            if (!response.ok) {
+
+                if (response.status === 404) {
+
+                    throw new Error(
+                        'Movie not found in database'
                     );
-                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                    const data = await response.json();
-                    const trailers = data.results.filter(v => v.site === 'YouTube' && v.type === 'Trailer');
-                    const trailer = trailers.length > 0 ? trailers[0] : data.results.find(v => v.type === 'Trailer');
+                }
 
-                    DOM.trailerLoading.style.display = 'none';
+                throw new Error(
+                    `API Error: ${response.status}`
+                );
+            }
 
-                    if (trailer && trailer.site === 'YouTube') {
-                        DOM.trailerIframe.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0`;
-                        DOM.trailerIframe.classList.add('active');
-                    } else if (trailer) {
-                        DOM.trailerIframe.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0`;
-                        DOM.trailerIframe.classList.add('active');
-                    } else {
-                        DOM.noTrailer.style.display = 'block';
-                    }
-                } catch (error) {
-                    console.error('Error fetching trailer:', error);
-                    DOM.trailerLoading.style.display = 'none';
-                    DOM.noTrailer.style.display = 'block';
-                    DOM.noTrailer.innerHTML = `
-                        <i class="fas fa-exclamation-circle"></i>
-                        Error loading trailer. Please try again.
-                    `;
+
+            const data =
+                await response.json();
+
+
+            console.log(
+                '📊 Movie data from PostgreSQL:',
+                data
+            );
+
+
+            if (
+                !data.success ||
+                !data.movie
+            ) {
+                throw new Error(
+                    'No movie data returned'
+                );
+            }
+
+
+            const movie =
+                data.movie;
+
+
+            // ----------------------------------------------------
+            // SHOWTIMES
+            // ----------------------------------------------------
+
+            if (
+                !movie.showtimes ||
+                movie.showtimes.length === 0
+            ) {
+
+                console.log(
+                    '📽️ Fetching showtimes from database...'
+                );
+
+
+                const showtimesResponse =
+                    await fetch(
+                        `${CONFIG.BACKEND_API}/movies/${movieId}/showtimes`
+                    );
+
+
+                if (showtimesResponse.ok) {
+
+                    const showtimesData =
+                        await showtimesResponse.json();
+
+
+                    movie.showtimes =
+                        showtimesData.showtimes || [];
+
+                } else {
+
+                    movie.showtimes = [];
                 }
             }
 
-            // ============================================================
-            // GET MOVIE ID FROM URL
-            // ============================================================
 
-            function getMovieIdFromURL() {
-                const params = new URLSearchParams(window.location.search);
-                return params.get('id');
-            }
+            return movie;
 
-            // ============================================================
-            // FETCH MOVIE DETAILS FROM BACKEND
-            // ============================================================
+        } catch (error) {
 
-            async function fetchMovieDetails(movieId) {
-                try {
-                    console.log('📽️ Fetching movie details from backend for ID:', movieId);
-                    
-                    // Fetch movie details from your backend API
-                    const response = await fetch(`${CONFIG.BACKEND_API}/movies/${movieId}`);
-                    
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            throw new Error('Movie not found in database');
+            console.error(
+                '❌ Error fetching movie details:',
+                error
+            );
+
+            return null;
+        }
+    }
+
+
+    // ============================================================
+    // GENERATE SHOWTIMES
+    // ============================================================
+
+    function generateShowtimes(movie) {
+
+        const today =
+            new Date();
+
+        today.setHours(
+            0,
+            0,
+            0,
+            0
+        );
+
+
+        const releaseDate =
+            movie.releaseDate
+                ? new Date(movie.releaseDate)
+                : null;
+
+
+        const currentYear =
+            today.getFullYear();
+
+
+        const releaseYear =
+            releaseDate
+                ? releaseDate.getFullYear()
+                : null;
+
+
+        // --------------------------------------------------------
+        // UPCOMING
+        // --------------------------------------------------------
+
+        if (
+            !releaseDate ||
+            releaseDate > today
+        ) {
+
+            return {
+
+                status: 'coming-soon',
+
+                html: `
+                    <div class="coming-soon-message">
+
+                        <i class="fas fa-calendar-plus"></i>
+
+                        <div class="year-badge">
+                            Coming Soon
+                        </div>
+
+                        <p>
+                            This film is coming to
+                            Savannah Cinemas
+                        </p>
+
+                        <div class="release-year">
+                            ${
+                                releaseDate
+                                    ? releaseDate.toLocaleDateString(
+                                        'en-US',
+                                        {
+                                            month: 'long',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        }
+                                    )
+                                    : 'TBA'
+                            }
+                        </div>
+
+                    </div>
+                `
+            };
+        }
+
+
+        // --------------------------------------------------------
+        // RELEASED
+        // --------------------------------------------------------
+
+        const showtimes =
+            movie.showtimes || [];
+
+
+        const now =
+            new Date();
+
+
+        const upcomingShowtimes =
+            showtimes.filter(showtime => {
+
+                if (!showtime.startTime) {
+                    return false;
+                }
+
+
+                const showTime =
+                    new Date(
+                        showtime.startTime
+                    );
+
+
+                return showTime >= now;
+            });
+
+
+        // --------------------------------------------------------
+        // NOW SHOWING
+        // --------------------------------------------------------
+
+        if (
+            upcomingShowtimes.length > 0
+        ) {
+
+            let html = `
+
+                <div style="
+                    display:flex;
+                    align-items:center;
+                    gap:8px;
+                    margin-bottom:12px;
+                ">
+
+                    <span class="status-badge now-showing">
+                        🎬 Now Showing
+                    </span>
+
+                    <span style="
+                        font-size:clamp(11px,0.8vw,13px);
+                        color:var(--paper-dim);
+                        font-weight:300;
+                    ">
+                        Released ${
+                            releaseDate.toLocaleDateString(
+                                'en-US',
+                                {
+                                    month: 'long',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                }
+                            )
                         }
-                        throw new Error(`API Error: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log('📊 Movie data from backend:', data);
-                    
-                    if (!data.success || !data.movie) {
-                        throw new Error('No movie data returned');
-                    }
-                    
-                    const movie = data.movie;
-                    
-                    // If showtimes are not included in the movie details, fetch them separately
-                    if (!movie.showtimes || movie.showtimes.length === 0) {
-                        console.log('📽️ Fetching showtimes separately...');
-                        const showtimesResponse = await fetch(`${CONFIG.BACKEND_API}/movies/${movieId}/showtimes`);
-                        if (showtimesResponse.ok) {
-                            const showtimesData = await showtimesResponse.json();
-                            console.log('📊 Showtimes data:', showtimesData);
-                            movie.showtimes = showtimesData.showtimes || [];
-                        }
-                    }
-                    
-                    return movie;
-                    
-                } catch (error) {
-                    console.error('❌ Error fetching movie details:', error);
-                    return null;
-                }
-            }
+                    </span>
 
-            // ============================================================
-            // GENERATE SHOWTIMES FROM DATABASE
-            // ============================================================
+                </div>
 
-            function generateShowtimes(movie) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                const releaseDate = movie.releaseDate ? new Date(movie.releaseDate) : null;
-                const yearNum = movie.releaseDate ? parseInt(movie.releaseDate.substring(0, 4)) : null;
-                const currentYear = today.getFullYear();
+                <div class="showtimes-list">
+            `;
 
-                // If no release date or release date is in the future -> Coming Soon
-                if (!releaseDate || releaseDate > today) {
-                    return {
-                        status: 'coming-soon',
-                        html: `
-                            <div class="coming-soon-message">
-                                <i class="fas fa-calendar-plus"></i>
-                                <div class="year-badge">Coming Soon</div>
-                                <p>This film is coming to Savannah Cinemas</p>
-                                <div class="release-year">${releaseDate ? releaseDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'TBA'}</div>
-                            </div>
-                        `
-                    };
-                }
 
-                // If release date is in the past -> Now Showing or Past
-                if (releaseDate <= today) {
-                    // Check if we have real showtimes from the database
-                    const showtimesList = movie.showtimes && movie.showtimes.length > 0 ? movie.showtimes : [];
-                    
-                    // Filter for upcoming showtimes (today or future)
-                    const now = new Date();
-                    const upcomingShowtimes = showtimesList.filter(st => {
-                        if (!st.startTime) return false;
-                        const showTime = new Date(st.startTime);
-                        return showTime >= now;
-                    });
+            upcomingShowtimes
+                .slice(0, 10)
+                .forEach(showtime => {
 
-                    // If we have upcoming showtimes -> Now Showing
-                    if (upcomingShowtimes.length > 0) {
-                        let showtimesHtml = `
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-                                <span class="status-badge now-showing">🎬 Now Showing</span>
-                                <span style="font-size:clamp(11px,0.8vw,13px);color:var(--paper-dim);font-weight:300;">
-                                    Released ${releaseDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    const showTime =
+                        new Date(
+                            showtime.startTime
+                        );
+
+
+                    const timeStr =
+                        showTime.toLocaleTimeString(
+                            'en-US',
+                            {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }
+                        );
+
+
+                    const dateStr =
+                        showTime.toLocaleDateString(
+                            'en-US',
+                            {
+                                month: 'short',
+                                day: 'numeric'
+                            }
+                        );
+
+
+                    const cinemaName =
+                        showtime.cinema?.name ||
+                        'Savannah Cinemas';
+
+
+                    const screenName =
+                        showtime.screen?.name ||
+                        'Screen 1';
+
+
+                    const ticketPrice =
+                        showtime.ticketPrice ??
+                        '0.00';
+
+
+                    const escapedTitle =
+                        movie.title
+                            .replace(/'/g, "\\'");
+
+
+                    html += `
+
+                        <div class="showtime-item">
+
+                            <div class="time-group">
+
+                                <span class="date">
+                                    ${dateStr}
                                 </span>
+
+                                <span class="time">
+                                    ${timeStr}
+                                </span>
+
                             </div>
-                            <div class="showtimes-list">
+
+
+                            <div class="info">
+
+                                <span>
+                                    ${cinemaName}
+                                </span>
+
+                                <span class="screen">
+                                    ${screenName}
+                                </span>
+
+                            </div>
+
+
+                            <div class="price">
+                                ₵${ticketPrice}
+                            </div>
+
+
+                            <button
+                                class="btn-sm"
+                                onclick="window.bookShowtime(
+                                    ${showtime.showtimeId},
+                                    '${escapedTitle}'
+                                )"
+                            >
+                                <i class="fas fa-ticket-alt"></i>
+                                Book
+                            </button>
+
+                        </div>
+
+                    `;
+                });
+
+
+            html += `
+                </div>
+            `;
+
+
+            return {
+                status: 'now-showing',
+                html
+            };
+        }
+
+
+        // --------------------------------------------------------
+        // RECENTLY RELEASED BUT NO SHOWTIMES
+        // --------------------------------------------------------
+
+        if (
+            releaseYear &&
+            releaseYear >= currentYear - 1
+        ) {
+
+            return {
+
+                status: 'now-showing-no-times',
+
+                html: `
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        gap:8px;
+                        margin-bottom:12px;
+                    ">
+
+                        <span class="status-badge now-showing">
+                            🎬 Now Showing
+                        </span>
+
+                        <span style="
+                            font-size:clamp(11px,0.8vw,13px);
+                            color:var(--paper-dim);
+                            font-weight:300;
+                        ">
+                            Released ${
+                                releaseDate.toLocaleDateString(
+                                    'en-US',
+                                    {
+                                        month: 'long',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    }
+                                )
+                            }
+                        </span>
+
+                    </div>
+
+                    <div class="no-showtimes-message">
+
+                        <i class="fas fa-clock"></i>
+
+                        <p>
+                            No upcoming showtimes available.
+                            Check back soon!
+                        </p>
+
+                    </div>
+                `
+            };
+        }
+
+
+        // --------------------------------------------------------
+        // PAST FILM
+        // --------------------------------------------------------
+
+        return {
+
+            status: 'past',
+
+            html: `
+
+                <div class="past-film-message">
+
+                    <i class="fas fa-film"></i>
+
+                    <p>
+                        This film was released in
+                        <strong>${releaseYear || 'the past'}</strong>.
+                    </p>
+
+                    <p style="
+                        margin-top:4px;
+                        font-size:clamp(12px,0.8vw,14px);
+                        color:var(--paper-dim);
+                    ">
+                        Check out our current lineup
+                        for films showing now.
+                    </p>
+
+                </div>
+
+            `
+        };
+    }
+
+
+    // ============================================================
+    // RENDER MOVIE DETAILS
+    // ============================================================
+
+    async function renderMovieDetails(movie) {
+
+        if (!movie) {
+
+            DOM.loadingState.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+
+                Failed to load movie details.
+
+                <a
+                    href="index.html"
+                    style="color:var(--gold);"
+                >
+                    Browse movies
+                </a>
+            `;
+
+            return;
+        }
+
+
+        currentMovie = movie;
+
+
+        console.log(
+            '🎬 Movie loaded:',
+            movie.movieId,
+            movie.title
+        );
+
+
+        console.log(
+            '🎬 Database showtimes:',
+            movie.showtimes
+        );
+
+
+        // --------------------------------------------------------
+        // RECORD VIEW
+        // --------------------------------------------------------
+
+        if (isAuthenticated()) {
+            await recordMovieView(
+                movie.movieId
+            );
+        }
+
+
+        DOM.loadingState.style.display =
+            'none';
+
+        DOM.movieContent.style.display =
+            'block';
+
+
+        // --------------------------------------------------------
+        // BACKDROP
+        // --------------------------------------------------------
+
+        if (movie.backdropUrl) {
+
+            DOM.heroSection.style.backgroundImage =
+                `url('${movie.backdropUrl}')`;
+
+        } else {
+
+            DOM.heroSection.style.backgroundImage =
+                'none';
+        }
+
+
+        // --------------------------------------------------------
+        // POSTER
+        // --------------------------------------------------------
+
+        if (movie.posterUrl) {
+
+            DOM.posterImg.src =
+                movie.posterUrl;
+
+            DOM.posterImg.alt =
+                movie.title;
+
+        } else {
+
+            DOM.posterImg.parentElement.innerHTML = `
+                <div class="placeholder">
+                    No Poster
+                </div>
+            `;
+        }
+
+
+        // --------------------------------------------------------
+        // TITLE
+        // --------------------------------------------------------
+
+        DOM.movieTitle.textContent =
+            movie.title || 'Untitled';
+
+
+        // The PostgreSQL movies table does not currently
+        // expose a tagline field.
+
+        DOM.movieTagline.textContent =
+            '';
+
+
+        // --------------------------------------------------------
+        // YEAR
+        // --------------------------------------------------------
+
+        DOM.movieYear.textContent =
+            movie.releaseDate
+                ? movie.releaseDate.substring(0, 4)
+                : 'N/A';
+
+
+        // --------------------------------------------------------
+        // RUNTIME
+        // --------------------------------------------------------
+
+        const runtime =
+            Number(movie.runtimeMinutes);
+
+
+        if (
+            Number.isFinite(runtime) &&
+            runtime > 0
+        ) {
+
+            const hours =
+                Math.floor(runtime / 60);
+
+            const minutes =
+                runtime % 60;
+
+
+            DOM.movieRuntime.textContent =
+                `${hours}h ${minutes}m`;
+
+        } else {
+
+            DOM.movieRuntime.textContent =
+                'N/A';
+        }
+
+
+        // --------------------------------------------------------
+        // STATUS
+        // --------------------------------------------------------
+
+        const statusLabels = {
+
+            NOW_SHOWING: 'Now Showing',
+
+            UPCOMING: 'Upcoming',
+
+            COMING_SOON: 'Coming Soon',
+
+            ENDED: 'Ended',
+
+            ARCHIVED: 'Archived'
+        };
+
+
+        DOM.movieStatus.textContent =
+            statusLabels[movie.status] ||
+            movie.status ||
+            'N/A';
+
+
+        // --------------------------------------------------------
+        // RATING
+        // --------------------------------------------------------
+
+        const rating =
+            Number(movie.rating);
+
+
+        const validRating =
+            Number.isFinite(rating)
+                ? rating
+                : 0;
+
+
+        DOM.movieRating.textContent =
+            validRating.toFixed(1);
+
+
+        // PostgreSQL movies currently stores
+        // the rating but not TMDB vote_count.
+
+        DOM.voteCount.textContent =
+            '';
+
+
+        // --------------------------------------------------------
+        // STARS
+        // --------------------------------------------------------
+
+        const stars =
+            Math.max(
+                0,
+                Math.min(
+                    5,
+                    Math.round(
+                        validRating / 2
+                    )
+                )
+            );
+
+
+        DOM.movieStars.textContent =
+            '★'.repeat(stars) +
+            '☆'.repeat(5 - stars);
+
+
+        // --------------------------------------------------------
+        // GENRES
+        // --------------------------------------------------------
+
+        DOM.genresContainer.innerHTML = '';
+
+
+        const genres =
+            movie.genres || [];
+
+
+        if (genres.length > 0) {
+
+            genres.forEach(genre => {
+
+                const tag =
+                    document.createElement('span');
+
+                tag.className =
+                    'genre-tag';
+
+
+                tag.textContent =
+                    genre.name ||
+                    genre.genreName ||
+                    'Unknown';
+
+
+                DOM.genresContainer.appendChild(
+                    tag
+                );
+            });
+
+        } else {
+
+            const tag =
+                document.createElement('span');
+
+            tag.className =
+                'genre-tag';
+
+            tag.textContent =
+                'N/A';
+
+            DOM.genresContainer.appendChild(
+                tag
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // OVERVIEW
+        // --------------------------------------------------------
+
+        DOM.movieOverview.textContent =
+            movie.description ||
+            'No overview available.';
+
+
+        // --------------------------------------------------------
+        // SHOWTIMES
+        // --------------------------------------------------------
+
+        const showtimeResult =
+            generateShowtimes(movie);
+
+
+        DOM.showtimesContainer.innerHTML =
+            showtimeResult.html;
+
+
+        // --------------------------------------------------------
+        // BOOK BUTTON
+        // --------------------------------------------------------
+
+        if (
+            showtimeResult.status ===
+            'now-showing'
+        ) {
+
+            DOM.bookBtn.style.display =
+                'inline-flex';
+
+            DOM.bookBtn.textContent =
+                'Book Tickets';
+
+
+            DOM.bookBtn.onclick =
+                function () {
+
+                    DOM.showtimesContainer
+                        .scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                };
+
+        } else {
+
+            DOM.bookBtn.style.display =
+                'none';
+        }
+
+
+        // --------------------------------------------------------
+        // CAST
+        // --------------------------------------------------------
+
+        DOM.castContainer.innerHTML =
+            '';
+
+
+        const castList =
+            movie.cast || [];
+
+
+        if (castList.length > 0) {
+
+            castList
+                .slice(0, 12)
+                .forEach(actor => {
+
+                    const card =
+                        document.createElement('div');
+
+                    card.className =
+                        'cast-card';
+
+
+                    const photoDiv =
+                        document.createElement('div');
+
+                    photoDiv.className =
+                        'photo';
+
+
+                    if (actor.profileUrl) {
+
+                        photoDiv.innerHTML = `
+                            <img
+                                src="${actor.profileUrl}"
+                                alt="${actor.name}"
+                                loading="lazy"
+                            >
                         `;
 
-                        // Show upcoming showtimes (limit to next 10)
-                        upcomingShowtimes.slice(0, 10).forEach(st => {
-                            const showTime = new Date(st.startTime);
-                            const timeStr = showTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                            const dateStr = showTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                            const cinemaName = st.cinema ? st.cinema.name : 'Savannah Cinemas';
-                            const screenName = st.screen ? st.screen.name : 'Screen 1';
-                            const ticketPrice = st.ticketPrice || '12.50';
-                            
-                            showtimesHtml += `
-                                <div class="showtime-item">
-                                    <div class="time-group">
-                                        <span class="date">${dateStr}</span>
-                                        <span class="time">${timeStr}</span>
-                                    </div>
-                                    <div class="info">
-                                        <span>${cinemaName}</span>
-                                        <span class="screen">${screenName}</span>
-                                    </div>
-                                    <div class="price">₵${ticketPrice}</div>
-                                    <button class="btn-sm" onclick="window.bookShowtime(${st.showtimeId}, '${movie.title.replace(/'/g, "\\'")}')">
-                                        <i class="fas fa-ticket-alt"></i> Book
-                                    </button>
-                                </div>
-                            `;
-                        });
-
-                        showtimesHtml += `</div>`;
-                        return { status: 'now-showing', html: showtimesHtml };
-                    }
-
-                    // If no upcoming showtimes but release date is recent (within 90 days) -> Now Showing with no showtimes
-                    if (yearNum && yearNum >= currentYear - 1) {
-                        return {
-                            status: 'now-showing-no-times',
-                            html: `
-                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-                                    <span class="status-badge now-showing">🎬 Now Showing</span>
-                                    <span style="font-size:clamp(11px,0.8vw,13px);color:var(--paper-dim);font-weight:300;">
-                                        Released ${releaseDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                    </span>
-                                </div>
-                                <div class="no-showtimes-message">
-                                    <i class="fas fa-clock"></i>
-                                    <p>No upcoming showtimes available. Check back soon!</p>
-                                </div>
-                            `
-                        };
-                    }
-
-                    // If release date is more than 1 year ago -> Past Film
-                    return {
-                        status: 'past',
-                        html: `
-                            <div class="past-film-message">
-                                <i class="fas fa-film"></i>
-                                <p>This film was released in <strong>${yearNum}</strong>.</p>
-                                <p style="margin-top:4px;font-size:clamp(12px,0.8vw,14px);color:var(--paper-dim);">
-                                    Check out our current lineup for films showing now.
-                                </p>
-                            </div>
-                        `
-                    };
-                }
-
-                // Fallback
-                return {
-                    status: 'unknown',
-                    html: `<p class="no-showtimes">No showtimes available for this film.</p>`
-                };
-            }
-
-            // ============================================================
-            // RENDER MOVIE DETAILS
-            // ============================================================
-
-            async function renderMovieDetails(movie) {
-                if (!movie) {
-                    DOM.loadingState.innerHTML = `
-                        <i class="fas fa-exclamation-circle"></i> 
-                        Failed to load movie details. <a href="index.html" style="color:var(--gold);">Browse movies</a>
-                    `;
-                    return;
-                }
-
-                currentMovie = movie;
-                console.log('🎬 Current movie loaded:', movie.movieId, movie.title);
-                console.log('🎬 Showtimes:', movie.showtimes);
-
-                // Record movie view if user is authenticated
-                if (isAuthenticated()) {
-                    await recordMovieView(movie.movieId);
-                }
-
-                DOM.loadingState.style.display = 'none';
-                DOM.movieContent.style.display = 'block';
-
-                // Hero Section (Backdrop)
-                if (movie.backdropUrl) {
-                    DOM.heroSection.style.backgroundImage = `url('${movie.backdropUrl}')`;
-                } else if (movie.backdrop_path) {
-                    DOM.heroSection.style.backgroundImage = `url('${CONFIG.BACKDROP_BASE}${movie.backdrop_path}')`;
-                }
-
-                // Poster
-                if (movie.posterUrl) {
-                    DOM.posterImg.src = movie.posterUrl;
-                    DOM.posterImg.alt = movie.title;
-                } else if (movie.poster_path) {
-                    DOM.posterImg.src = `${CONFIG.IMAGE_BASE}${movie.poster_path}`;
-                    DOM.posterImg.alt = movie.title;
-                } else {
-                    DOM.posterImg.parentElement.innerHTML = `
-                        <div class="placeholder">No Poster</div>
-                    `;
-                }
-
-                // Title & Tagline
-                DOM.movieTitle.textContent = movie.title;
-                DOM.movieTagline.textContent = movie.tagline || '';
-
-                // Year
-                const movieYear = movie.releaseDate ? movie.releaseDate.substring(0, 4) : 'N/A';
-                DOM.movieYear.textContent = movieYear;
-
-                // Runtime
-                const runtime = movie.runtimeMinutes || movie.runtime;
-                if (runtime) {
-                    const hours = Math.floor(runtime / 60);
-                    const minutes = runtime % 60;
-                    DOM.movieRuntime.textContent = `${hours}h ${minutes}m`;
-                } else {
-                    DOM.movieRuntime.textContent = 'N/A';
-                }
-
-                // Status
-                DOM.movieStatus.textContent = movie.status || 'N/A';
-
-                // Rating
-                const rating = movie.rating || movie.vote_average || 0;
-                DOM.movieRating.textContent = rating.toFixed(1);
-                DOM.voteCount.textContent = movie.vote_count ? movie.vote_count.toLocaleString() : '0';
-
-                // Stars
-                const stars = Math.round(rating / 2);
-                const starsStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
-                DOM.movieStars.textContent = starsStr;
-
-                // Genres
-                DOM.genresContainer.innerHTML = '';
-                if (movie.genres && movie.genres.length > 0) {
-                    movie.genres.forEach(genre => {
-                        const tag = document.createElement('span');
-                        tag.className = 'genre-tag';
-                        tag.textContent = genre.name || genre.genreName;
-                        DOM.genresContainer.appendChild(tag);
-                    });
-                } else {
-                    const tag = document.createElement('span');
-                    tag.className = 'genre-tag';
-                    tag.textContent = 'N/A';
-                    DOM.genresContainer.appendChild(tag);
-                }
-
-                // Overview
-                DOM.movieOverview.textContent = movie.description || 'No overview available.';
-
-                // ============================================================
-                // SHOWTIMES - FROM DATABASE
-                // ============================================================
-
-                const showtimeResult = generateShowtimes(movie);
-                DOM.showtimesContainer.innerHTML = showtimeResult.html;
-
-                // ============================================================
-                // BOOK BUTTON - Only show if film is now showing with showtimes
-                // ============================================================
-
-                if (showtimeResult.status === 'now-showing') {
-                    DOM.bookBtn.style.display = 'inline-flex';
-                    DOM.bookBtn.textContent = 'Book Tickets';
-                    DOM.bookBtn.onclick = function() {
-                        // Scroll to showtimes section
-                        document.getElementById('showtimesContainer').scrollIntoView({ behavior: 'smooth' });
-                    };
-                } else {
-                    DOM.bookBtn.style.display = 'none';
-                }
-
-                // ============================================================
-                // CAST
-                // ============================================================
-
-                DOM.castContainer.innerHTML = '';
-                const castList = movie.cast || [];
-                if (castList.length > 0) {
-                    castList.slice(0, 12).forEach(actor => {
-                        const card = document.createElement('div');
-                        card.className = 'cast-card';
-                        
-                        const photoDiv = document.createElement('div');
-                        photoDiv.className = 'photo';
-                        if (actor.profileUrl || actor.profile_path) {
-                            const profileUrl = actor.profileUrl || `${CONFIG.IMAGE_BASE}${actor.profile_path}`;
-                            photoDiv.innerHTML = `
-                                <img src="${profileUrl}" alt="${actor.name}" loading="lazy">
-                            `;
-                        } else {
-                            photoDiv.innerHTML = `
-                                <div class="placeholder">${actor.name.charAt(0)}</div>
-                            `;
-                        }
-                        
-                        const nameDiv = document.createElement('div');
-                        nameDiv.className = 'name';
-                        nameDiv.textContent = actor.name;
-                        
-                        const charDiv = document.createElement('div');
-                        charDiv.className = 'character';
-                        charDiv.textContent = actor.characterName || actor.character || 'N/A';
-                        
-                        card.appendChild(photoDiv);
-                        card.appendChild(nameDiv);
-                        card.appendChild(charDiv);
-                        DOM.castContainer.appendChild(card);
-                    });
-                } else {
-                    DOM.castContainer.innerHTML = `
-                        <p style="color:var(--paper-dim);font-weight:300;grid-column:1/-1;">
-                            No cast information available.
-                        </p>
-                    `;
-                }
-
-                document.title = `${movie.title} — Savannah Cinemas`;
-
-                // ============================================================
-                // WATCHLIST BUTTON
-                // ============================================================
-
-                DOM.watchlistBtn.dataset.filmId = movie.movieId;
-                
-                if (isAuthenticated()) {
-                    isInWatchlist = await checkWatchlistStatus(movie.movieId);
-                } else {
-                    isInWatchlist = false;
-                }
-                updateWatchlistUI(isInWatchlist);
-                
-                const newBtn = DOM.watchlistBtn.cloneNode(true);
-                DOM.watchlistBtn.parentNode.replaceChild(newBtn, DOM.watchlistBtn);
-                DOM.watchlistBtn = newBtn;
-                DOM.watchlistLabel = newBtn.querySelector('span');
-                DOM.watchlistBtn.addEventListener('click', toggleWatchlist);
-
-                // ============================================================
-                // TRAILER BUTTON
-                // ============================================================
-
-                DOM.trailerBtn.addEventListener('click', function() {
-                    const tmdbId = movie.tmdbId || movie.id;
-                    openTrailerModal(tmdbId);
-                });
-            }
-
-            // ============================================================
-            // RECORD MOVIE VIEW
-            // ============================================================
-
-            async function recordMovieView(movieId) {
-                if (!isAuthenticated()) {
-                    console.log('📊 User not authenticated, skipping view tracking');
-                    return;
-                }
-
-                try {
-                    console.log(`📊 Recording view for movie: ${movieId}`);
-                    
-                    const response = await fetch(`${CONFIG.BACKEND_API}/movies/views/record`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ movieId: parseInt(movieId) })
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        console.log('✅ Movie view recorded:', data.message);
                     } else {
-                        console.warn('⚠️ Failed to record movie view:', data.message);
+
+                        photoDiv.innerHTML = `
+                            <div class="placeholder">
+                                ${
+                                    actor.name
+                                        ? actor.name.charAt(0)
+                                        : '?'
+                                }
+                            </div>
+                        `;
                     }
-                } catch (error) {
-                    console.error('❌ Error recording movie view:', error);
-                }
-            }
 
-            // ============================================================
-            // GLOBAL FUNCTIONS
-            // ============================================================
 
-            window.bookMovie = function(movieId, title) {
-                window.location.href = `booking.html?movie=${movieId}&title=${encodeURIComponent(title)}`;
-            };
+                    const nameDiv =
+                        document.createElement('div');
 
-            window.bookShowtime = function(showtimeId, title) {
-                window.location.href = `booking.html?showtime=${showtimeId}&title=${encodeURIComponent(title)}`;
-            };
+                    nameDiv.className =
+                        'name';
 
-            // ============================================================
-            // INITIALIZE
-            // ============================================================
+                    nameDiv.textContent =
+                        actor.name ||
+                        'Unknown';
 
-            async function init() {
-                const movieId = getMovieIdFromURL();
 
-                if (!movieId) {
-                    DOM.loadingState.innerHTML = `
-                        <i class="fas fa-exclamation-circle"></i> 
-                        No movie ID provided. <a href="index.html" style="color:var(--gold);">Browse movies</a>
-                    `;
-                    return;
-                }
+                    const characterDiv =
+                        document.createElement('div');
 
-                renderNav();
-                setupMobileMenu();
-                setupTrailerModal();
+                    characterDiv.className =
+                        'character';
 
-                const movie = await fetchMovieDetails(movieId);
-                await renderMovieDetails(movie);
-            }
+                    characterDiv.textContent =
+                        actor.characterName ||
+                        'N/A';
 
-            if (document.readyState === 'complete' || document.readyState === 'interactive') {
-                init();
+
+                    card.appendChild(
+                        photoDiv
+                    );
+
+                    card.appendChild(
+                        nameDiv
+                    );
+
+                    card.appendChild(
+                        characterDiv
+                    );
+
+
+                    DOM.castContainer.appendChild(
+                        card
+                    );
+                });
+
+        } else {
+
+            DOM.castContainer.innerHTML = `
+
+                <p style="
+                    color:var(--paper-dim);
+                    font-weight:300;
+                    grid-column:1/-1;
+                ">
+                    No cast information available.
+                </p>
+
+            `;
+        }
+
+
+        // --------------------------------------------------------
+        // PAGE TITLE
+        // --------------------------------------------------------
+
+        document.title =
+            `${movie.title} — Savannah Cinemas`;
+
+
+        // --------------------------------------------------------
+        // WATCHLIST
+        // --------------------------------------------------------
+
+        DOM.watchlistBtn.dataset.filmId =
+            movie.movieId;
+
+
+        if (isAuthenticated()) {
+
+            isInWatchlist =
+                await checkWatchlistStatus(
+                    movie.movieId
+                );
+
+        } else {
+
+            isInWatchlist = false;
+        }
+
+
+        updateWatchlistUI(
+            isInWatchlist
+        );
+
+
+        // Remove previous listener safely
+
+        const newWatchlistBtn =
+            DOM.watchlistBtn.cloneNode(true);
+
+
+        DOM.watchlistBtn.parentNode.replaceChild(
+            newWatchlistBtn,
+            DOM.watchlistBtn
+        );
+
+
+        DOM.watchlistBtn =
+            newWatchlistBtn;
+
+
+        DOM.watchlistLabel =
+            newWatchlistBtn.querySelector('span');
+
+
+        DOM.watchlistBtn.addEventListener(
+            'click',
+            toggleWatchlist
+        );
+
+
+        // --------------------------------------------------------
+        // TRAILER
+        // --------------------------------------------------------
+
+        if (movie.trailerUrl) {
+
+            DOM.trailerBtn.style.display =
+                'inline-flex';
+
+            DOM.trailerBtn.onclick =
+                function () {
+
+                    openTrailerModal(
+                        movie.trailerUrl
+                    );
+                };
+
+        } else {
+
+            DOM.trailerBtn.style.display =
+                'none';
+        }
+    }
+
+
+    // ============================================================
+    // RECORD MOVIE VIEW
+    // ============================================================
+
+    async function recordMovieView(movieId) {
+
+        if (!isAuthenticated()) {
+
+            console.log(
+                '📊 User not authenticated, skipping view tracking'
+            );
+
+            return;
+        }
+
+
+        try {
+
+            console.log(
+                `📊 Recording view for movie: ${movieId}`
+            );
+
+
+            const response =
+                await fetch(
+                    `${CONFIG.BACKEND_API}/movies/views/record`,
+                    {
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type':
+                                'application/json',
+
+                            'Authorization':
+                                `Bearer ${token}`
+                        },
+
+                        body: JSON.stringify({
+                            movieId:
+                                Number(movieId)
+                        })
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (data.success) {
+
+                console.log(
+                    '✅ Movie view recorded:',
+                    data.message
+                );
+
             } else {
-                document.addEventListener('DOMContentLoaded', init);
+
+                console.warn(
+                    '⚠️ Failed to record movie view:',
+                    data.message
+                );
             }
 
-        })();
-    </script>
+        } catch (error) {
+
+            console.error(
+                '❌ Error recording movie view:',
+                error
+            );
+        }
+    }
+
+
+    // ============================================================
+    // GLOBAL BOOKING FUNCTIONS
+    // ============================================================
+
+    window.bookMovie =
+        function (movieId, title) {
+
+            window.location.href =
+                `booking.html?movie=${movieId}&title=${encodeURIComponent(title)}`;
+        };
+
+
+    window.bookShowtime =
+        function (showtimeId, title) {
+
+            window.location.href =
+                `booking.html?showtime=${showtimeId}&title=${encodeURIComponent(title)}`;
+        };
+
+
+    // ============================================================
+    // INITIALIZE
+    // ============================================================
+
+    async function init() {
+
+        const movieId =
+            getMovieIdFromURL();
+
+
+        if (!movieId) {
+
+            DOM.loadingState.innerHTML = `
+
+                <i class="fas fa-exclamation-circle"></i>
+
+                No movie ID provided.
+
+                <a
+                    href="index.html"
+                    style="color:var(--gold);"
+                >
+                    Browse movies
+                </a>
+
+            `;
+
+            return;
+        }
+
+
+        renderNav();
+
+        setupMobileMenu();
+
+        setupTrailerModal();
+
+
+        const movie =
+            await fetchMovieDetails(
+                movieId
+            );
+
+
+        await renderMovieDetails(
+            movie
+        );
+    }
+
+
+    if (
+        document.readyState === 'complete' ||
+        document.readyState === 'interactive'
+    ) {
+
+        init();
+
+    } else {
+
+        document.addEventListener(
+            'DOMContentLoaded',
+            init
+        );
+    }
+
+})();
+</script>
+
 </body>
 </html>

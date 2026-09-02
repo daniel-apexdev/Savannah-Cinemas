@@ -124,6 +124,101 @@
             z-index: 1001;
         }
 
+        /* ---------- PROFILE ---------- */
+        .profile-wrapper {
+            position: relative;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 15px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.3s ease;
+            user-select: none;
+        }
+
+        .avatar:hover {
+            border-color: var(--gold-dim);
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--ink-raised);
+            border: 1px solid var(--ink-line);
+            border-radius: var(--radius-md);
+            width: 220px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .profile-wrapper.is-open .profile-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-menu .who {
+            padding: 16px;
+            border-bottom: 1px solid var(--ink-line);
+        }
+
+        .profile-menu .who .name {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--paper);
+        }
+
+        .profile-menu .who .stat {
+            color: var(--gold);
+            font-size: 12px;
+            font-family: var(--font-mono);
+            margin-top: 4px;
+        }
+
+        .profile-menu a {
+            display: block;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--paper-dim);
+            text-decoration: none;
+            border-bottom: 1px solid var(--ink-line);
+            transition: 0.3s ease;
+            min-height: var(--touch-target);
+            touch-action: manipulation;
+        }
+
+        .profile-menu a:last-child {
+            border-bottom: none;
+            color: #d95b5b;
+        }
+
+        .profile-menu a:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--paper);
+        }
+
+        .profile-menu a:last-child:hover {
+            color: #ff6b6b;
+        }
+
         /* ---------- SIGN IN BUTTON ---------- */
         .btn-signin {
             padding: 8px 20px;
@@ -1277,501 +1372,1633 @@
     ============================================================ -->
     <script src="backend/config.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
 
-            // ============================================================
-            // AUTH STATE
-            // ============================================================
-            
-            const token = localStorage.getItem('token');
-            const userData = JSON.parse(localStorage.getItem('user') || 'null');
-            const isAuthenticated = !!token && !!userData;
+        'use strict';
 
-            // ============================================================
-            // NAV RENDER
-            // ============================================================
-            
-            function renderNav() {
-                const navRight = document.getElementById('navRight');
-                const mobileMenuLinks = document.getElementById('mobileMenuLinks');
-                const mobileDivider = document.getElementById('mobileDivider');
-                
-                if (isAuthenticated && userData) {
-                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                    
-                    navRight.innerHTML = `
-                        <div class="profile-wrapper" id="profileWrapper">
-                            <div class="avatar" id="avatarBtn">${initials}</div>
-                            <div class="profile-menu" id="profileMenu">
-                                <div class="who">
-                                    <div class="name">${userData.name}</div>
-                                    <div class="stat" id="navStat">0 films watched</div>
+
+        // ============================================================
+        // API CONFIGURATION
+        // ============================================================
+
+        const API_BASE =
+            window.API_BASE ||
+            'http://localhost:5000/api';
+
+        const WATCHLIST_URL =
+            window.WATCHLIST_URL ||
+            `${API_BASE}/watchlist`;
+
+
+        // ============================================================
+        // AUTH STATE
+        // ============================================================
+
+        const token =
+            localStorage.getItem('token');
+
+        let userData = null;
+
+        try {
+
+            userData =
+                JSON.parse(
+                    localStorage.getItem('user') || 'null'
+                );
+
+        } catch (error) {
+
+            console.warn(
+                '⚠️ Could not parse stored user data'
+            );
+
+            userData = null;
+        }
+
+
+        const isAuthenticated =
+            !!token && !!userData;
+
+
+        // ============================================================
+        // DOM REFERENCES
+        // ============================================================
+
+        const navRight =
+            document.getElementById('navRight');
+
+        const mobileMenuLinks =
+            document.getElementById('mobileMenuLinks');
+
+        const mobileDivider =
+            document.getElementById('mobileDivider');
+
+        const menuToggle =
+            document.getElementById('menuToggle');
+
+        const mobileMenu =
+            document.getElementById('mobileMenu');
+
+        const mobileOverlay =
+            document.getElementById('mobileOverlay');
+
+        const mobileMenuClose =
+            document.getElementById('mobileMenuClose');
+
+        const eventsGrid =
+            document.getElementById('eventsGrid');
+
+        const resultCount =
+            document.getElementById('resultCount');
+
+        const filterCategory =
+            document.getElementById('filterCategory');
+
+        const filterSort =
+            document.getElementById('filterSort');
+
+        const promoBtn =
+            document.getElementById('promoBtn');
+
+
+        // ============================================================
+        // NAV RENDER
+        // ============================================================
+
+        function renderNav() {
+
+            if (!navRight || !mobileMenuLinks) {
+                return;
+            }
+
+
+            // --------------------------------------------------------
+            // AUTHENTICATED USER
+            // --------------------------------------------------------
+
+            if (isAuthenticated && userData) {
+
+                const forenames =
+                    userData.forenames ||
+                    userData.FORENAMES ||
+                    userData.name ||
+                    userData.NAME ||
+                    'User';
+
+
+                const surname =
+                    userData.surname ||
+                    userData.SURNAME ||
+                    '';
+
+
+                const fullName =
+                    `${forenames} ${surname}`.trim() ||
+                    'User';
+
+
+                // ----------------------------------------------------
+                // Generate initials
+                // ----------------------------------------------------
+
+                let initials = '';
+
+
+                if (forenames) {
+
+                    const firstName =
+                        forenames
+                            .trim()
+                            .split(/\s+/)[0];
+
+                    if (firstName) {
+
+                        initials =
+                            firstName
+                                .substring(0, 2)
+                                .toUpperCase();
+                    }
+                }
+
+
+                if (
+                    initials.length < 2 &&
+                    surname
+                ) {
+
+                    initials +=
+                        surname
+                            .trim()
+                            .charAt(0)
+                            .toUpperCase();
+                }
+
+
+                while (initials.length < 2) {
+                    initials += 'U';
+                }
+
+
+                initials =
+                    initials.substring(0, 2);
+
+
+                // ----------------------------------------------------
+                // Desktop navigation
+                // ----------------------------------------------------
+
+                DOM.navRight.innerHTML = `
+                    <div class="profile-wrapper" id="profileWrapper">
+
+                        <div
+                            class="avatar"
+                            id="avatarBtn"
+                            title="${escapeHtml(fullName)}"
+                        >
+                            ${initials}
+                        </div>
+
+                        <div class="profile-menu" id="profileMenu">
+
+                            <div class="who">
+                                <div class="name">
+                                    ${escapeHtml(fullName)}
                                 </div>
-                                <a href="profile.html">My Profile</a>
-                                <a href="#" id="logoutBtn">Sign out</a>
+
+                                <div class="stat" id="navStat">
+                                    0 films watched
+                                </div>
                             </div>
+
+                            <div class="profile-menu-divider"></div>
+
+                            <a href="profile.html">
+                                My Profile
+                            </a>
+
+                            <a href="watchlist.html">
+                                My Watchlist
+                            </a>
+
+                            <a href="bookings.html">
+                                My Bookings
+                            </a>
+
+                            <div class="profile-menu-divider"></div>
+
+                            <a href="#" id="logoutBtn">
+                                Sign out
+                            </a>
+
                         </div>
-                    `;
-                    
-                    const logoutLink = document.createElement('li');
-                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
-                    mobileMenuLinks.appendChild(logoutLink);
-                    if (mobileDivider) mobileDivider.style.display = 'block';
-                    
-                    setupProfileDropdown();
-                    
-                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    
-                    fetchWatchCount();
-                    
-                } else {
-                    navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
-                            <i class="fas fa-sign-in-alt"></i> Sign In
-                        </a>
-                    `;
-                    
-                    const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
-                    mobileMenuLinks.appendChild(signInLink);
-                    if (mobileDivider) mobileDivider.style.display = 'block';
+                    </div>
+                `;
+
+
+                // ----------------------------------------------------
+                // Remove old mobile auth links
+                // ----------------------------------------------------
+
+                mobileMenuLinks
+                    .querySelectorAll(
+                        '.mobile-auth-link'
+                    )
+                    .forEach(
+                        element =>
+                            element.remove()
+                    );
+
+
+                // ----------------------------------------------------
+                // Mobile profile
+                // ----------------------------------------------------
+
+                const mobileProfile =
+                    document.createElement('li');
+
+                mobileProfile.className =
+                    'mobile-auth-link';
+
+                mobileProfile.innerHTML = `
+                    <a href="profile.html">
+                        <i class="fas fa-user"></i>
+                        ${escapeHtml(fullName)}
+                    </a>
+                `;
+
+                mobileMenuLinks.appendChild(
+                    mobileProfile
+                );
+
+
+                // ----------------------------------------------------
+                // Mobile logout
+                // ----------------------------------------------------
+
+                const logoutLink =
+                    document.createElement('li');
+
+                logoutLink.className =
+                    'mobile-auth-link';
+
+                logoutLink.innerHTML = `
+                    <a
+                        href="#"
+                        class="mobile-logout"
+                        id="mobileLogoutBtn"
+                    >
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sign out
+                    </a>
+                `;
+
+                mobileMenuLinks.appendChild(
+                    logoutLink
+                );
+
+
+                if (mobileDivider) {
+                    mobileDivider.style.display =
+                        'block';
                 }
-            }
 
-            // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
-            
-            function setupProfileDropdown() {
-                const profileWrapper = document.getElementById('profileWrapper');
-                const avatarBtn = document.getElementById('avatarBtn');
-                if (!profileWrapper || !avatarBtn) return;
-                
-                let closeTimer;
-                profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-                profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(() => {
-                        this.classList.remove('is-open');
-                    }, 150);
-                });
-                avatarBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    profileWrapper.classList.toggle('is-open');
-                });
-                document.addEventListener('click', function(e) {
-                    if (!profileWrapper.contains(e.target)) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-            }
 
-            // ============================================================
-            // FETCH WATCH COUNT
-            // ============================================================
+                setupProfileDropdown();
 
-            async function fetchWatchCount() {
-                try {
-                    const response = await fetch(`${API_BASE}/watchlist`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (response.ok) {
-                        const watchlist = await response.json();
-                        const watchedCount = watchlist.filter(item => item.watched).length;
-                        const statEl = document.getElementById('navStat');
-                        if (statEl) {
-                            statEl.textContent = `${watchedCount} films watched`;
+
+                const logoutBtn =
+                    document.getElementById(
+                        'logoutBtn'
+                    );
+
+
+                if (logoutBtn) {
+
+                    logoutBtn.addEventListener(
+                        'click',
+                        function (e) {
+
+                            e.preventDefault();
+
+                            logout();
                         }
-                    }
-                } catch (error) {
-                    console.error('Error fetching watch count:', error);
+                    );
+                }
+
+
+                const mobileLogoutBtn =
+                    document.getElementById(
+                        'mobileLogoutBtn'
+                    );
+
+
+                if (mobileLogoutBtn) {
+
+                    mobileLogoutBtn.addEventListener(
+                        'click',
+                        function (e) {
+
+                            e.preventDefault();
+
+                            logout();
+                        }
+                    );
+                }
+
+
+                fetchWatchCount();
+
+
+            } else {
+
+                // ----------------------------------------------------
+                // Signed-out user
+                // ----------------------------------------------------
+
+                navRight.innerHTML = `
+                    <a
+                        href="logout.html"
+                        class="btn-signin"
+                    >
+                        <i class="fas fa-sign-in-alt"></i>
+                        Sign In
+                    </a>
+                `;
+
+
+                mobileMenuLinks
+                    .querySelectorAll(
+                        '.mobile-auth-link'
+                    )
+                    .forEach(
+                        element =>
+                            element.remove()
+                    );
+
+
+                const signInLink =
+                    document.createElement('li');
+
+                signInLink.className =
+                    'mobile-auth-link';
+
+                signInLink.innerHTML = `
+                    <a
+                        href="logout.html"
+                        style="color:var(--gold);"
+                    >
+                        <i class="fas fa-sign-in-alt"></i>
+                        Sign In / Create Account
+                    </a>
+                `;
+
+
+                mobileMenuLinks.appendChild(
+                    signInLink
+                );
+
+
+                if (mobileDivider) {
+                    mobileDivider.style.display =
+                        'block';
                 }
             }
+        }
 
-            // ============================================================
-            // LOGOUT
-            // ============================================================
 
-            function logout() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = 'logout.html';
+        // ============================================================
+        // PROFILE DROPDOWN
+        // ============================================================
+
+        function setupProfileDropdown() {
+
+            const profileWrapper =
+                document.getElementById(
+                    'profileWrapper'
+                );
+
+            const avatarBtn =
+                document.getElementById(
+                    'avatarBtn'
+                );
+
+
+            if (
+                !profileWrapper ||
+                !avatarBtn
+            ) {
+                return;
             }
 
-            // ============================================================
-            // TOAST SYSTEM
-            // ============================================================
-            
-            let toastTimeout = null;
 
-            function showToast(message, type) {
-                const iconMap = {
-                    success: '✅',
-                    info: 'ℹ️',
-                    error: '❌'
-                };
-                
-                const toast = document.getElementById('toast');
-                const toastIcon = document.getElementById('toastIcon');
-                const toastMessage = document.getElementById('toastMessage');
-                
-                toastIcon.textContent = iconMap[type] || 'ℹ️';
-                toastIcon.className = `toast-icon ${type}`;
-                toastMessage.textContent = message;
-                
-                toast.classList.add('show');
-                
-                clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 3000);
-            }
+            let closeTimer;
 
-            // ============================================================
-            // MOBILE MENU
-            // ============================================================
-            
-            const menuToggle = document.getElementById('menuToggle');
-            const mobileMenu = document.getElementById('mobileMenu');
-            const mobileOverlay = document.getElementById('mobileOverlay');
-            const mobileMenuClose = document.getElementById('mobileMenuClose');
 
-            function openMobileMenu() {
-                mobileMenu.classList.add('open');
-                mobileOverlay.classList.add('active');
-                menuToggle.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
+            profileWrapper.addEventListener(
+                'mouseenter',
+                function () {
 
-            function closeMobileMenu() {
-                mobileMenu.classList.remove('open');
-                mobileOverlay.classList.remove('active');
-                menuToggle.classList.remove('active');
-                document.body.style.overflow = '';
-            }
+                    clearTimeout(closeTimer);
 
-            if (menuToggle) {
-                menuToggle.addEventListener('click', function(e) {
+                    this.classList.add(
+                        'is-open'
+                    );
+                }
+            );
+
+
+            profileWrapper.addEventListener(
+                'mouseleave',
+                function () {
+
+                    closeTimer =
+                        setTimeout(() => {
+
+                            this.classList.remove(
+                                'is-open'
+                            );
+
+                        }, 150);
+                }
+            );
+
+
+            avatarBtn.addEventListener(
+                'click',
+                function (e) {
+
                     e.stopPropagation();
-                    if (mobileMenu.classList.contains('open')) {
-                        closeMobileMenu();
-                    } else {
-                        openMobileMenu();
+
+                    profileWrapper.classList.toggle(
+                        'is-open'
+                    );
+                }
+            );
+
+
+            document.addEventListener(
+                'click',
+                function (e) {
+
+                    if (
+                        !profileWrapper.contains(
+                            e.target
+                        )
+                    ) {
+
+                        profileWrapper.classList.remove(
+                            'is-open'
+                        );
                     }
-                });
-            }
-
-            if (mobileMenuClose) {
-                mobileMenuClose.addEventListener('click', closeMobileMenu);
-            }
-
-            if (mobileOverlay) {
-                mobileOverlay.addEventListener('click', closeMobileMenu);
-            }
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
-                    closeMobileMenu();
                 }
-            });
+            );
+        }
 
-            document.querySelectorAll('.mobile-menu-links a').forEach(function(link) {
-                link.addEventListener('click', closeMobileMenu);
-            });
 
-            // ============================================================
-            // EVENTS DATA
-            // ============================================================
-            
-            const eventsData = [
-                {
-                    id: 1,
-                    title: 'Director\'s Cut Night: Inception',
-                    date: 'Dec 15, 2024',
-                    time: '7:00 PM',
-                    location: 'Screen 1',
-                    type: 'screening',
-                    badge: 'Special Screening',
-                    badgeType: 'default',
-                    price: 'Free Entry',
-                    isFree: true,
-                    image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&h=400&fit=crop',
-                    description: 'Experience Christopher Nolan\'s masterpiece with exclusive behind-the-scenes commentary and director\'s insights. Includes a Q&A session with film critics.',
-                    buttonText: 'Reserve Seat'
-                },
-                {
-                    id: 2,
-                    title: 'Christmas Movie Marathon',
-                    date: 'Dec 20, 2024',
-                    time: '10:00 AM - 10:00 PM',
-                    location: 'Screen 2 & 3',
-                    type: 'festival',
-                    badge: 'All-Day Pass',
-                    badgeType: 'default',
-                    price: '$25.00',
-                    isFree: false,
-                    image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&h=400&fit=crop',
-                    description: 'Four classic Christmas films back-to-back with special holiday treats, hot chocolate, and festive decorations. Get into the holiday spirit with us!',
-                    buttonText: 'Get Pass'
-                },
-                {
-                    id: 3,
-                    title: 'Film Industry Panel: The Future of Cinema',
-                    date: 'Jan 10, 2025',
-                    time: '6:30 PM',
-                    location: 'Lobby Lounge',
-                    type: 'panel',
-                    badge: 'Free Entry',
-                    badgeType: 'free',
-                    price: 'Free Entry',
-                    isFree: true,
-                    image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&h=400&fit=crop',
-                    description: 'Local filmmakers, directors, and critics discuss the art of storytelling, the future of cinema, and the impact of AI on filmmaking. Open to all film enthusiasts.',
-                    buttonText: 'RSVP Now'
-                },
-                {
-                    id: 4,
-                    title: 'Student Film Festival 2025',
-                    date: 'Jan 25, 2025',
-                    time: '2:00 PM',
-                    location: 'Screen 1 & 4',
-                    type: 'festival',
-                    badge: 'Student Showcase',
-                    badgeType: 'default',
-                    price: '$10.00',
-                    isFree: false,
-                    image: 'https://images.unsplash.com/photo-1534269222344-5d0b1f1d1b3d?w=600&h=400&fit=crop',
-                    description: 'Celebrating the next generation of filmmakers. Watch short films created by local students and vote for your favorite. Winners receive industry mentorship.',
-                    buttonText: 'Get Tickets'
-                },
-                {
-                    id: 5,
-                    title: 'Weekend Promo: 2-for-1 Tickets',
-                    date: 'Every Saturday & Sunday',
-                    time: 'All Day',
-                    location: 'All Screens',
-                    type: 'promo',
-                    badge: '🔥 BOGO',
-                    badgeType: 'promo',
-                    price: '2-for-1',
-                    isFree: false,
-                    image: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?w=600&h=400&fit=crop',
-                    description: 'Buy one ticket, get one free on any standard screening this weekend! Valid for all films and showtimes. Bring a friend and enjoy the movies together.',
-                    buttonText: 'Book Now'
-                },
-                {
-                    id: 6,
-                    title: 'Sci-Fi Double Feature',
-                    date: 'Feb 5, 2025',
-                    time: '6:00 PM',
-                    location: 'Screen 1',
-                    type: 'screening',
-                    badge: 'Double Feature',
-                    badgeType: 'default',
-                    price: '$18.00',
-                    isFree: false,
-                    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&h=400&fit=crop',
-                    description: 'Two classic sci-fi films back-to-back with a 15-minute intermission. Includes a free popcorn and drink combo with every ticket purchase.',
-                    buttonText: 'Get Tickets'
-                },
-                {
-                    id: 7,
-                    title: 'Women in Film Networking Event',
-                    date: 'Feb 12, 2025',
-                    time: '7:00 PM',
-                    location: 'Lobby Lounge',
-                    type: 'panel',
-                    badge: 'Free Entry',
-                    badgeType: 'free',
-                    price: 'Free Entry',
-                    isFree: true,
-                    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=400&fit=crop',
-                    description: 'Connect with women working in the film industry. A networking event featuring panel discussions, mentorship opportunities, and film screenings.',
-                    buttonText: 'Register'
-                },
-                {
-                    id: 8,
-                    title: 'Spring Film Festival',
-                    date: 'Mar 8, 2025',
-                    time: '12:00 PM - 8:00 PM',
-                    location: 'All Screens',
-                    type: 'festival',
-                    badge: '🎬 Festival',
-                    badgeType: 'default',
-                    price: '$15.00',
-                    isFree: false,
-                    image: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=400&fit=crop',
-                    description: 'A celebration of independent cinema. Screenings of award-winning indie films, filmmaker Q&As, and a closing party with special guests.',
-                    buttonText: 'Buy Pass'
-                }
-            ];
+        // ============================================================
+        // FETCH WATCH COUNT
+        // ============================================================
 
-            let filteredEvents = [...eventsData];
-            let currentFilter = {
-                category: 'all',
-                sort: 'date-asc'
-            };
+        async function fetchWatchCount() {
 
-            // ============================================================
-            // AUTH GUARD FOR ACTIONS
-            // ============================================================
-            
-            function requireAuth(actionName) {
-                if (!isAuthenticated) {
-                    showToast(`Please sign in to ${actionName}`, 'info');
-                    setTimeout(() => {
-                        window.location.href = 'logout.html';
-                    }, 2000);
-                    return false;
-                }
-                return true;
+            if (!isAuthenticated) {
+                return;
             }
 
-            // ============================================================
-            // RENDER FUNCTIONS
-            // ============================================================
-            
-            function renderEvents(events) {
-                const grid = document.getElementById('eventsGrid');
-                
-                if (events.length === 0) {
-                    grid.innerHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-calendar-times"></i>
-                            <h3>No Events Found</h3>
-                            <p>Try adjusting your filters to see more events.</p>
-                        </div>
-                    `;
-                    document.getElementById('resultCount').textContent = '0';
+
+            try {
+
+                const response =
+                    await fetch(
+                        WATCHLIST_URL,
+                        {
+                            headers: {
+                                'Authorization':
+                                    `Bearer ${token}`,
+
+                                'Content-Type':
+                                    'application/json'
+                            }
+                        }
+                    );
+
+
+                if (!response.ok) {
                     return;
                 }
 
-                document.getElementById('resultCount').textContent = events.length;
 
-                grid.innerHTML = events.map(event => {
-                    const badgeClass = event.badgeType === 'free' ? 'free' : 
-                                      event.badgeType === 'promo' ? 'promo' : 'default';
-                    const priceClass = event.isFree ? 'free' : '';
-                    
+                const data =
+                    await response.json();
+
+
+                /*
+                 * PostgreSQL backend returns:
+                 *
+                 * {
+                 *     success: true,
+                 *     watchlist: [...]
+                 * }
+                 */
+
+
+                let watchlist = [];
+
+
+                if (
+                    Array.isArray(
+                        data.watchlist
+                    )
+                ) {
+
+                    watchlist =
+                        data.watchlist;
+
+                } else if (
+                    Array.isArray(data.data)
+                ) {
+
+                    watchlist =
+                        data.data;
+
+                } else if (
+                    Array.isArray(data)
+                ) {
+
+                    watchlist =
+                        data;
+                }
+
+
+                const watchedCount =
+                    watchlist.filter(
+                        item =>
+                            item.watched === true ||
+                            item.watched === 'Y'
+                    ).length;
+
+
+                const statEl =
+                    document.getElementById(
+                        'navStat'
+                    );
+
+
+                if (statEl) {
+
+                    statEl.textContent =
+                        `${watchedCount} films watched`;
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    '❌ Error fetching watch count:',
+                    error
+                );
+            }
+        }
+
+
+        // ============================================================
+        // LOGOUT
+        // ============================================================
+
+        function logout() {
+
+            localStorage.removeItem(
+                'token'
+            );
+
+            localStorage.removeItem(
+                'user'
+            );
+
+            localStorage.removeItem(
+                'userData'
+            );
+
+            sessionStorage.clear();
+
+
+            window.location.href =
+                'logout.html';
+        }
+
+
+        // ============================================================
+        // TOAST SYSTEM
+        // ============================================================
+
+        let toastTimeout = null;
+
+
+        function showToast(
+            message,
+            type = 'info'
+        ) {
+
+            const toast =
+                document.getElementById(
+                    'toast'
+                );
+
+            const toastIcon =
+                document.getElementById(
+                    'toastIcon'
+                );
+
+            const toastMessage =
+                document.getElementById(
+                    'toastMessage'
+                );
+
+
+            if (
+                !toast ||
+                !toastIcon ||
+                !toastMessage
+            ) {
+                return;
+            }
+
+
+            const iconMap = {
+
+                success: '✅',
+
+                info: 'ℹ️',
+
+                error: '❌',
+
+                added: '❤️',
+
+                removed: '💔'
+            };
+
+
+            toastIcon.textContent =
+                iconMap[type] ||
+                iconMap.info;
+
+
+            toastIcon.className =
+                `toast-icon ${type}`;
+
+
+            toastMessage.textContent =
+                message;
+
+
+            toast.classList.add(
+                'show'
+            );
+
+
+            clearTimeout(
+                toastTimeout
+            );
+
+
+            toastTimeout =
+                setTimeout(() => {
+
+                    toast.classList.remove(
+                        'show'
+                    );
+
+                }, 3000);
+        }
+
+
+        // ============================================================
+        // MOBILE MENU
+        // ============================================================
+
+        function openMobileMenu() {
+
+            if (
+                !mobileMenu ||
+                !mobileOverlay ||
+                !menuToggle
+            ) {
+                return;
+            }
+
+
+            mobileMenu.classList.add(
+                'open'
+            );
+
+            mobileOverlay.classList.add(
+                'active'
+            );
+
+            menuToggle.classList.add(
+                'active'
+            );
+
+            document.body.style.overflow =
+                'hidden';
+        }
+
+
+        function closeMobileMenu() {
+
+            if (
+                !mobileMenu ||
+                !mobileOverlay ||
+                !menuToggle
+            ) {
+                return;
+            }
+
+
+            mobileMenu.classList.remove(
+                'open'
+            );
+
+            mobileOverlay.classList.remove(
+                'active'
+            );
+
+            menuToggle.classList.remove(
+                'active'
+            );
+
+            document.body.style.overflow =
+                '';
+        }
+
+
+        if (menuToggle) {
+
+            menuToggle.addEventListener(
+                'click',
+                function (e) {
+
+                    e.stopPropagation();
+
+
+                    if (
+                        mobileMenu &&
+                        mobileMenu.classList.contains(
+                            'open'
+                        )
+                    ) {
+
+                        closeMobileMenu();
+
+                    } else {
+
+                        openMobileMenu();
+                    }
+                }
+            );
+        }
+
+
+        if (mobileMenuClose) {
+
+            mobileMenuClose.addEventListener(
+                'click',
+                closeMobileMenu
+            );
+        }
+
+
+        if (mobileOverlay) {
+
+            mobileOverlay.addEventListener(
+                'click',
+                closeMobileMenu
+            );
+        }
+
+
+        document.addEventListener(
+            'keydown',
+            function (e) {
+
+                if (
+                    e.key === 'Escape' &&
+                    mobileMenu &&
+                    mobileMenu.classList.contains(
+                        'open'
+                    )
+                ) {
+
+                    closeMobileMenu();
+                }
+            }
+        );
+
+
+        document
+            .querySelectorAll(
+                '.mobile-menu-links a'
+            )
+            .forEach(function (link) {
+
+                link.addEventListener(
+                    'click',
+                    closeMobileMenu
+                );
+            });
+
+
+        // ============================================================
+        // EVENTS DATA
+        // ============================================================
+        //
+        // NOTE:
+        // These are still frontend/static events.
+        //
+        // The next step can be moving these into PostgreSQL:
+        //
+        // EVENTS
+        // EVENT_TYPES
+        // EVENT_REGISTRATIONS
+        // EVENT_TICKETS
+        //
+        // ============================================================
+
+        const eventsData = [
+
+            {
+                id: 1,
+
+                title:
+                    'Director\'s Cut Night: Inception',
+
+                date:
+                    'Dec 15, 2024',
+
+                time:
+                    '7:00 PM',
+
+                location:
+                    'Screen 1',
+
+                type:
+                    'screening',
+
+                badge:
+                    'Special Screening',
+
+                badgeType:
+                    'default',
+
+                price:
+                    'Free Entry',
+
+                isFree:
+                    true,
+
+                image:
+                    'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&h=400&fit=crop',
+
+                description:
+                    'Experience Christopher Nolan\'s masterpiece with exclusive behind-the-scenes commentary and director\'s insights. Includes a Q&A session with film critics.',
+
+                buttonText:
+                    'Reserve Seat'
+            },
+
+
+            {
+                id: 2,
+
+                title:
+                    'Christmas Movie Marathon',
+
+                date:
+                    'Dec 20, 2024',
+
+                time:
+                    '10:00 AM - 10:00 PM',
+
+                location:
+                    'Screen 2 & 3',
+
+                type:
+                    'festival',
+
+                badge:
+                    'All-Day Pass',
+
+                badgeType:
+                    'default',
+
+                price:
+                    '$25.00',
+
+                isFree:
+                    false,
+
+                image:
+                    'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&h=400&fit=crop',
+
+                description:
+                    'Four classic Christmas films back-to-back with special holiday treats, hot chocolate, and festive decorations. Get into the holiday spirit with us!',
+
+                buttonText:
+                    'Get Pass'
+            },
+
+
+            {
+                id: 3,
+
+                title:
+                    'Film Industry Panel: The Future of Cinema',
+
+                date:
+                    'Jan 10, 2025',
+
+                time:
+                    '6:30 PM',
+
+                location:
+                    'Lobby Lounge',
+
+                type:
+                    'panel',
+
+                badge:
+                    'Free Entry',
+
+                badgeType:
+                    'free',
+
+                price:
+                    'Free Entry',
+
+                isFree:
+                    true,
+
+                image:
+                    'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&h=400&fit=crop',
+
+                description:
+                    'Local filmmakers, directors, and critics discuss the art of storytelling, the future of cinema, and the impact of AI on filmmaking. Open to all film enthusiasts.',
+
+                buttonText:
+                    'RSVP Now'
+            },
+
+
+            {
+                id: 4,
+
+                title:
+                    'Student Film Festival 2025',
+
+                date:
+                    'Jan 25, 2025',
+
+                time:
+                    '2:00 PM',
+
+                location:
+                    'Screen 1 & 4',
+
+                type:
+                    'festival',
+
+                badge:
+                    'Student Showcase',
+
+                badgeType:
+                    'default',
+
+                price:
+                    '$10.00',
+
+                isFree:
+                    false,
+
+                image:
+                    'https://images.unsplash.com/photo-1534269222344-5d0b1f1d1b3d?w=600&h=400&fit=crop',
+
+                description:
+                    'Celebrating the next generation of filmmakers. Watch short films created by local students and vote for your favorite. Winners receive industry mentorship.',
+
+                buttonText:
+                    'Get Tickets'
+            },
+
+
+            {
+                id: 5,
+
+                title:
+                    'Weekend Promo: 2-for-1 Tickets',
+
+                date:
+                    'Every Saturday & Sunday',
+
+                time:
+                    'All Day',
+
+                location:
+                    'All Screens',
+
+                type:
+                    'promo',
+
+                badge:
+                    '🔥 BOGO',
+
+                badgeType:
+                    'promo',
+
+                price:
+                    '2-for-1',
+
+                isFree:
+                    false,
+
+                image:
+                    'https://images.unsplash.com/photo-1509281373149-e957c6296406?w=600&h=400&fit=crop',
+
+                description:
+                    'Buy one ticket, get one free on any standard screening this weekend! Valid for all films and showtimes. Bring a friend and enjoy the movies together.',
+
+                buttonText:
+                    'Book Now'
+            },
+
+
+            {
+                id: 6,
+
+                title:
+                    'Sci-Fi Double Feature',
+
+                date:
+                    'Feb 5, 2025',
+
+                time:
+                    '6:00 PM',
+
+                location:
+                    'Screen 1',
+
+                type:
+                    'screening',
+
+                badge:
+                    'Double Feature',
+
+                badgeType:
+                    'default',
+
+                price:
+                    '$18.00',
+
+                isFree:
+                    false,
+
+                image:
+                    'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&h=400&fit=crop',
+
+                description:
+                    'Two classic sci-fi films back-to-back with a 15-minute intermission. Includes a free popcorn and drink combo with every ticket purchase.',
+
+                buttonText:
+                    'Get Tickets'
+            },
+
+
+            {
+                id: 7,
+
+                title:
+                    'Women in Film Networking Event',
+
+                date:
+                    'Feb 12, 2025',
+
+                time:
+                    '7:00 PM',
+
+                location:
+                    'Lobby Lounge',
+
+                type:
+                    'panel',
+
+                badge:
+                    'Free Entry',
+
+                badgeType:
+                    'free',
+
+                price:
+                    'Free Entry',
+
+                isFree:
+                    true,
+
+                image:
+                    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=400&fit=crop',
+
+                description:
+                    'Connect with women working in the film industry. A networking event featuring panel discussions, mentorship opportunities, and film screenings.',
+
+                buttonText:
+                    'Register'
+            },
+
+
+            {
+                id: 8,
+
+                title:
+                    'Spring Film Festival',
+
+                date:
+                    'Mar 8, 2025',
+
+                time:
+                    '12:00 PM - 8:00 PM',
+
+                location:
+                    'All Screens',
+
+                type:
+                    'festival',
+
+                badge:
+                    '🎬 Festival',
+
+                badgeType:
+                    'default',
+
+                price:
+                    '$15.00',
+
+                isFree:
+                    false,
+
+                image:
+                    'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=400&fit=crop',
+
+                description:
+                    'A celebration of independent cinema. Screenings of award-winning indie films, filmmaker Q&As, and a closing party with special guests.',
+
+                buttonText:
+                    'Buy Pass'
+            }
+        ];
+
+
+        // ============================================================
+        // FILTER STATE
+        // ============================================================
+
+        let filteredEvents =
+            [...eventsData];
+
+
+        let currentFilter = {
+
+            category:
+                'all',
+
+            sort:
+                'date-asc'
+        };
+
+
+        // ============================================================
+        // AUTH GUARD
+        // ============================================================
+
+        function requireAuth(
+            actionName
+        ) {
+
+            if (!isAuthenticated) {
+
+                showToast(
+                    `Please sign in to ${actionName}`,
+                    'info'
+                );
+
+
+                setTimeout(() => {
+
+                    window.location.href =
+                        'logout.html';
+
+                }, 2000);
+
+
+                return false;
+            }
+
+
+            return true;
+        }
+
+
+        // ============================================================
+        // RENDER EVENTS
+        // ============================================================
+
+        function renderEvents(events) {
+
+            if (!eventsGrid) {
+                return;
+            }
+
+
+            if (
+                !events ||
+                events.length === 0
+            ) {
+
+                eventsGrid.innerHTML = `
+                    <div class="empty-state">
+
+                        <i class="fas fa-calendar-times"></i>
+
+                        <h3>
+                            No Events Found
+                        </h3>
+
+                        <p>
+                            Try adjusting your filters
+                            to see more events.
+                        </p>
+
+                    </div>
+                `;
+
+
+                if (resultCount) {
+                    resultCount.textContent =
+                        '0';
+                }
+
+
+                return;
+            }
+
+
+            if (resultCount) {
+                resultCount.textContent =
+                    events.length;
+            }
+
+
+            eventsGrid.innerHTML =
+                events.map(event => {
+
+                    const badgeClass =
+                        event.badgeType === 'free'
+                            ? 'free'
+                            : event.badgeType === 'promo'
+                                ? 'promo'
+                                : 'default';
+
+
+                    const priceClass =
+                        event.isFree
+                            ? 'free'
+                            : '';
+
+
                     return `
-                        <div class="event-card" onclick="eventDetail('${event.title}')">
-                            <div class="event-image" style="background-image: url('${event.image}');">
-                                <span class="event-badge ${badgeClass}">${event.badge}</span>
+                        <div
+                            class="event-card"
+                            onclick="
+                                eventDetail(
+                                    '${escapeJsString(event.title)}'
+                                )
+                            "
+                        >
+
+                            <div
+                                class="event-image"
+                                style="
+                                    background-image:
+                                        url('${escapeAttribute(event.image)}');
+                                "
+                            >
+
+                                <span
+                                    class="event-badge ${badgeClass}"
+                                >
+                                    ${escapeHtml(event.badge)}
+                                </span>
+
                             </div>
+
+
                             <div class="event-body">
-                                <div class="event-title">${event.title}</div>
+
+                                <div class="event-title">
+                                    ${escapeHtml(event.title)}
+                                </div>
+
+
                                 <div class="event-meta">
-                                    <span><i class="far fa-calendar-alt"></i> ${event.date}</span>
-                                    <span><i class="far fa-clock"></i> ${event.time}</span>
-                                    <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
+
+                                    <span>
+                                        <i class="far fa-calendar-alt"></i>
+                                        ${escapeHtml(event.date)}
+                                    </span>
+
+                                    <span>
+                                        <i class="far fa-clock"></i>
+                                        ${escapeHtml(event.time)}
+                                    </span>
+
+                                    <span>
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        ${escapeHtml(event.location)}
+                                    </span>
+
                                 </div>
-                                <div class="event-desc">${event.description}</div>
+
+
+                                <div class="event-desc">
+                                    ${escapeHtml(event.description)}
+                                </div>
+
+
                                 <div class="event-footer">
-                                    <span class="event-price ${priceClass}">${event.price}</span>
-                                    <button class="btn-event ${event.isFree ? 'ghost' : ''}" onclick="event.stopPropagation(); bookEvent('${event.title}')">
-                                        ${event.buttonText}
+
+                                    <span
+                                        class="event-price ${priceClass}"
+                                    >
+                                        ${escapeHtml(event.price)}
+                                    </span>
+
+
+                                    <button
+                                        class="btn-event ${
+                                            event.isFree
+                                                ? 'ghost'
+                                                : ''
+                                        }"
+                                        onclick="
+                                            event.stopPropagation();
+                                            bookEvent(
+                                                '${escapeJsString(event.title)}'
+                                            );
+                                        "
+                                    >
+                                        ${escapeHtml(event.buttonText)}
                                     </button>
+
                                 </div>
+
                             </div>
+
                         </div>
                     `;
+
                 }).join('');
+        }
+
+
+        // ============================================================
+        // FILTER EVENTS
+        // ============================================================
+
+        function applyFilters() {
+
+            let events =
+                [...eventsData];
+
+
+            // --------------------------------------------------------
+            // Category
+            // --------------------------------------------------------
+
+            if (
+                currentFilter.category !==
+                'all'
+            ) {
+
+                events =
+                    events.filter(
+                        event =>
+                            event.type ===
+                            currentFilter.category
+                    );
             }
 
-            // ============================================================
-            // FILTER FUNCTIONS
-            // ============================================================
-            
-            function applyFilters() {
-                let events = [...eventsData];
 
-                if (currentFilter.category !== 'all') {
-                    events = events.filter(event => event.type === currentFilter.category);
-                }
+            // --------------------------------------------------------
+            // Sort
+            // --------------------------------------------------------
 
-                switch (currentFilter.sort) {
-                    case 'date-asc':
-                        events.sort((a, b) => {
-                            const dateA = new Date(a.date);
-                            const dateB = new Date(b.date);
-                            return dateA - dateB;
-                        });
-                        break;
-                    case 'date-desc':
-                        events.sort((a, b) => {
-                            const dateA = new Date(a.date);
-                            const dateB = new Date(b.date);
-                            return dateB - dateA;
-                        });
-                        break;
-                    case 'title':
-                        events.sort((a, b) => a.title.localeCompare(b.title));
-                        break;
-                    default:
-                        break;
-                }
+            switch (
+                currentFilter.sort
+            ) {
 
-                filteredEvents = events;
-                renderEvents(events);
+                case 'date-asc':
+
+                    events.sort(
+                        (a, b) => {
+
+                            const dateA =
+                                new Date(a.date);
+
+                            const dateB =
+                                new Date(b.date);
+
+                            return (
+                                dateA - dateB
+                            );
+                        }
+                    );
+
+                    break;
+
+
+                case 'date-desc':
+
+                    events.sort(
+                        (a, b) => {
+
+                            const dateA =
+                                new Date(a.date);
+
+                            const dateB =
+                                new Date(b.date);
+
+                            return (
+                                dateB - dateA
+                            );
+                        }
+                    );
+
+                    break;
+
+
+                case 'title':
+
+                    events.sort(
+                        (a, b) =>
+                            a.title.localeCompare(
+                                b.title
+                            )
+                    );
+
+                    break;
+
+
+                default:
+                    break;
             }
 
-            // ============================================================
-            // EVENT FUNCTIONS WITH AUTH CHECK
-            // ============================================================
-            
-            window.eventDetail = function(title) {
-                if (!requireAuth('view event details')) return;
-                alert(`📽️ Event: "${title}"\n\nMore details will be available soon. Check back for updates!`);
+
+            filteredEvents =
+                events;
+
+
+            renderEvents(
+                events
+            );
+        }
+
+
+        // ============================================================
+        // EVENT DETAILS
+        // ============================================================
+
+        window.eventDetail =
+            function (title) {
+
+                if (
+                    !requireAuth(
+                        'view event details'
+                    )
+                ) {
+                    return;
+                }
+
+
+                alert(
+                    `📽️ Event: "${title}"\n\n` +
+                    `More details will be available soon. ` +
+                    `Check back for updates!`
+                );
             };
 
-            window.bookEvent = function(title) {
-                if (!requireAuth(`book "${title}"`)) return;
-                alert(`🎟️ You've booked a spot for "${title}"!\n\nWe'll send you a confirmation email shortly.`);
+
+        // ============================================================
+        // BOOK EVENT
+        // ============================================================
+
+        window.bookEvent =
+            function (title) {
+
+                if (
+                    !requireAuth(
+                        `book "${title}"`
+                    )
+                ) {
+                    return;
+                }
+
+
+                alert(
+                    `🎟️ You've booked a spot for "${title}"!\n\n` +
+                    `We'll send you a confirmation email shortly.`
+                );
             };
 
-            // ============================================================
-            // PROMO BANNER WITH AUTH CHECK
-            // ============================================================
-            
-            document.getElementById('promoBtn').addEventListener('click', function() {
-                if (!requireAuth('claim this offer')) return;
-                alert('🎉 Promo code SAVANNAH-BOGO applied!\n\nGet a free ticket when you purchase a combo meal.');
-            });
 
-            // ============================================================
-            // FILTER EVENT LISTENERS
-            // ============================================================
-            
-            document.getElementById('filterCategory').addEventListener('change', function() {
-                currentFilter.category = this.value;
-                applyFilters();
-            });
+        // ============================================================
+        // PROMO BUTTON
+        // ============================================================
 
-            document.getElementById('filterSort').addEventListener('change', function() {
-                currentFilter.sort = this.value;
-                applyFilters();
-            });
+        if (promoBtn) {
 
-            // ============================================================
-            // INITIALIZE
-            // ============================================================
-            
-            renderNav();
-            renderEvents(eventsData);
-            document.getElementById('resultCount').textContent = eventsData.length;
+            promoBtn.addEventListener(
+                'click',
+                function () {
 
-        });
-    </script>
+                    if (
+                        !requireAuth(
+                            'claim this offer'
+                        )
+                    ) {
+                        return;
+                    }
+
+
+                    alert(
+                        '🎉 Promo code SAVANNAH-BOGO applied!\n\n' +
+                        'Get a free ticket when you purchase a combo meal.'
+                    );
+                }
+            );
+        }
+
+
+        // ============================================================
+        // FILTER LISTENERS
+        // ============================================================
+
+        if (filterCategory) {
+
+            filterCategory.addEventListener(
+                'change',
+                function () {
+
+                    currentFilter.category =
+                        this.value;
+
+                    applyFilters();
+                }
+            );
+        }
+
+
+        if (filterSort) {
+
+            filterSort.addEventListener(
+                'change',
+                function () {
+
+                    currentFilter.sort =
+                        this.value;
+
+                    applyFilters();
+                }
+            );
+        }
+
+
+        // ============================================================
+        // INITIALIZE
+        // ============================================================
+
+        renderNav();
+
+        renderEvents(
+            eventsData
+        );
+
+
+        if (resultCount) {
+
+            resultCount.textContent =
+                eventsData.length;
+        }
+
+    });
+</script>
+
 
 </body>
 </html>

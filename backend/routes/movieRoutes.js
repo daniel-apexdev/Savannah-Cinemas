@@ -9,7 +9,8 @@ const {
     searchMovies,
     getComingSoonMovies,
     getMovieDetails,
-    getTopRatedMovies
+    getTopRatedMovies,
+    getPopularMovies
 } = require('../controllers/movieController');
 
 const router = express.Router();
@@ -22,12 +23,7 @@ router.get('/now-showing', getNowShowing);
 
 router.get('/upcoming', getUpcomingMovies);
 
-router.get('/popular', (req, res) => {
-    res.status(501).json({
-        success: false,
-        message: 'Popular movies endpoint will be added next'
-    });
-});
+router.get('/popular', getPopularMovies);
 
 router.get('/top-rated', getTopRatedMovies);
 

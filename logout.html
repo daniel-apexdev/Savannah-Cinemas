@@ -804,771 +804,1821 @@
 
 <script src="backend/config.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+
     // ============================================================
-    // WAIT FOR DOM TO BE READY
+    // API CONFIGURATION
     // ============================================================
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // ============================================================
-        // API CONFIGURATION
-        // ============================================================
-        const API_URL = window.API_BASE || 'http://10.20.10.152:5000/api';
-        const AUTH_TOKEN_KEY = 'token';
-        const USER_DATA_KEY = 'user';
 
-        // ============================================================
-        // DOM REFS
-        // ============================================================
-        const loginForm = document.getElementById('loginForm');
-        const registerForm = document.getElementById('registerForm');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const messageEl = document.getElementById('authMessage');
-        const messageText = messageEl ? messageEl.querySelector('.message-text') : null;
+    const API_URL = window.API_BASE;
 
-        // Dialog refs
-        const resetDialog = document.getElementById('resetDialog');
-        const resetPasswordDialog = document.getElementById('resetPasswordDialog');
-        const resetEmail = document.getElementById('resetEmail');
-        const resetBtn = document.getElementById('resetBtn');
-        const cancelResetBtn = document.getElementById('cancelResetBtn');
-        const dialogMessage = document.getElementById('dialogMessage');
-        const resetPasswordMessage = document.getElementById('resetPasswordMessage');
-        const newPassword = document.getElementById('newPassword');
-        const confirmNewPassword = document.getElementById('confirmNewPassword');
-        const resetPasswordBtn = document.getElementById('resetPasswordBtn');
-        const cancelResetPasswordBtn = document.getElementById('cancelResetPasswordBtn');
+    const AUTH_TOKEN_KEY = 'token';
+    const USER_DATA_KEY = 'user';
 
-        // ============================================================
-        // TAB SWITCHING
-        // ============================================================
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        
-        if (tabButtons.length > 0) {
-            tabButtons.forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Remove active class from all tabs
-                    tabButtons.forEach(b => b.classList.remove('active'));
-                    
-                    // Add active class to clicked tab
-                    this.classList.add('active');
 
-                    // Get the tab to show
-                    const tab = this.dataset.tab;
-                    
-                    // Hide all forms
-                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                    
-                    // Show the selected form
-                    if (tab === 'login') {
-                        const loginFormEl = document.getElementById('loginForm');
-                        if (loginFormEl) loginFormEl.classList.add('active');
-                    } else if (tab === 'register') {
-                        const registerFormEl = document.getElementById('registerForm');
-                        if (registerFormEl) registerFormEl.classList.add('active');
-                    }
+    // ============================================================
+    // DOM REFERENCES
+    // ============================================================
 
-                    // Hide any messages when switching tabs
-                    hideMessage();
-                });
-            });
-        }
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
 
-        // ============================================================
-        // PASSWORD TOGGLES
-        // ============================================================
-        document.querySelectorAll('.password-toggle').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const wrapper = this.closest('.password-input-wrapper');
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+
+    const messageEl = document.getElementById('authMessage');
+    const messageText = messageEl
+        ? messageEl.querySelector('.message-text')
+        : null;
+
+
+    // Reset password dialogs
+    const resetDialog = document.getElementById('resetDialog');
+    const resetPasswordDialog = document.getElementById('resetPasswordDialog');
+
+    const resetEmail = document.getElementById('resetEmail');
+    const resetBtn = document.getElementById('resetBtn');
+    const cancelResetBtn = document.getElementById('cancelResetBtn');
+
+    const dialogMessage = document.getElementById('dialogMessage');
+
+    const resetPasswordMessage =
+        document.getElementById('resetPasswordMessage');
+
+    const newPassword = document.getElementById('newPassword');
+    const confirmNewPassword =
+        document.getElementById('confirmNewPassword');
+
+    const resetPasswordBtn =
+        document.getElementById('resetPasswordBtn');
+
+    const cancelResetPasswordBtn =
+        document.getElementById('cancelResetPasswordBtn');
+
+
+    // ============================================================
+    // API CHECK
+    // ============================================================
+
+    if (!API_URL) {
+        console.error('❌ API_BASE is not configured.');
+
+        showMessage(
+            'Unable to connect to the Savannah Cinemas server.',
+            'error'
+        );
+
+        return;
+    }
+
+
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+
+    const tabButtons = document.querySelectorAll('.tab-btn');
+
+    tabButtons.forEach(btn => {
+
+        btn.addEventListener('click', function (e) {
+
+            e.preventDefault();
+
+            tabButtons.forEach(b =>
+                b.classList.remove('active')
+            );
+
+            this.classList.add('active');
+
+            const tab = this.dataset.tab;
+
+            document
+                .querySelectorAll('.auth-form')
+                .forEach(form =>
+                    form.classList.remove('active')
+                );
+
+            if (tab === 'login' && loginForm) {
+                loginForm.classList.add('active');
+            }
+
+            if (tab === 'register' && registerForm) {
+                registerForm.classList.add('active');
+            }
+
+            hideMessage();
+        });
+    });
+
+
+    // ============================================================
+    // PASSWORD VISIBILITY TOGGLE
+    // ============================================================
+
+    document
+        .querySelectorAll('.password-toggle')
+        .forEach(btn => {
+
+            btn.addEventListener('click', function () {
+
+                const wrapper =
+                    this.closest('.password-input-wrapper');
+
                 if (!wrapper) return;
-                
+
                 const input = wrapper.querySelector('input');
                 const icon = this.querySelector('i');
-                
-                if (input && icon) {
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        icon.className = 'fa-regular fa-eye-slash';
-                    } else {
-                        input.type = 'password';
-                        icon.className = 'fa-regular fa-eye';
-                    }
+
+                if (!input || !icon) return;
+
+                if (input.type === 'password') {
+
+                    input.type = 'text';
+
+                    icon.className =
+                        'fa-regular fa-eye-slash';
+
+                } else {
+
+                    input.type = 'password';
+
+                    icon.className =
+                        'fa-regular fa-eye';
                 }
             });
         });
 
-        // ============================================================
-        // MESSAGE HELPERS
-        // ============================================================
-        function showMessage(message, type = 'info') {
-            if (!messageText) return;
-            messageText.textContent = message;
-            if (messageEl) {
-                messageEl.className = `auth-message show ${type}`;
-            }
+
+    // ============================================================
+    // MESSAGE HELPERS
+    // ============================================================
+
+    function showMessage(message, type = 'info') {
+
+        if (!messageText) return;
+
+        messageText.textContent = message;
+
+        if (messageEl) {
+            messageEl.className =
+                `auth-message show ${type}`;
         }
+    }
 
-        function hideMessage() {
-            if (!messageEl) return;
-            messageEl.className = 'auth-message';
-            if (messageText) {
-                messageText.textContent = '';
-            }
+
+    function hideMessage() {
+
+        if (!messageEl) return;
+
+        messageEl.className = 'auth-message';
+
+        if (messageText) {
+            messageText.textContent = '';
         }
+    }
 
-        function showDialogMessage(el, message, type = 'info') {
-            if (!el) return;
-            el.textContent = message;
-            el.className = `dialog-message show ${type}`;
-        }
 
-        function hideDialogMessage(el) {
-            if (!el) return;
-            el.className = 'dialog-message';
-            el.textContent = '';
-        }
+    function showDialogMessage(el, message, type = 'info') {
 
-        // ============================================================
-        // PASSWORD STRENGTH
-        // ============================================================
-        const registerPassword = document.getElementById('registerPassword');
-        const bar1 = document.getElementById('bar1');
-        const bar2 = document.getElementById('bar2');
-        const bar3 = document.getElementById('bar3');
-        const bar4 = document.getElementById('bar4');
-        const strengthText = document.getElementById('strengthText');
+        if (!el) return;
 
-        if (registerPassword) {
-            registerPassword.addEventListener('input', function() {
+        el.textContent = message;
+
+        el.className =
+            `dialog-message show ${type}`;
+    }
+
+
+    function hideDialogMessage(el) {
+
+        if (!el) return;
+
+        el.className = 'dialog-message';
+        el.textContent = '';
+    }
+
+
+    // ============================================================
+    // PASSWORD STRENGTH
+    // ============================================================
+
+    const registerPassword =
+        document.getElementById('registerPassword');
+
+    const bar1 = document.getElementById('bar1');
+    const bar2 = document.getElementById('bar2');
+    const bar3 = document.getElementById('bar3');
+    const bar4 = document.getElementById('bar4');
+
+    const strengthText =
+        document.getElementById('strengthText');
+
+
+    if (registerPassword) {
+
+        registerPassword.addEventListener(
+            'input',
+            function () {
                 updatePasswordStrength(this.value);
-            });
+            }
+        );
+    }
+
+
+    function updatePasswordStrength(password) {
+
+        [bar1, bar2, bar3, bar4].forEach(bar => {
+
+            if (bar) {
+                bar.className = 'bar';
+            }
+
+        });
+
+
+        if (!strengthText) return;
+
+
+        if (!password) {
+
+            strengthText.textContent =
+                'Enter a password';
+
+            strengthText.className =
+                'password-strength-text';
+
+            return;
         }
 
-        function updatePasswordStrength(password) {
-            // Reset all bars
-            [bar1, bar2, bar3, bar4].forEach(bar => {
-                if (bar) bar.className = 'bar';
-            });
 
-            if (!strengthText) return;
+        let score = 0;
 
-            if (!password || password.length === 0) {
-                strengthText.textContent = 'Enter a password';
-                strengthText.className = 'password-strength-text';
+
+        if (password.length >= 8) score++;
+        if (password.length >= 12) score++;
+
+        if (
+            /[a-z]/.test(password) &&
+            /[A-Z]/.test(password)
+        ) {
+            score++;
+        }
+
+        if (/\d/.test(password)) score++;
+
+        if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+
+        let level;
+        let label;
+        let className;
+
+
+        if (score <= 1) {
+
+            level = 1;
+            label = 'Weak';
+            className = 'weak';
+
+        } else if (score <= 2) {
+
+            level = 2;
+            label = 'Fair';
+            className = 'weak';
+
+        } else if (score <= 3) {
+
+            level = 3;
+            label = 'Medium';
+            className = 'medium';
+
+        } else if (score <= 4) {
+
+            level = 4;
+            label = 'Strong';
+            className = 'strong';
+
+        } else {
+
+            level = 4;
+            label = 'Very Strong';
+            className = 'strong';
+        }
+
+
+        const bars = [
+            bar1,
+            bar2,
+            bar3,
+            bar4
+        ];
+
+
+        bars.forEach((bar, index) => {
+
+            if (index < level && bar) {
+
+                bar.className =
+                    `bar ${className}`;
+            }
+
+        });
+
+
+        strengthText.textContent = label;
+
+        strengthText.className =
+            `password-strength-text ${className}`;
+    }
+
+
+    // ============================================================
+    // LOGIN
+    // ============================================================
+
+    if (loginForm) {
+
+        loginForm.addEventListener(
+            'submit',
+            async function (e) {
+
+                e.preventDefault();
+
+                hideMessage();
+
+
+                const email =
+                    document
+                        .getElementById('loginEmail')
+                        .value
+                        .trim()
+                        .toLowerCase();
+
+                const password =
+                    document
+                        .getElementById('loginPassword')
+                        .value;
+
+
+                // ------------------------------------------------
+                // VALIDATION
+                // ------------------------------------------------
+
+                if (!email) {
+
+                    return showMessage(
+                        'Please enter your email address',
+                        'error'
+                    );
+                }
+
+
+                if (!password) {
+
+                    return showMessage(
+                        'Please enter your password',
+                        'error'
+                    );
+                }
+
+
+                const emailRegex =
+                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+                if (!emailRegex.test(email)) {
+
+                    return showMessage(
+                        'Please enter a valid email address',
+                        'error'
+                    );
+                }
+
+
+                if (password.length < 8) {
+
+                    return showMessage(
+                        'Password must be at least 8 characters',
+                        'error'
+                    );
+                }
+
+
+                setLoading(loginBtn, true);
+
+
+                try {
+
+                    console.log(
+                        '🔑 Logging in:',
+                        email
+                    );
+
+
+                    const response = await fetch(
+                        `${API_URL}/auth/login`,
+                        {
+                            method: 'POST',
+
+                            headers: {
+                                'Content-Type':
+                                    'application/json',
+
+                                'Accept':
+                                    'application/json'
+                            },
+
+                            body: JSON.stringify({
+                                email,
+                                password
+                            })
+                        }
+                    );
+
+
+                    const data =
+                        await parseResponse(response);
+
+
+                    // ------------------------------------------------
+                    // SUCCESS
+                    // ------------------------------------------------
+
+                    if (response.ok && data.success) {
+
+                        saveAuth(
+                            data.token,
+                            data.user
+                        );
+
+
+                        showMessage(
+                            'Welcome back! Redirecting...',
+                            'success'
+                        );
+
+
+                        document
+                            .getElementById('loginPassword')
+                            .value = '';
+
+
+                        setTimeout(() => {
+
+                            window.location.href =
+                                'index.html';
+
+                        }, 1200);
+
+
+                        return;
+                    }
+
+
+                    // ------------------------------------------------
+                    // ERROR
+                    // ------------------------------------------------
+
+                    if (response.status === 403) {
+
+                        showMessage(
+                            'Your account has been deactivated. Please contact support.',
+                            'error'
+                        );
+
+                    } else {
+
+                        /*
+                         * The backend intentionally returns:
+                         *
+                         * "Invalid email or password"
+                         *
+                         * for both unknown accounts and
+                         * incorrect passwords.
+                         *
+                         * We therefore don't try to distinguish
+                         * between those cases on the frontend.
+                         */
+
+                        showMessage(
+                            data.message ||
+                            'Invalid email or password. Please try again.',
+                            'error'
+                        );
+                    }
+
+
+                    document
+                        .getElementById('loginPassword')
+                        .value = '';
+
+
+                } catch (error) {
+
+                    console.error(
+                        '❌ Login error:',
+                        error
+                    );
+
+
+                    showMessage(
+                        'Network error. Please check your connection and try again.',
+                        'error'
+                    );
+
+                } finally {
+
+                    setLoading(
+                        loginBtn,
+                        false
+                    );
+                }
+            }
+        );
+    }
+
+
+    // ============================================================
+    // REGISTER
+    // ============================================================
+
+    if (registerForm) {
+
+        registerForm.addEventListener(
+            'submit',
+            async function (e) {
+
+                e.preventDefault();
+
+                hideMessage();
+
+
+                const forenames =
+                    document
+                        .getElementById('registerForenames')
+                        .value
+                        .trim();
+
+
+                const surname =
+                    document
+                        .getElementById('registerSurname')
+                        .value
+                        .trim();
+
+
+                const email =
+                    document
+                        .getElementById('registerEmail')
+                        .value
+                        .trim()
+                        .toLowerCase();
+
+
+                const password =
+                    document
+                        .getElementById('registerPassword')
+                        .value;
+
+
+                const confirm =
+                    document
+                        .getElementById('registerConfirmPassword')
+                        .value;
+
+
+                const terms =
+                    document
+                        .getElementById('agreeTerms')
+                        .checked;
+
+
+                // ------------------------------------------------
+                // VALIDATION
+                // ------------------------------------------------
+
+                if (!forenames) {
+
+                    return showMessage(
+                        'Please enter your first name(s)',
+                        'error'
+                    );
+                }
+
+
+                if (!surname) {
+
+                    return showMessage(
+                        'Please enter your surname',
+                        'error'
+                    );
+                }
+
+
+                if (!email) {
+
+                    return showMessage(
+                        'Please enter your email address',
+                        'error'
+                    );
+                }
+
+
+                const emailRegex =
+                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+                if (!emailRegex.test(email)) {
+
+                    return showMessage(
+                        'Please enter a valid email address',
+                        'error'
+                    );
+                }
+
+
+                if (!password || password.length < 8) {
+
+                    return showMessage(
+                        'Password must be at least 8 characters',
+                        'error'
+                    );
+                }
+
+
+                const hasUpperCase =
+                    /[A-Z]/.test(password);
+
+                const hasLowerCase =
+                    /[a-z]/.test(password);
+
+                const hasNumber =
+                    /\d/.test(password);
+
+                const hasSpecial =
+                    /[^a-zA-Z0-9]/.test(password);
+
+
+                if (
+                    !hasUpperCase ||
+                    !hasLowerCase ||
+                    !hasNumber ||
+                    !hasSpecial
+                ) {
+
+                    return showMessage(
+                        'Password must contain uppercase, lowercase, number, and special character',
+                        'error'
+                    );
+                }
+
+
+                if (password !== confirm) {
+
+                    return showMessage(
+                        'Passwords do not match',
+                        'error'
+                    );
+                }
+
+
+                if (!terms) {
+
+                    return showMessage(
+                        'Please agree to the Terms & Conditions',
+                        'error'
+                    );
+                }
+
+
+                setLoading(
+                    registerBtn,
+                    true
+                );
+
+
+                try {
+
+                    const payload = {
+                        forenames,
+                        surname,
+                        email,
+                        password
+                    };
+
+
+                    /*
+                     * If your registration form contains a
+                     * phone number field, include it.
+                     */
+
+                    const phoneInput =
+                        document.getElementById(
+                            'registerPhoneNumber'
+                        );
+
+
+                    if (phoneInput) {
+
+                        const phoneNumber =
+                            phoneInput.value.trim();
+
+                        if (phoneNumber) {
+                            payload.phoneNumber =
+                                phoneNumber;
+                        }
+                    }
+
+
+                    console.log(
+                        '📤 Registering user:',
+                        email
+                    );
+
+
+                    const response = await fetch(
+                        `${API_URL}/auth/register`,
+                        {
+                            method: 'POST',
+
+                            headers: {
+                                'Content-Type':
+                                    'application/json',
+
+                                'Accept':
+                                    'application/json'
+                            },
+
+                            body: JSON.stringify(payload)
+                        }
+                    );
+
+
+                    const data =
+                        await parseResponse(response);
+
+
+                    // ------------------------------------------------
+                    // SUCCESS
+                    // ------------------------------------------------
+
+                    if (response.ok && data.success) {
+
+                        saveAuth(
+                            data.token,
+                            data.user
+                        );
+
+
+                        showMessage(
+                            'Account created successfully! Redirecting...',
+                            'success'
+                        );
+
+
+                        registerForm.reset();
+
+                        updatePasswordStrength('');
+
+
+                        setTimeout(() => {
+
+                            window.location.href =
+                                'index.html';
+
+                        }, 1500);
+
+
+                        return;
+                    }
+
+
+                    // ------------------------------------------------
+                    // ERROR
+                    // ------------------------------------------------
+
+                    if (response.status === 409) {
+
+                        showMessage(
+                            'This email is already registered. Please sign in instead.',
+                            'error'
+                        );
+
+
+                        setTimeout(() => {
+
+                            switchToLogin(email);
+
+                        }, 2000);
+
+
+                    } else {
+
+                        showMessage(
+                            data.message ||
+                            'Registration failed. Please try again.',
+                            'error'
+                        );
+                    }
+
+
+                } catch (error) {
+
+                    console.error(
+                        '❌ Register error:',
+                        error
+                    );
+
+
+                    showMessage(
+                        'Network error. Please check your connection and try again.',
+                        'error'
+                    );
+
+                } finally {
+
+                    setLoading(
+                        registerBtn,
+                        false
+                    );
+                }
+            }
+        );
+    }
+
+
+    // ============================================================
+    // SWITCH TO LOGIN
+    // ============================================================
+
+    function switchToLogin(email = '') {
+
+        tabButtons.forEach(btn =>
+            btn.classList.remove('active')
+        );
+
+
+        const loginTab =
+            document.querySelector(
+                '.tab-btn[data-tab="login"]'
+            );
+
+
+        if (loginTab) {
+            loginTab.classList.add('active');
+        }
+
+
+        document
+            .querySelectorAll('.auth-form')
+            .forEach(form =>
+                form.classList.remove('active')
+            );
+
+
+        if (loginForm) {
+            loginForm.classList.add('active');
+        }
+
+
+        const loginEmail =
+            document.getElementById('loginEmail');
+
+
+        if (loginEmail && email) {
+            loginEmail.value = email;
+        }
+    }
+
+
+    // ============================================================
+    // AUTH STORAGE
+    // ============================================================
+
+    function saveAuth(token, user) {
+
+        if (!token) {
+            console.error(
+                '❌ No authentication token received.'
+            );
+            return;
+        }
+
+
+        localStorage.setItem(
+            AUTH_TOKEN_KEY,
+            token
+        );
+
+
+        localStorage.setItem(
+            USER_DATA_KEY,
+            JSON.stringify(user)
+        );
+
+
+        console.log(
+            '✅ Authentication saved for:',
+            user?.email
+        );
+    }
+
+
+    // ============================================================
+    // CHECK AUTHENTICATION
+    // ============================================================
+
+    async function checkAuth() {
+
+        const token =
+            localStorage.getItem(
+                AUTH_TOKEN_KEY
+            );
+
+
+        const userData =
+            localStorage.getItem(
+                USER_DATA_KEY
+            );
+
+
+        if (!token || !userData) {
+            return;
+        }
+
+
+        try {
+
+            console.log(
+                '🔍 Verifying existing authentication...'
+            );
+
+
+            const response =
+                await fetch(
+                    `${API_URL}/auth/me`,
+                    {
+                        method: 'GET',
+
+                        headers: {
+                            'Accept':
+                                'application/json',
+
+                            'Authorization':
+                                `Bearer ${token}`
+                        }
+                    }
+                );
+
+
+            const data =
+                await parseResponse(response);
+
+
+            if (response.ok && data.success) {
+
+                /*
+                 * Refresh stored user information.
+                 *
+                 * /auth/me contains the latest customer profile
+                 * information.
+                 */
+
+                if (data.user) {
+
+                    localStorage.setItem(
+                        USER_DATA_KEY,
+                        JSON.stringify(data.user)
+                    );
+                }
+
+
+                console.log(
+                    '✅ Already logged in as:',
+                    data.user?.email
+                );
+
+
+                window.location.href =
+                    'index.html';
+
+
+            } else {
+
+                clearAuth();
+
+
+                console.log(
+                    '❌ Invalid or expired token.'
+                );
+            }
+
+
+        } catch (error) {
+
+            /*
+             * Don't immediately delete the token if the server
+             * cannot be reached.
+             *
+             * The user may simply be offline.
+             */
+
+            console.warn(
+                '⚠️ Could not verify authentication:',
+                error
+            );
+        }
+    }
+
+
+    // ============================================================
+    // CLEAR AUTH
+    // ============================================================
+
+    function clearAuth() {
+
+        localStorage.removeItem(
+            AUTH_TOKEN_KEY
+        );
+
+        localStorage.removeItem(
+            USER_DATA_KEY
+        );
+    }
+
+
+    // ============================================================
+    // SAFE RESPONSE PARSER
+    // ============================================================
+
+    async function parseResponse(response) {
+
+        const contentType =
+            response.headers.get(
+                'content-type'
+            ) || '';
+
+
+        if (
+            contentType.includes(
+                'application/json'
+            )
+        ) {
+
+            return await response.json();
+        }
+
+
+        const text =
+            await response.text();
+
+
+        return {
+            success: false,
+            message:
+                text ||
+                'Unexpected server response'
+        };
+    }
+
+
+    // ============================================================
+    // LOADING STATE
+    // ============================================================
+
+    function setLoading(btn, loading) {
+
+        if (!btn) return;
+
+
+        if (loading) {
+
+            btn.classList.add('loading');
+
+            btn.disabled = true;
+
+
+            btn.dataset.originalText =
+                btn.innerHTML;
+
+
+            btn.innerHTML =
+                '<span class="spinner"></span> Loading...';
+
+
+        } else {
+
+            btn.classList.remove('loading');
+
+            btn.disabled = false;
+
+
+            if (btn.dataset.originalText) {
+
+                btn.innerHTML =
+                    btn.dataset.originalText;
+
+            } else {
+
+                if (btn.id === 'loginBtn') {
+
+                    btn.innerHTML =
+                        'Sign In <i class="fa-solid fa-arrow-right"></i>';
+
+                } else if (btn.id === 'registerBtn') {
+
+                    btn.innerHTML =
+                        'Create Account <i class="fa-solid fa-arrow-right"></i>';
+
+                } else if (btn.id === 'resetBtn') {
+
+                    btn.innerHTML =
+                        'Send Reset Link';
+
+                } else if (
+                    btn.id === 'resetPasswordBtn'
+                ) {
+
+                    btn.innerHTML =
+                        'Reset Password';
+                }
+            }
+        }
+    }
+
+
+    // ============================================================
+    // FORGOT PASSWORD
+    // ============================================================
+
+    /*
+     * These sections are retained from your existing frontend.
+     *
+     * IMPORTANT:
+     * Your auth controller shown above does NOT currently contain
+     * request-reset or reset-password endpoints.
+     *
+     * We will connect these once those backend routes exist.
+     */
+
+    const forgotPasswordLink =
+        document.getElementById(
+            'forgotPasswordLink'
+        );
+
+
+    if (forgotPasswordLink) {
+
+        forgotPasswordLink.addEventListener(
+            'click',
+            function (e) {
+
+                e.preventDefault();
+
+                if (resetDialog) {
+
+                    resetDialog.classList.add(
+                        'open'
+                    );
+                }
+
+                if (resetEmail) {
+                    resetEmail.value = '';
+                }
+
+                hideDialogMessage(
+                    dialogMessage
+                );
+
+                setLoading(
+                    resetBtn,
+                    false
+                );
+            }
+        );
+    }
+
+
+    // ============================================================
+    // CANCEL RESET
+    // ============================================================
+
+    if (cancelResetBtn) {
+
+        cancelResetBtn.addEventListener(
+            'click',
+            function () {
+
+                if (resetDialog) {
+                    resetDialog.classList.remove(
+                        'open'
+                    );
+                }
+
+                hideDialogMessage(
+                    dialogMessage
+                );
+
+                setLoading(
+                    resetBtn,
+                    false
+                );
+            }
+        );
+    }
+
+
+    if (resetDialog) {
+
+        resetDialog.addEventListener(
+            'click',
+            function (e) {
+
+                if (e.target === resetDialog) {
+
+                    resetDialog.classList.remove(
+                        'open'
+                    );
+
+                    hideDialogMessage(
+                        dialogMessage
+                    );
+
+                    setLoading(
+                        resetBtn,
+                        false
+                    );
+                }
+            }
+        );
+    }
+
+
+    // ============================================================
+    // SEND PASSWORD RESET
+    // ============================================================
+
+    if (resetBtn) {
+
+        resetBtn.addEventListener(
+            'click',
+            async function () {
+
+                const email =
+                    resetEmail
+                        ? resetEmail.value
+                            .trim()
+                            .toLowerCase()
+                        : '';
+
+
+                if (!email) {
+
+                    return showDialogMessage(
+                        dialogMessage,
+                        'Please enter your email address',
+                        'error'
+                    );
+                }
+
+
+                const emailRegex =
+                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+                if (!emailRegex.test(email)) {
+
+                    return showDialogMessage(
+                        dialogMessage,
+                        'Please enter a valid email address',
+                        'error'
+                    );
+                }
+
+
+                setLoading(
+                    resetBtn,
+                    true
+                );
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            `${API_URL}/auth/request-reset`,
+                            {
+                                method: 'POST',
+
+                                headers: {
+                                    'Content-Type':
+                                        'application/json',
+
+                                    'Accept':
+                                        'application/json'
+                                },
+
+                                body: JSON.stringify({
+                                    email
+                                })
+                            }
+                        );
+
+
+                    const data =
+                        await parseResponse(
+                            response
+                        );
+
+
+                    if (
+                        response.ok &&
+                        data.success
+                    ) {
+
+                        showDialogMessage(
+                            dialogMessage,
+                            'Reset link sent to your email!',
+                            'success'
+                        );
+
+
+                        if (resetEmail) {
+                            resetEmail.value = '';
+                        }
+
+
+                    } else {
+
+                        showDialogMessage(
+                            dialogMessage,
+                            data.message ||
+                            'Failed to send reset link',
+                            'error'
+                        );
+                    }
+
+
+                } catch (error) {
+
+                    console.error(
+                        '❌ Reset request error:',
+                        error
+                    );
+
+
+                    showDialogMessage(
+                        dialogMessage,
+                        'Network error. Please check your connection.',
+                        'error'
+                    );
+
+                } finally {
+
+                    setLoading(
+                        resetBtn,
+                        false
+                    );
+                }
+            }
+        );
+    }
+
+
+    // ============================================================
+    // RESET TOKEN
+    // ============================================================
+
+    function checkResetToken() {
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+
+        const token =
+            params.get('token');
+
+
+        if (
+            token &&
+            resetPasswordDialog
+        ) {
+
+            showResetPasswordDialog(
+                token
+            );
+
+
+            const newUrl =
+                window.location.pathname;
+
+
+            window.history.replaceState(
+                {},
+                document.title,
+                newUrl
+            );
+        }
+    }
+
+
+    function showResetPasswordDialog(token) {
+
+        if (!resetPasswordDialog) return;
+
+
+        resetPasswordDialog.classList.add(
+            'open'
+        );
+
+
+        if (newPassword) {
+            newPassword.value = '';
+        }
+
+
+        if (confirmNewPassword) {
+            confirmNewPassword.value = '';
+        }
+
+
+        hideDialogMessage(
+            resetPasswordMessage
+        );
+
+
+        setLoading(
+            resetPasswordBtn,
+            false
+        );
+
+
+        resetPasswordDialog.dataset.token =
+            token;
+    }
+
+
+    // ============================================================
+    // CANCEL RESET PASSWORD
+    // ============================================================
+
+    if (cancelResetPasswordBtn) {
+
+        cancelResetPasswordBtn.addEventListener(
+            'click',
+            function () {
+
+                if (resetPasswordDialog) {
+
+                    resetPasswordDialog.classList.remove(
+                        'open'
+                    );
+                }
+
+                hideDialogMessage(
+                    resetPasswordMessage
+                );
+
+                setLoading(
+                    resetPasswordBtn,
+                    false
+                );
+            }
+        );
+    }
+
+
+    if (resetPasswordDialog) {
+
+        resetPasswordDialog.addEventListener(
+            'click',
+            function (e) {
+
+                if (
+                    e.target ===
+                    resetPasswordDialog
+                ) {
+
+                    resetPasswordDialog.classList.remove(
+                        'open'
+                    );
+
+                    hideDialogMessage(
+                        resetPasswordMessage
+                    );
+
+                    setLoading(
+                        resetPasswordBtn,
+                        false
+                    );
+                }
+            }
+        );
+    }
+
+
+    // ============================================================
+    // RESET PASSWORD
+    // ============================================================
+
+    if (resetPasswordBtn) {
+
+        resetPasswordBtn.addEventListener(
+            'click',
+            async function () {
+
+                const token =
+                    resetPasswordDialog
+                        ? resetPasswordDialog.dataset.token
+                        : null;
+
+
+                const password =
+                    newPassword
+                        ? newPassword.value
+                        : '';
+
+
+                const confirm =
+                    confirmNewPassword
+                        ? confirmNewPassword.value
+                        : '';
+
+
+                if (!token) {
+
+                    return showDialogMessage(
+                        resetPasswordMessage,
+                        'Invalid reset token. Please try again.',
+                        'error'
+                    );
+                }
+
+
+                if (
+                    !password ||
+                    password.length < 8
+                ) {
+
+                    return showDialogMessage(
+                        resetPasswordMessage,
+                        'Password must be at least 8 characters',
+                        'error'
+                    );
+                }
+
+
+                if (password !== confirm) {
+
+                    return showDialogMessage(
+                        resetPasswordMessage,
+                        'Passwords do not match',
+                        'error'
+                    );
+                }
+
+
+                setLoading(
+                    resetPasswordBtn,
+                    true
+                );
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            `${API_URL}/auth/reset-password`,
+                            {
+                                method: 'POST',
+
+                                headers: {
+                                    'Content-Type':
+                                        'application/json',
+
+                                    'Accept':
+                                        'application/json'
+                                },
+
+                                body: JSON.stringify({
+                                    token,
+                                    newPassword:
+                                        password
+                                })
+                            }
+                        );
+
+
+                    const data =
+                        await parseResponse(
+                            response
+                        );
+
+
+                    if (
+                        response.ok &&
+                        data.success
+                    ) {
+
+                        showDialogMessage(
+                            resetPasswordMessage,
+                            'Password reset successful!',
+                            'success'
+                        );
+
+
+                        setTimeout(() => {
+
+                            if (
+                                resetPasswordDialog
+                            ) {
+
+                                resetPasswordDialog.classList.remove(
+                                    'open'
+                                );
+                            }
+
+
+                            hideDialogMessage(
+                                resetPasswordMessage
+                            );
+
+
+                            setLoading(
+                                resetPasswordBtn,
+                                false
+                            );
+
+
+                            switchToLogin();
+
+
+                            showMessage(
+                                'Password reset successfully. Please sign in.',
+                                'success'
+                            );
+
+                        }, 2000);
+
+
+                    } else {
+
+                        showDialogMessage(
+                            resetPasswordMessage,
+                            data.message ||
+                            'Failed to reset password',
+                            'error'
+                        );
+
+
+                        setLoading(
+                            resetPasswordBtn,
+                            false
+                        );
+                    }
+
+
+                } catch (error) {
+
+                    console.error(
+                        '❌ Reset password error:',
+                        error
+                    );
+
+
+                    showDialogMessage(
+                        resetPasswordMessage,
+                        'Network error. Please try again.',
+                        'error'
+                    );
+
+
+                    setLoading(
+                        resetPasswordBtn,
+                        false
+                    );
+                }
+            }
+        );
+    }
+
+
+    // ============================================================
+    // ESCAPE KEY
+    // ============================================================
+
+    document.addEventListener(
+        'keydown',
+        function (e) {
+
+            if (e.key !== 'Escape') {
                 return;
             }
 
-            let score = 0;
-            
-            // Length checks
-            if (password.length >= 8) score++;
-            if (password.length >= 12) score++;
-            
-            // Complexity checks
-            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-            if (/\d/.test(password)) score++;
-            if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-            let level = 0;
-            let label = '';
-            let className = '';
+            if (
+                resetDialog &&
+                resetDialog.classList.contains(
+                    'open'
+                )
+            ) {
 
-            if (score <= 1) {
-                level = 1;
-                label = 'Weak';
-                className = 'weak';
-            } else if (score <= 2) {
-                level = 2;
-                label = 'Fair';
-                className = 'weak';
-            } else if (score <= 3) {
-                level = 3;
-                label = 'Medium';
-                className = 'medium';
-            } else if (score <= 4) {
-                level = 4;
-                label = 'Strong';
-                className = 'strong';
-            } else {
-                level = 4;
-                label = 'Very Strong';
-                className = 'strong';
+                resetDialog.classList.remove(
+                    'open'
+                );
+
+                hideDialogMessage(
+                    dialogMessage
+                );
+
+                setLoading(
+                    resetBtn,
+                    false
+                );
             }
 
-            const bars = [bar1, bar2, bar3, bar4];
-            for (let i = 0; i < bars.length; i++) {
-                if (i < level && bars[i]) {
-                    bars[i].className = `bar ${className}`;
-                }
-            }
 
-            strengthText.textContent = label;
-            strengthText.className = `password-strength-text ${className}`;
-        }
+            if (
+                resetPasswordDialog &&
+                resetPasswordDialog.classList.contains(
+                    'open'
+                )
+            ) {
 
-        // ============================================================
-        // LOGIN - With Database Validation
-        // ============================================================
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                hideMessage();
+                resetPasswordDialog.classList.remove(
+                    'open'
+                );
 
-                // Get form values
-                const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-                const password = document.getElementById('loginPassword').value;
+                hideDialogMessage(
+                    resetPasswordMessage
+                );
 
-                // --- VALIDATION ---
-                
-                // Check if fields are empty
-                if (!email) {
-                    return showMessage('Please enter your email address', 'error');
-                }
-                if (!password) {
-                    return showMessage('Please enter your password', 'error');
-                }
-
-                // Validate email format
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    return showMessage('Please enter a valid email address', 'error');
-                }
-
-                // Check password minimum length
-                if (password.length < 8) {
-                    return showMessage('Password must be at least 8 characters', 'error');
-                }
-
-                // --- SUBMIT TO BACKEND ---
-                setLoading(loginBtn, true);
-
-                try {
-                    console.log('🔑 Logging in:', email);
-
-                    const res = await fetch(`${API_URL}/auth/login`, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ 
-                            email: email, 
-                            password: password 
-                        })
-                    });
-
-                    const data = await res.json();
-
-                    if (data.success) {
-                        // Save auth data
-                        saveAuth(data.token, data.user);
-                        showMessage('Welcome back! Redirecting...', 'success');
-                        
-                        // Clear password field for security
-                        document.getElementById('loginPassword').value = '';
-                        
-                        // Redirect after short delay
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 1200);
-                    } else {
-                        // Handle specific error cases
-                        if (data.message) {
-                            const msg = data.message.toLowerCase();
-                            
-                            if (msg.includes('not found') || msg.includes('no account')) {
-                                showMessage('Account not found. Please check your email or create a new account.', 'error');
-                                // Switch to register tab after a moment
-                                setTimeout(() => {
-                                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                                    const registerTab = document.querySelector('.tab-btn[data-tab="register"]');
-                                    if (registerTab) registerTab.classList.add('active');
-                                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                                    const registerFormEl = document.getElementById('registerForm');
-                                    if (registerFormEl) registerFormEl.classList.add('active');
-                                    // Pre-fill email
-                                    const registerEmail = document.getElementById('registerEmail');
-                                    if (registerEmail) registerEmail.value = email;
-                                }, 2000);
-                            } else if (msg.includes('invalid password') || msg.includes('incorrect password')) {
-                                showMessage('Invalid password. Please try again.', 'error');
-                                // Clear password field
-                                document.getElementById('loginPassword').value = '';
-                                // Focus on password field
-                                document.getElementById('loginPassword').focus();
-                            } else if (msg.includes('inactive') || msg.includes('disabled')) {
-                                showMessage('Your account has been deactivated. Please contact support.', 'error');
-                            } else if (msg.includes('locked') || msg.includes('too many')) {
-                                showMessage('Too many failed attempts. Please try again later.', 'error');
-                            } else {
-                                showMessage(data.message || 'Invalid email or password', 'error');
-                            }
-                        } else {
-                            showMessage('Invalid email or password. Please try again.', 'error');
-                        }
-                        
-                        // Clear password field on any error
-                        document.getElementById('loginPassword').value = '';
-                    }
-                } catch (err) {
-                    console.error('❌ Login error:', err);
-                    showMessage('Network error. Please check your connection and try again.', 'error');
-                } finally {
-                    setLoading(loginBtn, false);
-                }
-            });
-        }
-
-        // ============================================================
-        // REGISTER - With Database Validation
-        // ============================================================
-        if (registerForm) {
-            registerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                hideMessage();
-
-                // Get form values
-                const forenames = document.getElementById('registerForenames').value.trim();
-                const surname = document.getElementById('registerSurname').value.trim();
-                const email = document.getElementById('registerEmail').value.trim().toLowerCase();
-                const password = document.getElementById('registerPassword').value;
-                const confirm = document.getElementById('registerConfirmPassword').value;
-                const terms = document.getElementById('agreeTerms').checked;
-
-                // --- VALIDATION ---
-                
-                // Check required fields
-                if (!forenames) {
-                    return showMessage('Please enter your first name(s)', 'error');
-                }
-                if (!surname) {
-                    return showMessage('Please enter your surname', 'error');
-                }
-                if (!email) {
-                    return showMessage('Please enter your email address', 'error');
-                }
-                
-                // Validate email format
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    return showMessage('Please enter a valid email address', 'error');
-                }
-                
-                // Validate password
-                if (!password || password.length < 8) {
-                    return showMessage('Password must be at least 8 characters', 'error');
-                }
-                
-                // Check password strength
-                const hasUpperCase = /[A-Z]/.test(password);
-                const hasLowerCase = /[a-z]/.test(password);
-                const hasNumber = /\d/.test(password);
-                const hasSpecial = /[^a-zA-Z0-9]/.test(password);
-                
-                if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecial) {
-                    return showMessage('Password must contain uppercase, lowercase, number, and special character', 'error');
-                }
-                
-                // Check password confirmation
-                if (password !== confirm) {
-                    return showMessage('Passwords do not match', 'error');
-                }
-                
-                // Check terms agreement
-                if (!terms) {
-                    return showMessage('Please agree to the Terms & Conditions', 'error');
-                }
-
-                // --- SUBMIT TO BACKEND ---
-                setLoading(registerBtn, true);
-
-                try {
-                    const payload = {
-                        forenames: forenames,
-                        surname: surname,
-                        email: email,
-                        password: password
-                    };
-
-                    console.log('📤 Registering user:', email);
-
-                    const res = await fetch(`${API_URL}/auth/register`, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const data = await res.json();
-
-                    if (data.success) {
-                        // Save auth data
-                        saveAuth(data.token, data.user);
-                        showMessage('Account created successfully! Redirecting...', 'success');
-                        
-                        // Clear form
-                        registerForm.reset();
-                        updatePasswordStrength(''); // Reset password strength
-                        
-                        // Redirect after short delay
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 1500);
-                    } else {
-                        // Handle specific error cases
-                        if (data.message) {
-                            const msg = data.message.toLowerCase();
-                            
-                            if (msg.includes('already exists') || msg.includes('duplicate')) {
-                                showMessage('This email is already registered. Please sign in instead.', 'error');
-                                // Switch to login tab after a moment
-                                setTimeout(() => {
-                                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                                    const loginTab = document.querySelector('.tab-btn[data-tab="login"]');
-                                    if (loginTab) loginTab.classList.add('active');
-                                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                                    const loginFormEl = document.getElementById('loginForm');
-                                    if (loginFormEl) loginFormEl.classList.add('active');
-                                    // Pre-fill email
-                                    const loginEmail = document.getElementById('loginEmail');
-                                    if (loginEmail) loginEmail.value = email;
-                                }, 2000);
-                            } else if (msg.includes('validation')) {
-                                showMessage('Please check your information and try again.', 'error');
-                            } else {
-                                showMessage(data.message || 'Registration failed. Please try again.', 'error');
-                            }
-                        } else {
-                            showMessage('Registration failed. Please try again.', 'error');
-                        }
-                    }
-                } catch (err) {
-                    console.error('❌ Register error:', err);
-                    showMessage('Network error. Please check your connection and try again.', 'error');
-                } finally {
-                    setLoading(registerBtn, false);
-                }
-            });
-        }
-
-        // ============================================================
-        // FORGOT PASSWORD
-        // ============================================================
-        const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-        if (forgotPasswordLink) {
-            forgotPasswordLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (resetDialog) {
-                    resetDialog.classList.add('open');
-                    if (resetEmail) resetEmail.value = '';
-                    hideDialogMessage(dialogMessage);
-                    setLoading(resetBtn, false);
-                }
-            });
-        }
-
-        // ============================================================
-        // CANCEL RESET DIALOG
-        // ============================================================
-        if (cancelResetBtn) {
-            cancelResetBtn.addEventListener('click', () => {
-                if (resetDialog) resetDialog.classList.remove('open');
-                hideDialogMessage(dialogMessage);
-                setLoading(resetBtn, false);
-            });
-        }
-
-        if (resetDialog) {
-            resetDialog.addEventListener('click', (e) => {
-                if (e.target === resetDialog) {
-                    resetDialog.classList.remove('open');
-                    hideDialogMessage(dialogMessage);
-                    setLoading(resetBtn, false);
-                }
-            });
-        }
-
-        // ============================================================
-        // SEND RESET LINK
-        // ============================================================
-        if (resetBtn) {
-            resetBtn.addEventListener('click', async () => {
-                const email = resetEmail ? resetEmail.value.trim().toLowerCase() : '';
-
-                if (!email) {
-                    return showDialogMessage(dialogMessage, 'Please enter your email address', 'error');
-                }
-
-                // Validate email format
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    return showDialogMessage(dialogMessage, 'Please enter a valid email address', 'error');
-                }
-
-                setLoading(resetBtn, true);
-                hideDialogMessage(dialogMessage);
-
-                try {
-                    console.log('📧 Requesting reset for:', email);
-
-                    const res = await fetch(`${API_URL}/auth/request-reset`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
-                    });
-
-                    const data = await res.json();
-
-                    if (data.success) {
-                        showDialogMessage(dialogMessage, 'Reset link sent to your email!', 'success');
-                        if (resetEmail) resetEmail.value = '';
-                        
-                        if (data.resetToken) {
-                            console.log('🔑 Reset Token (dev):', data.resetToken);
-                        }
-
-                        setTimeout(() => {
-                            if (resetDialog) resetDialog.classList.remove('open');
-                            hideDialogMessage(dialogMessage);
-                            setLoading(resetBtn, false);
-                        }, 3000);
-                    } else {
-                        if (data.message && data.message.toLowerCase().includes('not found')) {
-                            showDialogMessage(dialogMessage, 'No account found with this email address.', 'error');
-                        } else {
-                            showDialogMessage(dialogMessage, data.message || 'Failed to send reset link', 'error');
-                        }
-                        setLoading(resetBtn, false);
-                    }
-                } catch (err) {
-                    console.error('❌ Reset error:', err);
-                    showDialogMessage(dialogMessage, 'Network error. Please check your connection.', 'error');
-                    setLoading(resetBtn, false);
-                }
-            });
-        }
-
-        // ============================================================
-        // CHECK FOR RESET TOKEN IN URL
-        // ============================================================
-        function checkResetToken() {
-            const params = new URLSearchParams(window.location.search);
-            const token = params.get('token');
-            if (token && resetPasswordDialog) {
-                console.log('🔑 Reset token found:', token);
-                showResetPasswordDialog(token);
-                const newUrl = window.location.pathname;
-                window.history.replaceState({}, document.title, newUrl);
+                setLoading(
+                    resetPasswordBtn,
+                    false
+                );
             }
         }
+    );
 
-        function showResetPasswordDialog(token) {
-            if (!resetPasswordDialog) return;
-            resetPasswordDialog.classList.add('open');
-            if (newPassword) newPassword.value = '';
-            if (confirmNewPassword) confirmNewPassword.value = '';
-            hideDialogMessage(resetPasswordMessage);
-            setLoading(resetPasswordBtn, false);
-            resetPasswordDialog.dataset.token = token;
-        }
 
-        // ============================================================
-        // CANCEL RESET PASSWORD DIALOG
-        // ============================================================
-        if (cancelResetPasswordBtn) {
-            cancelResetPasswordBtn.addEventListener('click', () => {
-                if (resetPasswordDialog) resetPasswordDialog.classList.remove('open');
-                hideDialogMessage(resetPasswordMessage);
-                setLoading(resetPasswordBtn, false);
-            });
-        }
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
 
-        if (resetPasswordDialog) {
-            resetPasswordDialog.addEventListener('click', (e) => {
-                if (e.target === resetPasswordDialog) {
-                    resetPasswordDialog.classList.remove('open');
-                    hideDialogMessage(resetPasswordMessage);
-                    setLoading(resetPasswordBtn, false);
-                }
-            });
-        }
+    console.log(
+        '🔗 Auth API URL:',
+        API_URL
+    );
 
-        // ============================================================
-        // RESET PASSWORD
-        // ============================================================
-        if (resetPasswordBtn) {
-            resetPasswordBtn.addEventListener('click', async () => {
-                const token = resetPasswordDialog ? resetPasswordDialog.dataset.token : null;
-                const password = newPassword ? newPassword.value : '';
-                const confirm = confirmNewPassword ? confirmNewPassword.value : '';
 
-                if (!token) {
-                    return showDialogMessage(resetPasswordMessage, 'Invalid reset token. Please try again.', 'error');
-                }
+    checkAuth();
 
-                if (!password || password.length < 8) {
-                    return showDialogMessage(resetPasswordMessage, 'Password must be at least 8 characters', 'error');
-                }
-                
-                if (password !== confirm) {
-                    return showDialogMessage(resetPasswordMessage, 'Passwords do not match', 'error');
-                }
+    checkResetToken();
 
-                setLoading(resetPasswordBtn, true);
-                hideDialogMessage(resetPasswordMessage);
 
-                try {
-                    console.log('🔐 Resetting password...');
+    // ============================================================
+    // URL MESSAGE
+    // ============================================================
 
-                    const res = await fetch(`${API_URL}/auth/reset-password`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ token, newPassword: password })
-                    });
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
 
-                    const data = await res.json();
 
-                    if (data.success) {
-                        showDialogMessage(resetPasswordMessage, 'Password reset successful!', 'success');
-                        setTimeout(() => {
-                            if (resetPasswordDialog) resetPasswordDialog.classList.remove('open');
-                            hideDialogMessage(resetPasswordMessage);
-                            setLoading(resetPasswordBtn, false);
-                            
-                            // Switch to login tab
-                            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                            const loginTab = document.querySelector('.tab-btn[data-tab="login"]');
-                            if (loginTab) loginTab.classList.add('active');
-                            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                            const loginFormEl = document.getElementById('loginForm');
-                            if (loginFormEl) loginFormEl.classList.add('active');
-                            
-                            showMessage('Password reset successfully. Please sign in.', 'success');
-                        }, 2000);
-                    } else {
-                        showDialogMessage(resetPasswordMessage, data.message || 'Failed to reset password', 'error');
-                        setLoading(resetPasswordBtn, false);
-                    }
-                } catch (err) {
-                    console.error('❌ Reset password error:', err);
-                    showDialogMessage(resetPasswordMessage, 'Network error. Please try again.', 'error');
-                    setLoading(resetPasswordBtn, false);
-                }
-            });
-        }
+    const message =
+        params.get('message');
 
-        // ============================================================
-        // UTILITY FUNCTIONS
-        // ============================================================
-        function setLoading(btn, loading) {
-            if (!btn) return;
-            
-            if (loading) {
-                btn.classList.add('loading');
-                btn.disabled = true;
-                const originalText = btn.innerHTML;
-                btn.dataset.originalText = originalText;
-                btn.innerHTML = '<span class="spinner"></span> Loading...';
-            } else {
-                btn.classList.remove('loading');
-                btn.disabled = false;
-                if (btn.dataset.originalText) {
-                    btn.innerHTML = btn.dataset.originalText;
-                } else {
-                    // Default text based on button ID
-                    if (btn.id === 'loginBtn') {
-                        btn.innerHTML = 'Sign In <i class="fa-solid fa-arrow-right"></i>';
-                    } else if (btn.id === 'registerBtn') {
-                        btn.innerHTML = 'Create Account <i class="fa-solid fa-arrow-right"></i>';
-                    } else if (btn.id === 'resetBtn') {
-                        btn.innerHTML = 'Send Reset Link';
-                    } else if (btn.id === 'resetPasswordBtn') {
-                        btn.innerHTML = 'Reset Password';
-                    }
-                }
-            }
-        }
 
-        function saveAuth(token, user) {
-            localStorage.setItem(AUTH_TOKEN_KEY, token);
-            localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
-            console.log('✅ Auth saved for user:', user.email || user.EMAIL);
-        }
+    if (message) {
 
-        // ============================================================
-        // CHECK IF ALREADY LOGGED IN
-        // ============================================================
-        function checkAuth() {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
-            const userData = localStorage.getItem(USER_DATA_KEY);
-            
-            if (token && userData) {
-                fetch(`${API_URL}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        console.log('✅ Already logged in as:', data.user.email || data.user.EMAIL);
-                        window.location.href = 'index.html';
-                    } else {
-                        localStorage.removeItem(AUTH_TOKEN_KEY);
-                        localStorage.removeItem(USER_DATA_KEY);
-                        console.log('❌ Invalid token, cleared auth data');
-                    }
-                })
-                .catch(() => {
-                    console.log('⚠️ Could not verify auth, staying on login page');
-                });
-            }
-        }
+        showMessage(
+            decodeURIComponent(message),
+            'info'
+        );
 
-        // ============================================================
-        // KEYBOARD SHORTCUTS
-        // ============================================================
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (resetDialog && resetDialog.classList.contains('open')) {
-                    resetDialog.classList.remove('open');
-                    hideDialogMessage(dialogMessage);
-                    setLoading(resetBtn, false);
-                }
-                if (resetPasswordDialog && resetPasswordDialog.classList.contains('open')) {
-                    resetPasswordDialog.classList.remove('open');
-                    hideDialogMessage(resetPasswordMessage);
-                    setLoading(resetPasswordBtn, false);
-                }
-            }
-        });
 
-        // ============================================================
-        // INIT
-        // ============================================================
-        console.log('🔗 Auth API URL:', API_URL);
-        
-        // Check if already logged in
-        checkAuth();
-        
-        // Check for reset token in URL
-        checkResetToken();
+        const newUrl =
+            window.location.pathname;
 
-        // Show initial message if any
-        const params = new URLSearchParams(window.location.search);
-        const message = params.get('message');
-        if (message) {
-            showMessage(decodeURIComponent(message), 'info');
-            const newUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, newUrl);
-        }
 
-        console.log('🎬 Savannah Cinemas Auth Page Loaded');
-        console.log('📡 API URL:', API_URL);
-        
-    }); // End of DOMContentLoaded
+        window.history.replaceState(
+            {},
+            document.title,
+            newUrl
+        );
+    }
+
+
+    console.log(
+        '🎬 Savannah Cinemas Auth Page Loaded'
+    );
+
+
+});
 </script>
 
 </body>
