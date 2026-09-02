@@ -1,4 +1,4 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -6,8 +6,6 @@ const { getConnection } = require('../config/database');
 // ============================================================
 
 async function recordMovieView(req, res) {
-
-    let connection;
 
     try {
 
@@ -38,26 +36,21 @@ async function recordMovieView(req, res) {
 
         }
 
-        connection = await getConnection();
-
         // ----------------------------------------------------
         // Verify movie exists
         // ----------------------------------------------------
 
-        const movieResult =
-            await connection.execute(
-                `
-                SELECT
-                    MOVIE_ID,
-                    TITLE,
-                    POSTER_URL
-                FROM MOVIES
-                WHERE MOVIE_ID = :movieId
-                `,
-                {
-                    movieId
-                }
-            );
+        const movieResult = await pool.query(
+            `
+            SELECT
+                movie_id,
+                title,
+                poster_url
+            FROM movies
+            WHERE movie_id = $1
+            `,
+            [movieId]
+        );
 
         if (movieResult.rows.length === 0) {
 
@@ -75,19 +68,19 @@ async function recordMovieView(req, res) {
         // Check existing view
         // ----------------------------------------------------
 
-        const existingResult =
-            await connection.execute(
-                `
-                SELECT VIEW_ID
-                FROM USER_MOVIE_VIEWS
-                WHERE USER_ID = :userId
-                  AND MOVIE_ID = :movieId
-                `,
-                {
-                    userId,
-                    movieId
-                }
-            );
+        const existingResult = await pool.query(
+            `
+            SELECT
+                view_id
+            FROM user_movie_views
+            WHERE user_id = $1
+              AND movie_id = $2
+            `,
+            [
+                userId,
+                movieId
+            ]
+        );
 
         // ----------------------------------------------------
         // Existing movie view
@@ -96,30 +89,27 @@ async function recordMovieView(req, res) {
         if (existingResult.rows.length > 0) {
 
             const viewId =
-                existingResult.rows[0][0];
+                existingResult.rows[0].view_id;
 
-            await connection.execute(
+            await pool.query(
                 `
-                UPDATE USER_MOVIE_VIEWS
+                UPDATE user_movie_views
 
                 SET
-                    VIEW_COUNT = VIEW_COUNT + 1,
-                    LAST_VIEWED_AT = CURRENT_TIMESTAMP
+                    view_count = view_count + 1,
+                    last_viewed_at = CURRENT_TIMESTAMP
 
-                WHERE VIEW_ID = :viewId
+                WHERE view_id = $1
                 `,
-                {
-                    viewId
-                }
+                [viewId]
             );
-
-            await connection.commit();
 
             return res.json({
 
                 success: true,
 
-                message: 'Movie view recorded',
+                message:
+                    'Movie view recorded',
 
                 view: {
 
@@ -128,7 +118,7 @@ async function recordMovieView(req, res) {
                     movieId,
 
                     movieTitle:
-                        movie[1],
+                        movie.title,
 
                     viewCount:
                         'incremented'
@@ -143,47 +133,35 @@ async function recordMovieView(req, res) {
         // First view
         // ----------------------------------------------------
 
-        const insertResult =
-            await connection.execute(
-                `
-                INSERT INTO USER_MOVIE_VIEWS (
-                    USER_ID,
-                    MOVIE_ID
-                )
+        const insertResult = await pool.query(
+            `
+            INSERT INTO user_movie_views (
+                user_id,
+                movie_id
+            )
 
-                VALUES (
-                    :userId,
-                    :movieId
-                )
+            VALUES (
+                $1,
+                $2
+            )
 
-                RETURNING VIEW_ID
-                INTO :viewId
-                `,
-                {
-                    userId,
-                    movieId,
-
-                    viewId: {
-                        dir:
-                            require('oracledb').BIND_OUT,
-
-                        type:
-                            require('oracledb').NUMBER
-                    }
-                }
-            );
+            RETURNING view_id
+            `,
+            [
+                userId,
+                movieId
+            ]
+        );
 
         const viewId =
-            insertResult.outBinds
-                .viewId[0];
-
-        await connection.commit();
+            insertResult.rows[0].view_id;
 
         return res.status(201).json({
 
             success: true,
 
-            message: 'Movie view recorded',
+            message:
+                'Movie view recorded',
 
             view: {
 
@@ -192,7 +170,7 @@ async function recordMovieView(req, res) {
                 movieId,
 
                 movieTitle:
-                    movie[1],
+                    movie.title,
 
                 viewCount: 1
 
@@ -207,16 +185,17 @@ async function recordMovieView(req, res) {
             error
         );
 
-        if (connection) {
+        // PostgreSQL unique constraint violation
+        if (error.code === '23505') {
 
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-            }
+            return res.status(409).json({
+
+                success: false,
+
+                message:
+                    'Movie view already exists'
+
+            });
 
         }
 
@@ -232,21 +211,6 @@ async function recordMovieView(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
@@ -258,9 +222,11 @@ async function recordMovieView(req, res) {
 
 async function getRecentlyViewedMovies(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -273,6 +239,10 @@ async function getRecentlyViewedMovies(req, res) {
 
         const userId = req.user.userId;
 
+        // ----------------------------------------------------
+        // Validate limit
+        // ----------------------------------------------------
+
         const limit =
             Math.min(
                 Math.max(
@@ -282,97 +252,86 @@ async function getRecentlyViewedMovies(req, res) {
                 50
             );
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Get recently viewed movies
+        // ----------------------------------------------------
 
-        const result =
-            await connection.execute(
-                `
-                SELECT
-                    VIEW_ID,
-                    MOVIE_ID,
-                    TITLE,
-                    ORIGINAL_TITLE,
-                    POSTER_URL,
-                    BACKDROP_URL,
-                    TRAILER_URL,
-                    RATING,
-                    STATUS,
-                    VIEW_COUNT,
-                    FIRST_VIEWED_AT,
-                    LAST_VIEWED_AT
+        const result = await pool.query(
+            `
+            SELECT
+                v.view_id,
+                m.movie_id,
+                m.title,
+                m.original_title,
+                m.poster_url,
+                m.backdrop_url,
+                m.trailer_url,
+                m.rating,
+                m.status,
+                v.view_count,
+                v.first_viewed_at,
+                v.last_viewed_at
 
-                FROM (
-                    SELECT
-                        V.VIEW_ID,
-                        M.MOVIE_ID,
-                        M.TITLE,
-                        M.ORIGINAL_TITLE,
-                        M.POSTER_URL,
-                        M.BACKDROP_URL,
-                        M.TRAILER_URL,
-                        M.RATING,
-                        M.STATUS,
-                        V.VIEW_COUNT,
-                        V.FIRST_VIEWED_AT,
-                        V.LAST_VIEWED_AT
+            FROM user_movie_views v
 
-                    FROM USER_MOVIE_VIEWS V
+            JOIN movies m
+                ON m.movie_id = v.movie_id
 
-                    JOIN MOVIES M
-                        ON M.MOVIE_ID = V.MOVIE_ID
+            WHERE v.user_id = $1
 
-                    WHERE V.USER_ID = :userId
+            ORDER BY
+                v.last_viewed_at DESC
 
-                    ORDER BY
-                        V.LAST_VIEWED_AT DESC
-                )
+            LIMIT $2
+            `,
+            [
+                userId,
+                limit
+            ]
+        );
 
-                WHERE ROWNUM <= :viewLimit
-                `,
-                {
-                    userId,
-                    viewLimit: limit
-                }
-            );
+        // ----------------------------------------------------
+        // Format response
+        // ----------------------------------------------------
 
         const movies =
             result.rows.map(row => ({
 
                 viewId:
-                    row[0],
+                    row.view_id,
 
                 movieId:
-                    row[1],
+                    row.movie_id,
 
                 title:
-                    row[2],
+                    row.title,
 
                 originalTitle:
-                    row[3],
+                    row.original_title,
 
                 posterUrl:
-                    row[4],
+                    row.poster_url,
 
                 backdropUrl:
-                    row[5],
+                    row.backdrop_url,
 
                 trailerUrl:
-                    row[6],
+                    row.trailer_url,
 
                 rating:
-                    row[7],
+                    row.rating,
 
                 status:
-                    row[8],
+                    row.status,
 
                 viewCount:
-                    row[9],
+                    row.view_count,
 
                 firstViewedAt:
-                    row[10],
+                    row.first_viewed_at,
 
                 lastViewedAt:
-                    row[11]
+                    row.last_viewed_at
 
             }));
 
@@ -380,7 +339,8 @@ async function getRecentlyViewedMovies(req, res) {
 
             success: true,
 
-            count: movies.length,
+            count:
+                movies.length,
 
             movies
 
@@ -405,21 +365,6 @@ async function getRecentlyViewedMovies(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
@@ -431,9 +376,11 @@ async function getRecentlyViewedMovies(req, res) {
 
 async function getMovieViewStatus(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -458,27 +405,32 @@ async function getMovieViewStatus(req, res) {
 
         }
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Get view status
+        // ----------------------------------------------------
 
-        const result =
-            await connection.execute(
-                `
-                SELECT
-                    VIEW_ID,
-                    VIEW_COUNT,
-                    FIRST_VIEWED_AT,
-                    LAST_VIEWED_AT
+        const result = await pool.query(
+            `
+            SELECT
+                view_id,
+                view_count,
+                first_viewed_at,
+                last_viewed_at
 
-                FROM USER_MOVIE_VIEWS
+            FROM user_movie_views
 
-                WHERE USER_ID = :userId
-                  AND MOVIE_ID = :movieId
-                `,
-                {
-                    userId,
-                    movieId
-                }
-            );
+            WHERE user_id = $1
+              AND movie_id = $2
+            `,
+            [
+                userId,
+                movieId
+            ]
+        );
+
+        // ----------------------------------------------------
+        // Movie has not been viewed
+        // ----------------------------------------------------
 
         if (result.rows.length === 0) {
 
@@ -496,6 +448,10 @@ async function getMovieViewStatus(req, res) {
 
         }
 
+        // ----------------------------------------------------
+        // Movie has been viewed
+        // ----------------------------------------------------
+
         const row =
             result.rows[0];
 
@@ -510,16 +466,16 @@ async function getMovieViewStatus(req, res) {
             view: {
 
                 viewId:
-                    row[0],
+                    row.view_id,
 
                 viewCount:
-                    row[1],
+                    row.view_count,
 
                 firstViewedAt:
-                    row[2],
+                    row.first_viewed_at,
 
                 lastViewedAt:
-                    row[3]
+                    row.last_viewed_at
 
             }
 
@@ -543,21 +499,6 @@ async function getMovieViewStatus(req, res) {
                 error.message
 
         });
-
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
 
     }
 

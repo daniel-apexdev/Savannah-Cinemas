@@ -1,13 +1,12 @@
-const { getConnection } = require('../config/database');
-
+const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
+
+
 // ============================================================
 // GET MY PROFILE
 // ============================================================
 
 async function getMyProfile(req, res) {
-
-    let connection;
 
     try {
 
@@ -26,36 +25,30 @@ async function getMyProfile(req, res) {
 
         const userId = req.user.userId;
 
-        // ----------------------------------------------------
-        // Database connection
-        // ----------------------------------------------------
-
-        connection = await getConnection();
 
         // ----------------------------------------------------
         // Get user profile
         // ----------------------------------------------------
 
-        const result = await connection.execute(
+        const result = await pool.query(
             `
             SELECT
-                USER_ID,
-                EMAIL,
-                FORENAMES,
-                SURNAME,
-                PHONE_NUMBER,
-                IS_ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
+                user_id,
+                email,
+                forenames,
+                surname,
+                phone_number,
+                is_active,
+                created_at,
+                updated_at
 
-            FROM USERS
+            FROM users
 
-            WHERE USER_ID = :userId
+            WHERE user_id = $1
             `,
-            {
-                userId
-            }
+            [userId]
         );
+
 
         // ----------------------------------------------------
         // User not found
@@ -70,20 +63,9 @@ async function getMyProfile(req, res) {
 
         }
 
+
         const row = result.rows[0];
 
-        /*
-            PROFILE SELECT INDEXES
-
-            0  USER_ID
-            1  EMAIL
-            2  FORENAMES
-            3  SURNAME
-            4  PHONE_NUMBER
-            5  IS_ACTIVE
-            6  CREATED_AT
-            7  UPDATED_AT
-        */
 
         // ----------------------------------------------------
         // Response
@@ -95,21 +77,29 @@ async function getMyProfile(req, res) {
 
             user: {
 
-                userId: row[0],
+                userId:
+                    row.user_id,
 
-                email: row[1],
+                email:
+                    row.email,
 
-                forenames: row[2],
+                forenames:
+                    row.forenames,
 
-                surname: row[3],
+                surname:
+                    row.surname,
 
-                phoneNumber: row[4],
+                phoneNumber:
+                    row.phone_number,
 
-                isActive: row[5],
+                isActive:
+                    row.is_active,
 
-                createdAt: row[6],
+                createdAt:
+                    row.created_at,
 
-                updatedAt: row[7]
+                updatedAt:
+                    row.updated_at
 
             }
 
@@ -134,25 +124,6 @@ async function getMyProfile(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
     }
 
 }
@@ -164,7 +135,7 @@ async function getMyProfile(req, res) {
 
 async function updateMyProfile(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
@@ -183,6 +154,7 @@ async function updateMyProfile(req, res) {
 
         const userId = req.user.userId;
 
+
         // ----------------------------------------------------
         // Request data
         // ----------------------------------------------------
@@ -192,6 +164,7 @@ async function updateMyProfile(req, res) {
             surname,
             phoneNumber
         } = req.body;
+
 
         // ----------------------------------------------------
         // Make sure at least one field was supplied
@@ -213,6 +186,7 @@ async function updateMyProfile(req, res) {
             });
 
         }
+
 
         // ----------------------------------------------------
         // Validate fields
@@ -237,6 +211,7 @@ async function updateMyProfile(req, res) {
 
         }
 
+
         if (
             surname !== undefined &&
             (
@@ -256,6 +231,7 @@ async function updateMyProfile(req, res) {
 
         }
 
+
         if (
             phoneNumber !== undefined &&
             phoneNumber !== null &&
@@ -273,32 +249,37 @@ async function updateMyProfile(req, res) {
 
         }
 
+
         // ----------------------------------------------------
-        // Database connection
+        // Get PostgreSQL client
         // ----------------------------------------------------
 
-        connection = await getConnection();
+        client = await pool.connect();
+
+        await client.query('BEGIN');
+
 
         // ----------------------------------------------------
         // Check user exists
         // ----------------------------------------------------
 
-        const userResult = await connection.execute(
+        const userResult = await client.query(
             `
             SELECT
-                USER_ID,
-                IS_ACTIVE
+                user_id,
+                is_active
 
-            FROM USERS
+            FROM users
 
-            WHERE USER_ID = :userId
+            WHERE user_id = $1
             `,
-            {
-                userId
-            }
+            [userId]
         );
 
+
         if (userResult.rows.length === 0) {
+
+            await client.query('ROLLBACK');
 
             return res.status(404).json({
 
@@ -311,11 +292,14 @@ async function updateMyProfile(req, res) {
 
         }
 
+
         // ----------------------------------------------------
         // Make sure account is active
         // ----------------------------------------------------
 
-        if (userResult.rows[0][1] !== 'Y') {
+        if (userResult.rows[0].is_active !== 'Y') {
+
+            await client.query('ROLLBACK');
 
             return res.status(403).json({
 
@@ -328,105 +312,130 @@ async function updateMyProfile(req, res) {
 
         }
 
+
+        // ----------------------------------------------------
+        // Prepare values
+        // ----------------------------------------------------
+
+        const forenamesValue =
+            forenames !== undefined
+                ? forenames.trim()
+                : null;
+
+        const surnameValue =
+            surname !== undefined
+                ? surname.trim()
+                : null;
+
+        const phoneNumberValue =
+            phoneNumber !== undefined
+                ? (
+                    phoneNumber === null
+                        ? null
+                        : phoneNumber.trim()
+                )
+                : null;
+
+        const phoneNumberProvided =
+            phoneNumber !== undefined;
+
+
         // ----------------------------------------------------
         // Update profile
         //
-        // NVL keeps existing values when a field
-        // was not supplied.
+        // PostgreSQL equivalent of Oracle NVL logic.
+        //
+        // Forenames/surname:
+        //   supplied  -> update
+        //   omitted   -> keep existing value
+        //
+        // Phone:
+        //   supplied string -> update
+        //   supplied null   -> clear value
+        //   omitted          -> keep existing value
         // ----------------------------------------------------
 
-        await connection.execute(
+        await client.query(
             `
-            UPDATE USERS
+            UPDATE users
 
             SET
 
-                FORENAMES =
-                    NVL(
-                        :forenames,
-                        FORENAMES
-                    ),
-
-                SURNAME =
-                    NVL(
-                        :surname,
-                        SURNAME
-                    ),
-
-                PHONE_NUMBER =
+                forenames =
                     CASE
-
-                        WHEN :phoneNumberProvided = 1
-                        THEN :phoneNumber
-
-                        ELSE PHONE_NUMBER
-
+                        WHEN $1::boolean
+                        THEN $2
+                        ELSE forenames
                     END,
 
-                UPDATED_AT =
+                surname =
+                    CASE
+                        WHEN $3::boolean
+                        THEN $4
+                        ELSE surname
+                    END,
+
+                phone_number =
+                    CASE
+                        WHEN $5::boolean
+                        THEN $6
+                        ELSE phone_number
+                    END,
+
+                updated_at =
                     CURRENT_TIMESTAMP
 
-            WHERE USER_ID = :userId
+            WHERE user_id = $7
             `,
-            {
-                userId,
+            [
+                forenames !== undefined,
+                forenamesValue,
 
-                forenames:
-                    forenames !== undefined
-                        ? forenames.trim()
-                        : null,
+                surname !== undefined,
+                surnameValue,
 
-                surname:
-                    surname !== undefined
-                        ? surname.trim()
-                        : null,
+                phoneNumberProvided,
+                phoneNumberValue,
 
-                phoneNumber:
-                    phoneNumber !== undefined
-                        ? (
-                            phoneNumber === null
-                                ? null
-                                : phoneNumber.trim()
-                        )
-                        : null,
-
-                phoneNumberProvided:
-                    phoneNumber !== undefined
-                        ? 1
-                        : 0
-            }
+                userId
+            ]
         );
 
-        await connection.commit();
 
         // ----------------------------------------------------
         // Get updated profile
         // ----------------------------------------------------
 
-        const updatedResult =
-            await connection.execute(
-                `
-                SELECT
-                    USER_ID,
-                    EMAIL,
-                    FORENAMES,
-                    SURNAME,
-                    PHONE_NUMBER,
-                    IS_ACTIVE,
-                    CREATED_AT,
-                    UPDATED_AT
+        const updatedResult = await client.query(
+            `
+            SELECT
+                user_id,
+                email,
+                forenames,
+                surname,
+                phone_number,
+                is_active,
+                created_at,
+                updated_at
 
-                FROM USERS
+            FROM users
 
-                WHERE USER_ID = :userId
-                `,
-                {
-                    userId
-                }
-            );
+            WHERE user_id = $1
+            `,
+            [userId]
+        );
+
 
         const row =
             updatedResult.rows[0];
+
+
+        // ----------------------------------------------------
+        // Commit
+        // ----------------------------------------------------
+
+        await client.query('COMMIT');
+
 
         // ----------------------------------------------------
         // Response
@@ -441,21 +450,29 @@ async function updateMyProfile(req, res) {
 
             user: {
 
-                userId: row[0],
+                userId:
+                    row.user_id,
 
-                email: row[1],
+                email:
+                    row.email,
 
-                forenames: row[2],
+                forenames:
+                    row.forenames,
 
-                surname: row[3],
+                surname:
+                    row.surname,
 
-                phoneNumber: row[4],
+                phoneNumber:
+                    row.phone_number,
 
-                isActive: row[5],
+                isActive:
+                    row.is_active,
 
-                createdAt: row[6],
+                createdAt:
+                    row.created_at,
 
-                updatedAt: row[7]
+                updatedAt:
+                    row.updated_at
 
             }
 
@@ -468,10 +485,12 @@ async function updateMyProfile(req, res) {
             error
         );
 
-        if (connection) {
+        if (client) {
 
             try {
-                await connection.rollback();
+
+                await client.query('ROLLBACK');
+
             } catch (rollbackError) {
 
                 console.error(
@@ -497,20 +516,9 @@ async function updateMyProfile(req, res) {
 
     } finally {
 
-        if (connection) {
+        if (client) {
 
-            try {
-
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
+            client.release();
 
         }
 
@@ -518,13 +526,14 @@ async function updateMyProfile(req, res) {
 
 }
 
+
 // ============================================================
 // CHANGE MY PASSWORD
 // ============================================================
 
 async function changeMyPassword(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
@@ -543,6 +552,7 @@ async function changeMyPassword(req, res) {
 
         const userId = req.user.userId;
 
+
         // ----------------------------------------------------
         // Request data
         // ----------------------------------------------------
@@ -552,15 +562,20 @@ async function changeMyPassword(req, res) {
             newPassword
         } = req.body;
 
+
         if (!currentPassword || !newPassword) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'Current password and new password are required'
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // Validate new password
@@ -569,58 +584,84 @@ async function changeMyPassword(req, res) {
         if (typeof newPassword !== 'string') {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'New password must be a valid value'
+
+                message:
+                    'New password must be a valid value'
+
             });
 
         }
+
 
         if (newPassword.length < 8) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'New password must be at least 8 characters long'
+
             });
 
         }
 
+
         // ----------------------------------------------------
-        // Database connection
+        // Get PostgreSQL client
         // ----------------------------------------------------
 
-        connection = await getConnection();
+        client = await pool.connect();
+
+        await client.query('BEGIN');
+
 
         // ----------------------------------------------------
         // Get current password hash
         // ----------------------------------------------------
 
-        const result = await connection.execute(
+        const result = await client.query(
             `
             SELECT
-                PASSWORD_HASH,
-                IS_ACTIVE
+                password_hash,
+                is_active
 
-            FROM USERS
+            FROM users
 
-            WHERE USER_ID = :userId
+            WHERE user_id = $1
             `,
-            {
-                userId
-            }
+            [userId]
         );
+
+
+        // ----------------------------------------------------
+        // User not found
+        // ----------------------------------------------------
 
         if (result.rows.length === 0) {
 
+            await client.query('ROLLBACK');
+
             return res.status(404).json({
+
                 success: false,
-                message: 'User account not found'
+
+                message:
+                    'User account not found'
+
             });
 
         }
 
-        const passwordHash = result.rows[0][0];
-        const isActive = result.rows[0][1];
+
+        const passwordHash =
+            result.rows[0].password_hash;
+
+        const isActive =
+            result.rows[0].is_active;
+
 
         // ----------------------------------------------------
         // Check account status
@@ -628,18 +669,22 @@ async function changeMyPassword(req, res) {
 
         if (isActive !== 'Y') {
 
+            await client.query('ROLLBACK');
+
             return res.status(403).json({
+
                 success: false,
-                message: 'This user account is inactive'
+
+                message:
+                    'This user account is inactive'
+
             });
 
         }
 
+
         // ----------------------------------------------------
         // Verify current password
-        //
-        // IMPORTANT:
-        // Use the same bcrypt library your login system uses.
         // ----------------------------------------------------
 
         const passwordMatch =
@@ -648,14 +693,22 @@ async function changeMyPassword(req, res) {
                 passwordHash
             );
 
+
         if (!passwordMatch) {
 
+            await client.query('ROLLBACK');
+
             return res.status(401).json({
+
                 success: false,
-                message: 'Current password is incorrect'
+
+                message:
+                    'Current password is incorrect'
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // Make sure new password is different
@@ -667,15 +720,22 @@ async function changeMyPassword(req, res) {
                 passwordHash
             );
 
+
         if (samePassword) {
 
+            await client.query('ROLLBACK');
+
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'New password must be different from your current password'
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // Hash new password
@@ -687,35 +747,39 @@ async function changeMyPassword(req, res) {
                 12
             );
 
+
         // ----------------------------------------------------
         // Update password
         // ----------------------------------------------------
 
-        await connection.execute(
+        await client.query(
             `
-            UPDATE USERS
+            UPDATE users
 
             SET
-                PASSWORD_HASH = :passwordHash,
-                UPDATED_AT = CURRENT_TIMESTAMP
+                password_hash = $1,
+                updated_at = CURRENT_TIMESTAMP
 
-            WHERE USER_ID = :userId
+            WHERE user_id = $2
             `,
-            {
-                passwordHash: newPasswordHash,
+            [
+                newPasswordHash,
                 userId
-            }
+            ]
         );
+
 
         // ----------------------------------------------------
         // Commit
         // ----------------------------------------------------
 
-        await connection.commit();
+        await client.query('COMMIT');
+
 
         console.log(
             `🔐 Password changed successfully | User: ${userId}`
         );
+
 
         // ----------------------------------------------------
         // Response
@@ -737,10 +801,12 @@ async function changeMyPassword(req, res) {
             error
         );
 
-        if (connection) {
+        if (client) {
 
             try {
-                await connection.rollback();
+
+                await client.query('ROLLBACK');
+
             } catch (rollbackError) {
 
                 console.error(
@@ -766,26 +832,16 @@ async function changeMyPassword(req, res) {
 
     } finally {
 
-        if (connection) {
+        if (client) {
 
-            try {
-
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
+            client.release();
 
         }
 
     }
 
 }
+
 
 // ============================================================
 // EXPORT

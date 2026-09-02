@@ -1,5 +1,5 @@
-const { getConnection } = require('../config/database');
-const oracledb = require('oracledb');
+js
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -7,8 +7,6 @@ const oracledb = require('oracledb');
 // ============================================================
 
 async function createReview(req, res) {
-
-    let connection;
 
     try {
 
@@ -68,8 +66,10 @@ async function createReview(req, res) {
 
         let cleanedReviewText = null;
 
-        if (reviewText !== undefined &&
-            reviewText !== null) {
+        if (
+            reviewText !== undefined &&
+            reviewText !== null
+        ) {
 
             cleanedReviewText =
                 String(reviewText).trim();
@@ -87,31 +87,23 @@ async function createReview(req, res) {
             if (cleanedReviewText.length === 0) {
                 cleanedReviewText = null;
             }
+
         }
-
-        // ----------------------------------------------------
-        // Database
-        // ----------------------------------------------------
-
-        connection = await getConnection();
 
         // ----------------------------------------------------
         // Verify movie exists
         // ----------------------------------------------------
 
-        const movieResult =
-            await connection.execute(
-                `
-                SELECT
-                    MOVIE_ID,
-                    TITLE
-                FROM MOVIES
-                WHERE MOVIE_ID = :movieId
-                `,
-                {
-                    movieId: parsedMovieId
-                }
-            );
+        const movieResult = await pool.query(
+            `
+            SELECT
+                movie_id,
+                title
+            FROM movies
+            WHERE movie_id = $1
+            `,
+            [parsedMovieId]
+        );
 
         if (movieResult.rows.length === 0) {
 
@@ -123,26 +115,25 @@ async function createReview(req, res) {
         }
 
         const movieTitle =
-            movieResult.rows[0][1];
+            movieResult.rows[0].title;
 
         // ----------------------------------------------------
         // Check existing review
         // ----------------------------------------------------
 
-        const existingResult =
-            await connection.execute(
-                `
-                SELECT
-                    REVIEW_ID
-                FROM MOVIE_REVIEWS
-                WHERE USER_ID = :userId
-                  AND MOVIE_ID = :movieId
-                `,
-                {
-                    userId,
-                    movieId: parsedMovieId
-                }
-            );
+        const existingResult = await pool.query(
+            `
+            SELECT
+                review_id
+            FROM movie_reviews
+            WHERE user_id = $1
+              AND movie_id = $2
+            `,
+            [
+                userId,
+                parsedMovieId
+            ]
+        );
 
         if (existingResult.rows.length > 0) {
 
@@ -151,7 +142,7 @@ async function createReview(req, res) {
                 message:
                     'You have already reviewed this movie',
                 reviewId:
-                    existingResult.rows[0][0]
+                    existingResult.rows[0].review_id
             });
 
         }
@@ -160,52 +151,34 @@ async function createReview(req, res) {
         // Create review
         // ----------------------------------------------------
 
-        const result =
-            await connection.execute(
-                `
-                INSERT INTO MOVIE_REVIEWS (
-                    USER_ID,
-                    MOVIE_ID,
-                    RATING,
-                    REVIEW_TEXT,
-                    STATUS
-                )
-                VALUES (
-                    :userId,
-                    :movieId,
-                    :rating,
-                    :reviewText,
-                    'PUBLISHED'
-                )
-                RETURNING REVIEW_ID
-                INTO :reviewId
-                `,
-                {
-                    userId,
-
-                    movieId:
-                        parsedMovieId,
-
-                    rating:
-                        parsedRating,
-
-                    reviewText:
-                        cleanedReviewText,
-
-                    reviewId: {
-                        dir:
-                            oracledb.BIND_OUT,
-
-                        type:
-                            oracledb.NUMBER
-                    }
-                }
-            );
+        const result = await pool.query(
+            `
+            INSERT INTO movie_reviews (
+                user_id,
+                movie_id,
+                rating,
+                review_text,
+                status
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                'PUBLISHED'
+            )
+            RETURNING review_id
+            `,
+            [
+                userId,
+                parsedMovieId,
+                parsedRating,
+                cleanedReviewText
+            ]
+        );
 
         const reviewId =
-            result.outBinds.reviewId[0];
-
-        await connection.commit();
+            result.rows[0].review_id;
 
         return res.status(201).json({
 
@@ -245,21 +218,8 @@ async function createReview(req, res) {
             error
         );
 
-        if (connection) {
-
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-
-            }
-        }
-
-        if (error.errorNum === 1) {
+        // PostgreSQL unique constraint violation
+        if (error.code === '23505') {
 
             return res.status(409).json({
                 success: false,
@@ -281,23 +241,6 @@ async function createReview(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
     }
 
 }
@@ -308,8 +251,6 @@ async function createReview(req, res) {
 // ============================================================
 
 async function getMovieReviews(req, res) {
-
-    let connection;
 
     try {
 
@@ -325,60 +266,55 @@ async function getMovieReviews(req, res) {
 
         }
 
-        connection = await getConnection();
+        const result = await pool.query(
+            `
+            SELECT
+                r.review_id,
+                r.user_id,
+                u.forenames,
+                u.surname,
+                r.rating,
+                r.review_text,
+                r.created_at,
+                r.updated_at
 
-        const result =
-            await connection.execute(
-                `
-                SELECT
-                    R.REVIEW_ID,
-                    R.USER_ID,
-                    U.FORENAMES,
-                    U.SURNAME,
-                    R.RATING,
-                    R.REVIEW_TEXT,
-                    R.CREATED_AT,
-                    R.UPDATED_AT
+            FROM movie_reviews r
 
-                FROM MOVIE_REVIEWS R
+            JOIN users u
+                ON u.user_id = r.user_id
 
-                JOIN USERS U
-                    ON U.USER_ID = R.USER_ID
+            WHERE r.movie_id = $1
+              AND r.status = 'PUBLISHED'
 
-                WHERE R.MOVIE_ID = :movieId
-                  AND R.STATUS = 'PUBLISHED'
-
-                ORDER BY
-                    R.CREATED_AT DESC
-                `,
-                {
-                    movieId
-                }
-            );
+            ORDER BY
+                r.created_at DESC
+            `,
+            [movieId]
+        );
 
         const reviews =
             result.rows.map(row => ({
 
                 reviewId:
-                    row[0],
+                    row.review_id,
 
                 userId:
-                    row[1],
+                    row.user_id,
 
                 customerName:
-                    `${row[2]} ${row[3]}`,
+                    `${row.forenames} ${row.surname}`,
 
                 rating:
-                    row[4],
+                    row.rating,
 
                 reviewText:
-                    row[5],
+                    row.review_text,
 
                 createdAt:
-                    row[6],
+                    row.created_at,
 
                 updatedAt:
-                    row[7]
+                    row.updated_at
 
             }));
 
@@ -414,23 +350,6 @@ async function getMovieReviews(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
     }
 
 }
@@ -442,9 +361,11 @@ async function getMovieReviews(req, res) {
 
 async function updateReview(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -456,6 +377,10 @@ async function updateReview(req, res) {
         }
 
         const userId = req.user.userId;
+
+        // ----------------------------------------------------
+        // Request data
+        // ----------------------------------------------------
 
         const reviewId =
             Number(req.params.reviewId);
@@ -489,10 +414,16 @@ async function updateReview(req, res) {
 
         }
 
+        // ----------------------------------------------------
+        // Validate review text
+        // ----------------------------------------------------
+
         let cleanedReviewText = null;
 
-        if (reviewText !== undefined &&
-            reviewText !== null) {
+        if (
+            reviewText !== undefined &&
+            reviewText !== null
+        ) {
 
             cleanedReviewText =
                 String(reviewText).trim();
@@ -510,38 +441,35 @@ async function updateReview(req, res) {
             if (cleanedReviewText.length === 0) {
                 cleanedReviewText = null;
             }
+
         }
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Update review
+        // ----------------------------------------------------
 
-        const result =
-            await connection.execute(
-                `
-                UPDATE MOVIE_REVIEWS
+        const result = await pool.query(
+            `
+            UPDATE movie_reviews
 
-                SET
-                    RATING = :rating,
-                    REVIEW_TEXT = :reviewText,
-                    UPDATED_AT = CURRENT_TIMESTAMP
+            SET
+                rating = $1,
+                review_text = $2,
+                updated_at = CURRENT_TIMESTAMP
 
-                WHERE REVIEW_ID = :reviewId
-                  AND USER_ID = :userId
-                  AND STATUS = 'PUBLISHED'
-                `,
-                {
-                    rating:
-                        parsedRating,
+            WHERE review_id = $3
+              AND user_id = $4
+              AND status = 'PUBLISHED'
+            `,
+            [
+                parsedRating,
+                cleanedReviewText,
+                reviewId,
+                userId
+            ]
+        );
 
-                    reviewText:
-                        cleanedReviewText,
-
-                    reviewId,
-
-                    userId
-                }
-            );
-
-        if (result.rowsAffected === 0) {
+        if (result.rowCount === 0) {
 
             return res.status(404).json({
                 success: false,
@@ -549,8 +477,6 @@ async function updateReview(req, res) {
             });
 
         }
-
-        await connection.commit();
 
         return res.json({
 
@@ -580,21 +506,6 @@ async function updateReview(req, res) {
             error
         );
 
-        if (connection) {
-
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-
-            }
-
-        }
-
         return res.status(500).json({
 
             success: false,
@@ -607,23 +518,6 @@ async function updateReview(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
     }
 
 }
@@ -635,9 +529,11 @@ async function updateReview(req, res) {
 
 async function deleteReview(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -649,6 +545,10 @@ async function deleteReview(req, res) {
         }
 
         const userId = req.user.userId;
+
+        // ----------------------------------------------------
+        // Request data
+        // ----------------------------------------------------
 
         const reviewId =
             Number(req.params.reviewId);
@@ -662,27 +562,28 @@ async function deleteReview(req, res) {
 
         }
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Soft delete review
+        // ----------------------------------------------------
 
-        const result =
-            await connection.execute(
-                `
-                UPDATE MOVIE_REVIEWS
+        const result = await pool.query(
+            `
+            UPDATE movie_reviews
 
-                SET
-                    STATUS = 'DELETED',
-                    UPDATED_AT = CURRENT_TIMESTAMP
+            SET
+                status = 'DELETED',
+                updated_at = CURRENT_TIMESTAMP
 
-                WHERE REVIEW_ID = :reviewId
-                  AND USER_ID = :userId
-                `,
-                {
-                    reviewId,
-                    userId
-                }
-            );
+            WHERE review_id = $1
+              AND user_id = $2
+            `,
+            [
+                reviewId,
+                userId
+            ]
+        );
 
-        if (result.rowsAffected === 0) {
+        if (result.rowCount === 0) {
 
             return res.status(404).json({
                 success: false,
@@ -690,8 +591,6 @@ async function deleteReview(req, res) {
             });
 
         }
-
-        await connection.commit();
 
         return res.json({
 
@@ -709,48 +608,17 @@ async function deleteReview(req, res) {
             error
         );
 
-        if (connection) {
-
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-
-            }
-        }
-
         return res.status(500).json({
 
             success: false,
 
             message:
-                'Server error deleting review',
+                'Server error deleting movie review',
 
             error:
                 error.message
 
         });
-
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
 
     }
 
@@ -763,3 +631,4 @@ module.exports = {
     updateReview,
     deleteReview
 };
+

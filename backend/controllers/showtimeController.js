@@ -1,4 +1,4 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -7,105 +7,132 @@ const { getConnection } = require('../config/database');
 
 async function getShowtimes(req, res) {
 
-    let connection;
-
     try {
 
-        connection = await getConnection();
-
-        const result = await connection.execute(
+        const result = await pool.query(
             `
             SELECT
-                ST.SHOWTIME_ID,
-                ST.MOVIE_ID,
-                M.TITLE,
-                M.POSTER_URL,
+                st.showtime_id,
+                st.movie_id,
+                m.title,
+                m.poster_url,
 
-                ST.CINEMA_ID,
-                C.CINEMA_NAME,
+                st.cinema_id,
+                c.cinema_name,
 
-                ST.SCREEN_ID,
-                S.SCREEN_NAME,
-                S.SCREEN_NUMBER,
+                st.screen_id,
+                s.screen_name,
+                s.screen_number,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                st.show_date,
+                st.start_time,
+                st.end_time,
 
-                ST.TICKET_PRICE,
-                ST.STATUS,
-                ST.IS_ACTIVE
+                st.ticket_price,
+                st.status,
+                st.is_active
 
-            FROM SHOWTIMES ST
+            FROM showtimes st
 
-            JOIN MOVIES M
-                ON M.MOVIE_ID = ST.MOVIE_ID
+            JOIN movies m
+                ON m.movie_id = st.movie_id
 
-            JOIN CINEMAS C
-                ON C.CINEMA_ID = ST.CINEMA_ID
+            JOIN cinemas c
+                ON c.cinema_id = st.cinema_id
 
-            JOIN SCREENS S
-                ON S.SCREEN_ID = ST.SCREEN_ID
+            JOIN screens s
+                ON s.screen_id = st.screen_id
 
-            WHERE ST.IS_ACTIVE = 'Y'
+            WHERE st.is_active = 'Y'
 
             ORDER BY
-                ST.SHOW_DATE,
-                ST.START_TIME
+                st.show_date,
+                st.start_time
             `
         );
 
-        const showtimes = result.rows.map(row => ({
-            showtimeId: row[0],
-            movieId: row[1],
-            movieTitle: row[2],
-            posterUrl: row[3],
+        const showtimes =
+            result.rows.map(row => ({
 
-            cinemaId: row[4],
-            cinemaName: row[5],
+                showtimeId:
+                    row.showtime_id,
 
-            screenId: row[6],
-            screenName: row[7],
-            screenNumber: row[8],
+                movieId:
+                    row.movie_id,
 
-            showDate: row[9],
-            startTime: row[10],
-            endTime: row[11],
+                movieTitle:
+                    row.title,
 
-            ticketPrice: row[12],
-            status: row[13],
-            isActive: row[14] === 'Y'
-        }));
+                posterUrl:
+                    row.poster_url,
 
-        res.json({
+                cinemaId:
+                    row.cinema_id,
+
+                cinemaName:
+                    row.cinema_name,
+
+                screenId:
+                    row.screen_id,
+
+                screenName:
+                    row.screen_name,
+
+                screenNumber:
+                    row.screen_number,
+
+                showDate:
+                    row.show_date,
+
+                startTime:
+                    row.start_time,
+
+                endTime:
+                    row.end_time,
+
+                ticketPrice:
+                    row.ticket_price,
+
+                status:
+                    row.status,
+
+                isActive:
+                    row.is_active === 'Y'
+
+            }));
+
+        return res.json({
+
             success: true,
-            count: showtimes.length,
+
+            count:
+                showtimes.length,
+
             showtimes
+
         });
 
     } catch (error) {
 
-        console.error('❌ Get showtimes error:', error);
+        console.error(
+            '❌ Get showtimes error:',
+            error
+        );
 
-        res.status(500).json({
+        return res.status(500).json({
+
             success: false,
-            message: 'Server error fetching showtimes',
-            error: error.message
+
+            message:
+                'Server error fetching showtimes',
+
+            error:
+                error.message
+
         });
 
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing showtime connection:',
-                    error.message
-                );
-            }
-        }
     }
+
 }
 
 
@@ -115,198 +142,200 @@ async function getShowtimes(req, res) {
 
 async function getShowtimeSeats(req, res) {
 
-    let connection;
-
     try {
 
-        const showtimeId = Number(req.params.showtimeId);
+        const showtimeId =
+            Number(req.params.showtimeId);
 
         if (!Number.isInteger(showtimeId)) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Invalid showtime ID'
+
+                message:
+                    'Invalid showtime ID'
+
             });
 
         }
 
-        connection = await getConnection();
 
         // ----------------------------------------------------
         // Get showtime information
         // ----------------------------------------------------
 
-        const showtimeResult = await connection.execute(
-            `
-            SELECT
-                ST.SHOWTIME_ID,
-                ST.MOVIE_ID,
-                M.TITLE,
+        const showtimeResult =
+            await pool.query(
+                `
+                SELECT
+                    st.showtime_id,
+                    st.movie_id,
+                    m.title,
 
-                ST.CINEMA_ID,
-                C.CINEMA_NAME,
+                    st.cinema_id,
+                    c.cinema_name,
 
-                ST.SCREEN_ID,
-                S.SCREEN_NAME,
-                S.CAPACITY,
+                    st.screen_id,
+                    s.screen_name,
+                    s.capacity,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                    st.show_date,
+                    st.start_time,
+                    st.end_time,
 
-                ST.TICKET_PRICE,
-                ST.STATUS,
-                ST.IS_ACTIVE
+                    st.ticket_price,
+                    st.status,
+                    st.is_active
 
-            FROM SHOWTIMES ST
+                FROM showtimes st
 
-            JOIN MOVIES M
-                ON M.MOVIE_ID = ST.MOVIE_ID
+                JOIN movies m
+                    ON m.movie_id = st.movie_id
 
-            JOIN CINEMAS C
-                ON C.CINEMA_ID = ST.CINEMA_ID
+                JOIN cinemas c
+                    ON c.cinema_id = st.cinema_id
 
-            JOIN SCREENS S
-                ON S.SCREEN_ID = ST.SCREEN_ID
+                JOIN screens s
+                    ON s.screen_id = st.screen_id
 
-            WHERE ST.SHOWTIME_ID = :showtimeId
-            `,
-            {
-                showtimeId
-            }
-        );
+                WHERE st.showtime_id = $1
+                `,
+                [showtimeId]
+            );
 
-        if (showtimeResult.rows.length === 0) {
+        if (
+            showtimeResult.rows.length === 0
+        ) {
 
             return res.status(404).json({
+
                 success: false,
-                message: 'Showtime not found'
+
+                message:
+                    'Showtime not found'
+
             });
 
         }
 
-        const showtime = showtimeResult.rows[0];
+        const showtime =
+            showtimeResult.rows[0];
 
-        /*
-            INDEXES
-
-            0  SHOWTIME_ID
-            1  MOVIE_ID
-            2  MOVIE TITLE
-            3  CINEMA_ID
-            4  CINEMA_NAME
-            5  SCREEN_ID
-            6  SCREEN_NAME
-            7  CAPACITY
-            8  SHOW_DATE
-            9  START_TIME
-            10 END_TIME
-            11 TICKET_PRICE
-            12 STATUS
-            13 IS_ACTIVE
-        */
 
         // ----------------------------------------------------
         // Get all seats for screen
         // ----------------------------------------------------
 
-        const seatsResult = await connection.execute(
-            `
-            SELECT
-                SEAT_ID,
-                ROW_LABEL,
-                SEAT_NUMBER,
-                SEAT_LABEL,
-                SEAT_TYPE,
-                IS_ACTIVE
+        const seatsResult =
+            await pool.query(
+                `
+                SELECT
+                    seat_id,
+                    row_label,
+                    seat_number,
+                    seat_label,
+                    seat_type,
+                    is_active
 
-            FROM SEATS
+                FROM seats
 
-            WHERE SCREEN_ID = :screenId
+                WHERE screen_id = $1
 
-            ORDER BY
-                ROW_LABEL,
-                SEAT_NUMBER
-            `,
-            {
-                screenId: showtime[5]
-            }
-        );
+                ORDER BY
+                    row_label,
+                    seat_number
+                `,
+                [showtime.screen_id]
+            );
+
 
         // ----------------------------------------------------
         // Get booked seats
         // ----------------------------------------------------
 
-        const bookedResult = await connection.execute(
-            `
-            SELECT
-                BS.SEAT_ID
+        const bookedResult =
+            await pool.query(
+                `
+                SELECT
+                    bs.seat_id
 
-            FROM BOOKING_SEATS BS
+                FROM booking_seats bs
 
-            JOIN BOOKINGS B
-                ON B.BOOKING_ID = BS.BOOKING_ID
+                JOIN bookings b
+                    ON b.booking_id = bs.booking_id
 
-            WHERE BS.SHOWTIME_ID = :showtimeId
+                WHERE bs.showtime_id = $1
 
-              AND B.STATUS IN (
-                  'PENDING',
-                  'CONFIRMED'
-              )
-            `,
-            {
-                showtimeId
-            }
-        );
+                  AND b.status IN (
+                      'PENDING',
+                      'CONFIRMED'
+                  )
+                `,
+                [showtimeId]
+            );
 
         const bookedSeatIds =
             new Set(
                 bookedResult.rows.map(
-                    row => row[0]
+                    row => row.seat_id
                 )
             );
+
 
         // ----------------------------------------------------
         // Build seat map
         // ----------------------------------------------------
 
-        const seats = seatsResult.rows.map(
-            seat => {
+        const seats =
+            seatsResult.rows.map(
+                seat => {
 
-                const seatId = seat[0];
+                    const seatId =
+                        seat.seat_id;
 
-                let status = 'AVAILABLE';
+                    let status =
+                        'AVAILABLE';
 
-                if (seat[5] !== 'Y') {
+                    if (
+                        seat.is_active !== 'Y'
+                    ) {
 
-                    status = 'INACTIVE';
+                        status =
+                            'INACTIVE';
 
-                } else if (
-                    bookedSeatIds.has(seatId)
-                ) {
+                    } else if (
+                        bookedSeatIds.has(seatId)
+                    ) {
 
-                    status = 'BOOKED';
+                        status =
+                            'BOOKED';
+
+                    }
+
+                    return {
+
+                        seatId,
+
+                        rowLabel:
+                            seat.row_label,
+
+                        seatNumber:
+                            seat.seat_number,
+
+                        seatLabel:
+                            seat.seat_label,
+
+                        seatType:
+                            seat.seat_type,
+
+                        status
+
+                    };
 
                 }
+            );
 
-                return {
-
-                    seatId,
-
-                    rowLabel: seat[1],
-
-                    seatNumber: seat[2],
-
-                    seatLabel: seat[3],
-
-                    seatType: seat[4],
-
-                    status
-
-                };
-
-            }
-        );
 
         // ----------------------------------------------------
         // Calculate availability
@@ -314,66 +343,99 @@ async function getShowtimeSeats(req, res) {
 
         const activeSeats =
             seats.filter(
-                seat => seat.status !== 'INACTIVE'
+                seat =>
+                    seat.status !== 'INACTIVE'
             );
 
         const availableSeats =
             seats.filter(
-                seat => seat.status === 'AVAILABLE'
+                seat =>
+                    seat.status === 'AVAILABLE'
             );
 
         const bookedSeats =
             seats.filter(
-                seat => seat.status === 'BOOKED'
+                seat =>
+                    seat.status === 'BOOKED'
             );
+
 
         // ----------------------------------------------------
         // Response
         // ----------------------------------------------------
 
-        res.json({
+        return res.json({
 
             success: true,
 
             showtime: {
 
-                showtimeId: showtime[0],
+                showtimeId:
+                    showtime.showtime_id,
 
                 movie: {
-                    movieId: showtime[1],
-                    title: showtime[2]
+
+                    movieId:
+                        showtime.movie_id,
+
+                    title:
+                        showtime.title
+
                 },
 
                 cinema: {
-                    cinemaId: showtime[3],
-                    name: showtime[4]
+
+                    cinemaId:
+                        showtime.cinema_id,
+
+                    name:
+                        showtime.cinema_name
+
                 },
 
                 screen: {
-                    screenId: showtime[5],
-                    name: showtime[6],
-                    capacity: showtime[7]
+
+                    screenId:
+                        showtime.screen_id,
+
+                    name:
+                        showtime.screen_name,
+
+                    capacity:
+                        showtime.capacity
+
                 },
 
-                showDate: showtime[8],
-                startTime: showtime[9],
-                endTime: showtime[10],
+                showDate:
+                    showtime.show_date,
 
-                ticketPrice: showtime[11],
+                startTime:
+                    showtime.start_time,
 
-                status: showtime[12],
+                endTime:
+                    showtime.end_time,
 
-                isActive: showtime[13]
+                ticketPrice:
+                    showtime.ticket_price,
+
+                status:
+                    showtime.status,
+
+                isActive:
+                    showtime.is_active === 'Y'
 
             },
 
             summary: {
 
-                capacity: showtime[7],
+                capacity:
+                    showtime.capacity,
 
-                totalSeats: seats.length,
+                totalSeats:
+                    seats.length,
 
-                activeSeats: activeSeats.length,
+                activeSeats:
+                    activeSeats.length,
 
                 availableSeats:
                     availableSeats.length,
@@ -394,38 +456,22 @@ async function getShowtimeSeats(req, res) {
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
 
             success: false,
 
             message:
                 'Server error fetching showtime seats',
 
-            error: error.message
+            error:
+                error.message
 
         });
-
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
 
     }
 
 }
+
 
 // ============================================================
 // GET SHOWTIME BY ID
@@ -433,133 +479,172 @@ async function getShowtimeSeats(req, res) {
 
 async function getShowtimeById(req, res) {
 
-    let connection;
-
     try {
 
-        const showtimeId = Number(req.params.showtimeId);
+        const showtimeId =
+            Number(req.params.showtimeId);
 
         if (!Number.isInteger(showtimeId)) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Invalid showtime ID'
+
+                message:
+                    'Invalid showtime ID'
+
             });
 
         }
 
-        connection = await getConnection();
+        const result =
+            await pool.query(
+                `
+                SELECT
+                    st.showtime_id,
+                    st.movie_id,
+                    m.title,
+                    m.poster_url,
 
-        const result = await connection.execute(
-            `
-            SELECT
-                ST.SHOWTIME_ID,
-                ST.MOVIE_ID,
-                M.TITLE,
-                M.POSTER_URL,
+                    st.cinema_id,
+                    c.cinema_name,
 
-                ST.CINEMA_ID,
-                C.CINEMA_NAME,
+                    st.screen_id,
+                    s.screen_name,
+                    s.screen_number,
+                    s.capacity,
 
-                ST.SCREEN_ID,
-                S.SCREEN_NAME,
-                S.SCREEN_NUMBER,
-                S.CAPACITY,
+                    st.show_date,
+                    st.start_time,
+                    st.end_time,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                    st.ticket_price,
+                    st.status,
+                    st.is_active
 
-                ST.TICKET_PRICE,
-                ST.STATUS,
-                ST.IS_ACTIVE
+                FROM showtimes st
 
-            FROM SHOWTIMES ST
+                JOIN movies m
+                    ON m.movie_id = st.movie_id
 
-            JOIN MOVIES M
-                ON M.MOVIE_ID = ST.MOVIE_ID
+                JOIN cinemas c
+                    ON c.cinema_id = st.cinema_id
 
-            JOIN CINEMAS C
-                ON C.CINEMA_ID = ST.CINEMA_ID
+                JOIN screens s
+                    ON s.screen_id = st.screen_id
 
-            JOIN SCREENS S
-                ON S.SCREEN_ID = ST.SCREEN_ID
-
-            WHERE ST.SHOWTIME_ID = :showtimeId
-            `,
-            {
-                showtimeId
-            }
-        );
+                WHERE st.showtime_id = $1
+                `,
+                [showtimeId]
+            );
 
         if (result.rows.length === 0) {
 
             return res.status(404).json({
+
                 success: false,
-                message: 'Showtime not found'
+
+                message:
+                    'Showtime not found'
+
             });
 
         }
 
-        const row = result.rows[0];
+        const row =
+            result.rows[0];
 
-        res.json({
+        return res.json({
+
             success: true,
 
             showtime: {
-                showtimeId: row[0],
+
+                showtimeId:
+                    row.showtime_id,
 
                 movie: {
-                    movieId: row[1],
-                    title: row[2],
-                    posterUrl: row[3]
+
+                    movieId:
+                        row.movie_id,
+
+                    title:
+                        row.title,
+
+                    posterUrl:
+                        row.poster_url
+
                 },
 
                 cinema: {
-                    cinemaId: row[4],
-                    name: row[5]
+
+                    cinemaId:
+                        row.cinema_id,
+
+                    name:
+                        row.cinema_name
+
                 },
 
                 screen: {
-                    screenId: row[6],
-                    name: row[7],
-                    number: row[8],
-                    capacity: row[9]
+
+                    screenId:
+                        row.screen_id,
+
+                    name:
+                        row.screen_name,
+
+                    number:
+                        row.screen_number,
+
+                    capacity:
+                        row.capacity
+
                 },
 
-                showDate: row[10],
-                startTime: row[11],
-                endTime: row[12],
+                showDate:
+                    row.show_date,
 
-                ticketPrice: row[13],
-                status: row[14],
-                isActive: row[15] === 'Y'
+                startTime:
+                    row.start_time,
+
+                endTime:
+                    row.end_time,
+
+                ticketPrice:
+                    row.ticket_price,
+
+                status:
+                    row.status,
+
+                isActive:
+                    row.is_active === 'Y'
+
             }
+
         });
 
     } catch (error) {
 
-        console.error('❌ Get showtime error:', error);
+        console.error(
+            '❌ Get showtime error:',
+            error
+        );
 
-        res.status(500).json({
+        return res.status(500).json({
+
             success: false,
-            message: 'Server error fetching showtime',
-            error: error.message
+
+            message:
+                'Server error fetching showtime',
+
+            error:
+                error.message
+
         });
 
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-        }
     }
+
 }
 
 
@@ -569,85 +654,112 @@ async function getShowtimeById(req, res) {
 
 async function getMovieShowtimes(req, res) {
 
-    let connection;
-
     try {
 
-        const movieId = Number(req.params.movieId);
+        const movieId =
+            Number(req.params.movieId);
 
         if (!Number.isInteger(movieId)) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Invalid movie ID'
+
+                message:
+                    'Invalid movie ID'
+
             });
 
         }
 
-        connection = await getConnection();
+        const result =
+            await pool.query(
+                `
+                SELECT
+                    st.showtime_id,
+                    st.movie_id,
 
-        const result = await connection.execute(
-            `
-            SELECT
-                ST.SHOWTIME_ID,
-                ST.MOVIE_ID,
+                    st.cinema_id,
+                    c.cinema_name,
 
-                ST.CINEMA_ID,
-                C.CINEMA_NAME,
+                    st.screen_id,
+                    s.screen_name,
 
-                ST.SCREEN_ID,
-                S.SCREEN_NAME,
+                    st.show_date,
+                    st.start_time,
+                    st.end_time,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                    st.ticket_price,
+                    st.status
 
-                ST.TICKET_PRICE,
-                ST.STATUS
+                FROM showtimes st
 
-            FROM SHOWTIMES ST
+                JOIN cinemas c
+                    ON c.cinema_id = st.cinema_id
 
-            JOIN CINEMAS C
-                ON C.CINEMA_ID = ST.CINEMA_ID
+                JOIN screens s
+                    ON s.screen_id = st.screen_id
 
-            JOIN SCREENS S
-                ON S.SCREEN_ID = ST.SCREEN_ID
+                WHERE st.movie_id = $1
 
-            WHERE ST.MOVIE_ID = :movieId
-              AND ST.IS_ACTIVE = 'Y'
+                  AND st.is_active = 'Y'
 
-            ORDER BY
-                ST.SHOW_DATE,
-                ST.START_TIME
-            `,
-            {
-                movieId
-            }
-        );
+                ORDER BY
+                    st.show_date,
+                    st.start_time
+                `,
+                [movieId]
+            );
 
-        const showtimes = result.rows.map(row => ({
-            showtimeId: row[0],
-            movieId: row[1],
+        const showtimes =
+            result.rows.map(row => ({
 
-            cinemaId: row[2],
-            cinemaName: row[3],
+                showtimeId:
+                    row.showtime_id,
 
-            screenId: row[4],
-            screenName: row[5],
+                movieId:
+                    row.movie_id,
 
-            showDate: row[6],
-            startTime: row[7],
-            endTime: row[8],
+                cinemaId:
+                    row.cinema_id,
 
-            ticketPrice: row[9],
-            status: row[10]
-        }));
+                cinemaName:
+                    row.cinema_name,
 
-        res.json({
+                screenId:
+                    row.screen_id,
+
+                screenName:
+                    row.screen_name,
+
+                showDate:
+                    row.show_date,
+
+                startTime:
+                    row.start_time,
+
+                endTime:
+                    row.end_time,
+
+                ticketPrice:
+                    row.ticket_price,
+
+                status:
+                    row.status
+
+            }));
+
+        return res.json({
+
             success: true,
+
             movieId,
-            count: showtimes.length,
+
+            count:
+                showtimes.length,
+
             showtimes
+
         });
 
     } catch (error) {
@@ -657,20 +769,20 @@ async function getMovieShowtimes(req, res) {
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
+
             success: false,
-            message: 'Server error fetching movie showtimes',
-            error: error.message
+
+            message:
+                'Server error fetching movie showtimes',
+
+            error:
+                error.message
+
         });
 
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {}
-        }
     }
+
 }
 
 
@@ -680,90 +792,120 @@ async function getMovieShowtimes(req, res) {
 
 async function getCinemaShowtimes(req, res) {
 
-    let connection;
-
     try {
 
-        const cinemaId = Number(req.params.cinemaId);
+        const cinemaId =
+            Number(req.params.cinemaId);
 
         if (!Number.isInteger(cinemaId)) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Invalid cinema ID'
+
+                message:
+                    'Invalid cinema ID'
+
             });
 
         }
 
-        connection = await getConnection();
+        const result =
+            await pool.query(
+                `
+                SELECT
+                    st.showtime_id,
+                    st.movie_id,
+                    m.title,
+                    m.poster_url,
 
-        const result = await connection.execute(
-            `
-            SELECT
-                ST.SHOWTIME_ID,
-                ST.MOVIE_ID,
-                M.TITLE,
-                M.POSTER_URL,
+                    st.cinema_id,
 
-                ST.CINEMA_ID,
+                    st.screen_id,
+                    s.screen_name,
+                    s.screen_number,
 
-                ST.SCREEN_ID,
-                S.SCREEN_NAME,
-                S.SCREEN_NUMBER,
+                    st.show_date,
+                    st.start_time,
+                    st.end_time,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                    st.ticket_price,
+                    st.status
 
-                ST.TICKET_PRICE,
-                ST.STATUS
+                FROM showtimes st
 
-            FROM SHOWTIMES ST
+                JOIN movies m
+                    ON m.movie_id = st.movie_id
 
-            JOIN MOVIES M
-                ON M.MOVIE_ID = ST.MOVIE_ID
+                JOIN screens s
+                    ON s.screen_id = st.screen_id
 
-            JOIN SCREENS S
-                ON S.SCREEN_ID = ST.SCREEN_ID
+                WHERE st.cinema_id = $1
 
-            WHERE ST.CINEMA_ID = :cinemaId
-              AND ST.IS_ACTIVE = 'Y'
+                  AND st.is_active = 'Y'
 
-            ORDER BY
-                ST.SHOW_DATE,
-                ST.START_TIME
-            `,
-            {
-                cinemaId
-            }
-        );
+                ORDER BY
+                    st.show_date,
+                    st.start_time
+                `,
+                [cinemaId]
+            );
 
-        const showtimes = result.rows.map(row => ({
-            showtimeId: row[0],
+        const showtimes =
+            result.rows.map(row => ({
 
-            movieId: row[1],
-            movieTitle: row[2],
-            posterUrl: row[3],
+                showtimeId:
+                    row.showtime_id,
 
-            cinemaId: row[4],
+                movieId:
+                    row.movie_id,
 
-            screenId: row[5],
-            screenName: row[6],
-            screenNumber: row[7],
+                movieTitle:
+                    row.title,
 
-            showDate: row[8],
-            startTime: row[9],
-            endTime: row[10],
+                posterUrl:
+                    row.poster_url,
 
-            ticketPrice: row[11],
-            status: row[12]
-        }));
+                cinemaId:
+                    row.cinema_id,
 
-        res.json({
+                screenId:
+                    row.screen_id,
+
+                screenName:
+                    row.screen_name,
+
+                screenNumber:
+                    row.screen_number,
+
+                showDate:
+                    row.show_date,
+
+                startTime:
+                    row.start_time,
+
+                endTime:
+                    row.end_time,
+
+                ticketPrice:
+                    row.ticket_price,
+
+                status:
+                    row.status
+
+            }));
+
+        return res.json({
+
             success: true,
+
             cinemaId,
-            count: showtimes.length,
+
+            count:
+                showtimes.length,
+
             showtimes
+
         });
 
     } catch (error) {
@@ -773,20 +915,20 @@ async function getCinemaShowtimes(req, res) {
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
+
             success: false,
-            message: 'Server error fetching cinema showtimes',
-            error: error.message
+
+            message:
+                'Server error fetching cinema showtimes',
+
+            error:
+                error.message
+
         });
 
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {}
-        }
     }
+
 }
 
 
@@ -796,12 +938,13 @@ async function getCinemaShowtimes(req, res) {
 
 async function getScreenShowtimes(req, res) {
 
-    let connection;
-
     try {
 
-        const cinemaId = Number(req.params.cinemaId);
-        const screenId = Number(req.params.screenId);
+        const cinemaId =
+            Number(req.params.cinemaId);
+
+        const screenId =
+            Number(req.params.screenId);
 
         if (
             !Number.isInteger(cinemaId) ||
@@ -809,76 +952,108 @@ async function getScreenShowtimes(req, res) {
         ) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Invalid cinema or screen ID'
+
+                message:
+                    'Invalid cinema or screen ID'
+
             });
 
         }
 
-        connection = await getConnection();
+        const result =
+            await pool.query(
+                `
+                SELECT
+                    st.showtime_id,
 
-        const result = await connection.execute(
-            `
-            SELECT
-                ST.SHOWTIME_ID,
+                    st.movie_id,
+                    m.title,
+                    m.poster_url,
 
-                ST.MOVIE_ID,
-                M.TITLE,
-                M.POSTER_URL,
+                    st.cinema_id,
+                    st.screen_id,
 
-                ST.CINEMA_ID,
-                ST.SCREEN_ID,
+                    st.show_date,
+                    st.start_time,
+                    st.end_time,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                    st.ticket_price,
+                    st.status
 
-                ST.TICKET_PRICE,
-                ST.STATUS
+                FROM showtimes st
 
-            FROM SHOWTIMES ST
+                JOIN movies m
+                    ON m.movie_id = st.movie_id
 
-            JOIN MOVIES M
-                ON M.MOVIE_ID = ST.MOVIE_ID
+                WHERE st.cinema_id = $1
 
-            WHERE ST.CINEMA_ID = :cinemaId
-              AND ST.SCREEN_ID = :screenId
-              AND ST.IS_ACTIVE = 'Y'
+                  AND st.screen_id = $2
 
-            ORDER BY
-                ST.SHOW_DATE,
-                ST.START_TIME
-            `,
-            {
-                cinemaId,
-                screenId
-            }
-        );
+                  AND st.is_active = 'Y'
 
-        const showtimes = result.rows.map(row => ({
-            showtimeId: row[0],
+                ORDER BY
+                    st.show_date,
+                    st.start_time
+                `,
+                [
+                    cinemaId,
+                    screenId
+                ]
+            );
 
-            movieId: row[1],
-            movieTitle: row[2],
-            posterUrl: row[3],
+        const showtimes =
+            result.rows.map(row => ({
 
-            cinemaId: row[4],
-            screenId: row[5],
+                showtimeId:
+                    row.showtime_id,
 
-            showDate: row[6],
-            startTime: row[7],
-            endTime: row[8],
+                movieId:
+                    row.movie_id,
 
-            ticketPrice: row[9],
-            status: row[10]
-        }));
+                movieTitle:
+                    row.title,
 
-        res.json({
+                posterUrl:
+                    row.poster_url,
+
+                cinemaId:
+                    row.cinema_id,
+
+                screenId:
+                    row.screen_id,
+
+                showDate:
+                    row.show_date,
+
+                startTime:
+                    row.start_time,
+
+                endTime:
+                    row.end_time,
+
+                ticketPrice:
+                    row.ticket_price,
+
+                status:
+                    row.status
+
+            }));
+
+        return res.json({
+
             success: true,
+
             cinemaId,
+
             screenId,
-            count: showtimes.length,
+
+            count:
+                showtimes.length,
+
             showtimes
+
         });
 
     } catch (error) {
@@ -888,21 +1063,22 @@ async function getScreenShowtimes(req, res) {
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
+
             success: false,
-            message: 'Server error fetching screen showtimes',
-            error: error.message
+
+            message:
+                'Server error fetching screen showtimes',
+
+            error:
+                error.message
+
         });
 
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {}
-        }
     }
+
 }
+
 
 // ============================================================
 // CREATE SHOWTIME
@@ -910,7 +1086,8 @@ async function getScreenShowtimes(req, res) {
 
 async function createShowtime(req, res) {
 
-    let connection;
+    const client =
+        await pool.connect();
 
     try {
 
@@ -922,6 +1099,7 @@ async function createShowtime(req, res) {
             startTime,
             ticketPrice
         } = req.body;
+
 
         // ----------------------------------------------------
         // VALIDATION
@@ -938,17 +1116,28 @@ async function createShowtime(req, res) {
         ) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'Movie, cinema, screen, date, start time and ticket price are required'
+
             });
 
         }
 
-        const parsedMovieId = Number(movieId);
-        const parsedCinemaId = Number(cinemaId);
-        const parsedScreenId = Number(screenId);
-        const parsedTicketPrice = Number(ticketPrice);
+        const parsedMovieId =
+            Number(movieId);
+
+        const parsedCinemaId =
+            Number(cinemaId);
+
+        const parsedScreenId =
+            Number(screenId);
+
+        const parsedTicketPrice =
+            Number(ticketPrice);
+
 
         if (
             !Number.isInteger(parsedMovieId) ||
@@ -957,9 +1146,12 @@ async function createShowtime(req, res) {
         ) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'Movie, cinema and screen IDs must be valid numbers'
+
             });
 
         }
@@ -970,28 +1162,39 @@ async function createShowtime(req, res) {
         ) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'Ticket price must be a valid positive number'
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // VALIDATE DATE
         // ----------------------------------------------------
 
-        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        const datePattern =
+            /^\d{4}-\d{2}-\d{2}$/;
 
-        if (!datePattern.test(showDate)) {
+        if (
+            !datePattern.test(showDate)
+        ) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'Show date must use YYYY-MM-DD format'
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // VALIDATE TIME
@@ -1006,55 +1209,69 @@ async function createShowtime(req, res) {
         if (!timeMatch) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'Invalid start time. Use HH:MM or HH:MM:SS'
+
             });
 
         }
 
-        const hours = Number(timeMatch[1]);
-        const minutes = Number(timeMatch[2]);
-        const seconds = Number(timeMatch[3] || 0);
+        const hours =
+            Number(timeMatch[1]);
 
-        // ----------------------------------------------------
-        // DATABASE CONNECTION
-        // ----------------------------------------------------
+        const minutes =
+            Number(timeMatch[2]);
 
-        connection = await getConnection();
+        const seconds =
+            Number(timeMatch[3] || 0);
+
 
         // ----------------------------------------------------
         // GET MOVIE RUNTIME
         // ----------------------------------------------------
 
-        const movieResult = await connection.execute(
-            `
-            SELECT
-                MOVIE_ID,
-                TITLE,
-                RUNTIME_MINUTES,
-                STATUS
-            FROM MOVIES
-            WHERE MOVIE_ID = :movieId
-            `,
-            {
-                movieId: parsedMovieId
-            }
-        );
+        const movieResult =
+            await client.query(
+                `
+                SELECT
+                    movie_id,
+                    title,
+                    runtime_minutes,
+                    status
 
-        if (movieResult.rows.length === 0) {
+                FROM movies
+
+                WHERE movie_id = $1
+                `,
+                [parsedMovieId]
+            );
+
+        if (
+            movieResult.rows.length === 0
+        ) {
 
             return res.status(404).json({
+
                 success: false,
-                message: 'Movie not found'
+
+                message:
+                    'Movie not found'
+
             });
 
         }
 
-        const movie = movieResult.rows[0];
+        const movie =
+            movieResult.rows[0];
 
-        const movieTitle = movie[1];
-        const runtimeMinutes = movie[2];
+        const movieTitle =
+            movie.title;
+
+        const runtimeMinutes =
+            movie.runtime_minutes;
 
         if (
             runtimeMinutes === null ||
@@ -1063,112 +1280,165 @@ async function createShowtime(req, res) {
         ) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     `Runtime is not available for "${movieTitle}". Update the movie runtime before creating a showtime.`
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // CHECK CINEMA
         // ----------------------------------------------------
 
-        const cinemaResult = await connection.execute(
-            `
-            SELECT
-                CINEMA_ID,
-                CINEMA_NAME,
-                IS_ACTIVE
-            FROM CINEMAS
-            WHERE CINEMA_ID = :cinemaId
-            `,
-            {
-                cinemaId: parsedCinemaId
-            }
-        );
+        const cinemaResult =
+            await client.query(
+                `
+                SELECT
+                    cinema_id,
+                    cinema_name,
+                    is_active
 
-        if (cinemaResult.rows.length === 0) {
+                FROM cinemas
+
+                WHERE cinema_id = $1
+                `,
+                [parsedCinemaId]
+            );
+
+        if (
+            cinemaResult.rows.length === 0
+        ) {
 
             return res.status(404).json({
+
                 success: false,
-                message: 'Cinema not found'
+
+                message:
+                    'Cinema not found'
+
             });
 
         }
 
-        if (cinemaResult.rows[0][2] !== 'Y') {
+        if (
+            cinemaResult.rows[0].is_active !== 'Y'
+        ) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Cinema is not active'
+
+                message:
+                    'Cinema is not active'
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // CHECK SCREEN
         // ----------------------------------------------------
 
-        const screenResult = await connection.execute(
-            `
-            SELECT
-                SCREEN_ID,
-                SCREEN_NAME,
-                CINEMA_ID,
-                IS_ACTIVE
-            FROM SCREENS
-            WHERE SCREEN_ID = :screenId
-            `,
-            {
-                screenId: parsedScreenId
-            }
-        );
+        const screenResult =
+            await client.query(
+                `
+                SELECT
+                    screen_id,
+                    screen_name,
+                    cinema_id,
+                    is_active
 
-        if (screenResult.rows.length === 0) {
+                FROM screens
+
+                WHERE screen_id = $1
+                `,
+                [parsedScreenId]
+            );
+
+        if (
+            screenResult.rows.length === 0
+        ) {
 
             return res.status(404).json({
+
                 success: false,
-                message: 'Screen not found'
+
+                message:
+                    'Screen not found'
+
             });
 
         }
 
-        const screen = screenResult.rows[0];
+        const screen =
+            screenResult.rows[0];
 
-        if (screen[2] !== parsedCinemaId) {
+        if (
+            screen.cinema_id !== parsedCinemaId
+        ) {
 
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     'The selected screen does not belong to the selected cinema'
+
             });
 
         }
 
-        if (screen[3] !== 'Y') {
+        if (
+            screen.is_active !== 'Y'
+        ) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Screen is not active'
+
+                message:
+                    'Screen is not active'
+
             });
 
         }
 
+
         // ----------------------------------------------------
-        // CALCULATE END TIME
+        // BUILD START AND END TIMESTAMP
         // ----------------------------------------------------
+        //
+        // PostgreSQL can calculate the end timestamp directly
+        // from the date, time and movie runtime.
+        // ----------------------------------------------------
+
+        const formattedStartTime =
+            `${showDate} ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
         const startDateTime =
             new Date(
                 `${showDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
             );
 
-        if (isNaN(startDateTime.getTime())) {
+        if (
+            Number.isNaN(
+                startDateTime.getTime()
+            )
+        ) {
 
             return res.status(400).json({
+
                 success: false,
-                message: 'Invalid date or start time'
+
+                message:
+                    'Invalid date or start time'
+
             });
 
         }
@@ -1181,160 +1451,191 @@ async function createShowtime(req, res) {
             Number(runtimeMinutes)
         );
 
+
         // ----------------------------------------------------
-        // FORMAT ORACLE TIMESTAMP VALUES
+        // FORMAT END TIME
         // ----------------------------------------------------
 
-        const formatOracleTimestamp =
-            (date) => {
+        const formatTimestamp =
+            date => {
 
                 const year =
                     date.getFullYear();
 
                 const month =
-                    String(date.getMonth() + 1)
-                        .padStart(2, '0');
+                    String(
+                        date.getMonth() + 1
+                    ).padStart(2, '0');
 
                 const day =
-                    String(date.getDate())
-                        .padStart(2, '0');
+                    String(
+                        date.getDate()
+                    ).padStart(2, '0');
 
                 const hour =
-                    String(date.getHours())
-                        .padStart(2, '0');
+                    String(
+                        date.getHours()
+                    ).padStart(2, '0');
 
                 const minute =
-                    String(date.getMinutes())
-                        .padStart(2, '0');
+                    String(
+                        date.getMinutes()
+                    ).padStart(2, '0');
 
                 const second =
-                    String(date.getSeconds())
-                        .padStart(2, '0');
+                    String(
+                        date.getSeconds()
+                    ).padStart(2, '0');
 
                 return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+
             };
 
-        const oracleStartTime =
-            formatOracleTimestamp(startDateTime);
+        const formattedEndTime =
+            formatTimestamp(endDateTime);
 
-        const oracleEndTime =
-            formatOracleTimestamp(endDateTime);
+
+        // ----------------------------------------------------
+        // START TRANSACTION
+        // ----------------------------------------------------
+
+        await client.query('BEGIN');
+
 
         // ----------------------------------------------------
         // CHECK FOR SCREEN CONFLICT
         // ----------------------------------------------------
+        //
+        // Two showtimes overlap when:
+        //
+        // existing start < requested end
+        // AND
+        // existing end > requested start
+        //
+        // This is the same overlap logic as the Oracle version.
+        // ----------------------------------------------------
 
         const conflictResult =
-            await connection.execute(
+            await client.query(
                 `
                 SELECT
-                    SHOWTIME_ID,
-                    START_TIME,
-                    END_TIME
-                FROM SHOWTIMES
-                WHERE SCREEN_ID = :screenId
-                  AND SHOW_DATE = TO_DATE(
-                        :showDate,
-                        'YYYY-MM-DD'
+                    showtime_id,
+                    start_time,
+                    end_time
+
+                FROM showtimes
+
+                WHERE screen_id = $1
+
+                  AND show_date = $2::date
+
+                  AND is_active = 'Y'
+
+                  AND status NOT IN (
+                      'CANCELLED',
+                      'COMPLETED'
                   )
-                  AND IS_ACTIVE = 'Y'
-                  AND STATUS NOT IN ('CANCELLED', 'COMPLETED')
-                  AND START_TIME < TO_TIMESTAMP(
-                        :endTime,
-                        'YYYY-MM-DD HH24:MI:SS'
-                  )
-                  AND NVL(
-                        END_TIME,
-                        START_TIME
-                      ) > TO_TIMESTAMP(
-                        :startTime,
-                        'YYYY-MM-DD HH24:MI:SS'
-                  )
+
+                  AND start_time < $3::timestamp
+
+                  AND COALESCE(
+                        end_time,
+                        start_time
+                      ) > $4::timestamp
+
+                LIMIT 1
                 `,
-                {
-                    screenId: parsedScreenId,
+                [
+                    parsedScreenId,
                     showDate,
-                    startTime: oracleStartTime,
-                    endTime: oracleEndTime
-                }
+                    formattedEndTime,
+                    formattedStartTime
+                ]
             );
 
-        if (conflictResult.rows.length > 0) {
+        if (
+            conflictResult.rows.length > 0
+        ) {
+
+            await client.query(
+                'ROLLBACK'
+            );
 
             return res.status(409).json({
+
                 success: false,
+
                 message:
                     'This screen already has a showtime that overlaps with the requested time',
+
                 conflictingShowtimeId:
-                    conflictResult.rows[0][0]
+                    conflictResult.rows[0].showtime_id
+
             });
 
         }
+
 
         // ----------------------------------------------------
         // INSERT SHOWTIME
         // ----------------------------------------------------
 
         const insertResult =
-            await connection.execute(
+            await client.query(
                 `
-                INSERT INTO SHOWTIMES (
-                    MOVIE_ID,
-                    CINEMA_ID,
-                    SCREEN_ID,
-                    SHOW_DATE,
-                    START_TIME,
-                    END_TIME,
-                    TICKET_PRICE,
-                    STATUS,
-                    IS_ACTIVE,
-                    CREATED_AT,
-                    UPDATED_AT
+                INSERT INTO showtimes (
+                    movie_id,
+                    cinema_id,
+                    screen_id,
+                    show_date,
+                    start_time,
+                    end_time,
+                    ticket_price,
+                    status,
+                    is_active,
+                    created_at,
+                    updated_at
                 )
+
                 VALUES (
-                    :movieId,
-                    :cinemaId,
-                    :screenId,
-                    TO_DATE(
-                        :showDate,
-                        'YYYY-MM-DD'
-                    ),
-                    TO_TIMESTAMP(
-                        :startTime,
-                        'YYYY-MM-DD HH24:MI:SS'
-                    ),
-                    TO_TIMESTAMP(
-                        :endTime,
-                        'YYYY-MM-DD HH24:MI:SS'
-                    ),
-                    :ticketPrice,
+                    $1,
+                    $2,
+                    $3,
+                    $4::date,
+                    $5::timestamp,
+                    $6::timestamp,
+                    $7,
                     'SCHEDULED',
                     'Y',
                     CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP
                 )
-                RETURNING SHOWTIME_ID INTO :showtimeId
-                `,
-                {
-                    movieId: parsedMovieId,
-                    cinemaId: parsedCinemaId,
-                    screenId: parsedScreenId,
-                    showDate,
-                    startTime: oracleStartTime,
-                    endTime: oracleEndTime,
-                    ticketPrice: parsedTicketPrice,
 
-                    showtimeId: {
-                        dir: require('oracledb').BIND_OUT,
-                        type: require('oracledb').NUMBER
-                    }
-                }
+                RETURNING showtime_id
+                `,
+                [
+                    parsedMovieId,
+                    parsedCinemaId,
+                    parsedScreenId,
+                    showDate,
+                    formattedStartTime,
+                    formattedEndTime,
+                    parsedTicketPrice
+                ]
             );
 
         const showtimeId =
-            insertResult.outBinds.showtimeId[0];
+            insertResult.rows[0].showtime_id;
 
-        await connection.commit();
+
+        // ----------------------------------------------------
+        // COMMIT
+        // ----------------------------------------------------
+
+        await client.query(
+            'COMMIT'
+        );
+
 
         // ----------------------------------------------------
         // RESPONSE
@@ -1351,7 +1652,8 @@ async function createShowtime(req, res) {
 
                 showtimeId,
 
-                movieId: parsedMovieId,
+                movieId:
+                    parsedMovieId,
 
                 movieTitle,
 
@@ -1364,10 +1666,10 @@ async function createShowtime(req, res) {
                 showDate,
 
                 startTime:
-                    oracleStartTime,
+                    formattedStartTime,
 
                 endTime:
-                    oracleEndTime,
+                    formattedEndTime,
 
                 runtimeMinutes:
                     Number(runtimeMinutes),
@@ -1387,16 +1689,16 @@ async function createShowtime(req, res) {
 
     } catch (error) {
 
-        if (connection) {
+        try {
+            await client.query(
+                'ROLLBACK'
+            );
+        } catch (rollbackError) {
 
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError.message
-                );
-            }
+            console.error(
+                '❌ Rollback error:',
+                rollbackError.message
+            );
 
         }
 
@@ -1419,28 +1721,19 @@ async function createShowtime(req, res) {
 
     } finally {
 
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing showtime connection:',
-                    error.message
-                );
-            }
-
-        }
+        client.release();
 
     }
 
 }
+
 
 // ============================================================
 // EXPORTS
 // ============================================================
 
 module.exports = {
+
     getShowtimes,
     getShowtimeById,
     getMovieShowtimes,
@@ -1448,4 +1741,5 @@ module.exports = {
     getScreenShowtimes,
     getShowtimeSeats,
     createShowtime
+
 };

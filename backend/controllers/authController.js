@@ -1,219 +1,199 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const oracledb = require('oracledb');
-
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
 
 // ============================================================
 // REGISTER
 // ============================================================
+const register = async (req, res) => {
+    const {
+        forenames,
+        surname,
+        email,
+        password,
+        phoneNumber
+    } = req.body;
 
-async function register(req, res) {
-    let connection;
+    // --------------------------------------------------------
+    // Validation
+    // --------------------------------------------------------
+    if (!forenames || !surname || !email || !password) {
+        return res.status(400).json({
+            success: false,
+            message: 'Forenames, surname, email and password are required'
+        });
+    }
+
+    if (password.length < 8) {
+        return res.status(400).json({
+            success: false,
+            message: 'Password must be at least 8 characters long'
+        });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const client = await pool.connect();
 
     try {
-        const {
-            forenames,
-            surname,
-            email,
-            password,
-            phoneNumber
-        } = req.body;
+        await client.query('BEGIN');
 
-        // ----------------------------------------
-        // VALIDATION
-        // ----------------------------------------
-
-        if (!forenames || !surname || !email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Forenames, surname, email and password are required'
-            });
-        }
-
-        const normalizedEmail = email.trim().toLowerCase();
-
-        if (password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must be at least 8 characters long'
-            });
-        }
-
-        if (!JWT_SECRET) {
-            throw new Error('JWT_SECRET is not configured');
-        }
-
-        // ----------------------------------------
-        // DATABASE CONNECTION
-        // ----------------------------------------
-
-        connection = await getConnection();
-
-        // ----------------------------------------
-        // CHECK EXISTING USER
-        // ----------------------------------------
-
-        const existingUser = await connection.execute(
-            `
-            SELECT USER_ID
-            FROM USERS
-            WHERE LOWER(EMAIL) = :email
-            `,
-            {
-                email: normalizedEmail
-            }
+        // ----------------------------------------------------
+        // Check whether user already exists
+        // ----------------------------------------------------
+        const existingUser = await client.query(
+            `SELECT user_id
+             FROM users
+             WHERE LOWER(email) = LOWER($1)`,
+            [normalizedEmail]
         );
 
         if (existingUser.rows.length > 0) {
+            await client.query('ROLLBACK');
+            client.release();
+
             return res.status(409).json({
                 success: false,
-                message: 'An account already exists with this email'
+                message: 'An account with this email already exists'
             });
         }
 
-        // ----------------------------------------
-        // HASH PASSWORD
-        // ----------------------------------------
+        // ----------------------------------------------------
+        // Hash password
+        // ----------------------------------------------------
+        const passwordHash = await bcrypt.hash(password, 10);
 
-        const passwordHash = await bcrypt.hash(password, 12);
-
-        // ----------------------------------------
-        // CREATE USER
-        // ----------------------------------------
-
-        const userResult = await connection.execute(
-            `
-            INSERT INTO USERS (
-                EMAIL,
-                PASSWORD_HASH,
-                FORENAMES,
-                SURNAME,
-                PHONE_NUMBER,
-                IS_ACTIVE,
-                CREATED_AT
+        // ----------------------------------------------------
+        // Create user
+        // ----------------------------------------------------
+        const userResult = await client.query(
+            `INSERT INTO users (
+                email,
+                password_hash,
+                forenames,
+                surname,
+                phone_number,
+                is_active,
+                created_at,
+                updated_at
             )
             VALUES (
-                :email,
-                :passwordHash,
-                :forenames,
-                :surname,
-                :phoneNumber,
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
                 'Y',
+                CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
             )
-            RETURNING USER_ID INTO :userId
-            `,
-            {
-                email: normalizedEmail,
+            RETURNING user_id`,
+            [
+                normalizedEmail,
                 passwordHash,
-                forenames: forenames.trim(),
-                surname: surname.trim(),
-                phoneNumber: phoneNumber
-                    ? phoneNumber.trim()
-                    : null,
-
-                userId: {
-                    dir: oracledb.BIND_OUT,
-                    type: oracledb.NUMBER
-                }
-            }
-
-            
+                forenames.trim(),
+                surname.trim(),
+                phoneNumber || null
+            ]
         );
 
-        const userId = userResult.outBinds.userId[0];
+        const userId = userResult.rows[0].user_id;
 
-        await connection.execute(
-            `
-            INSERT INTO USER_NOTIFICATION_PREFERENCES (
-                USER_ID
+        // ----------------------------------------------------
+        // Create notification preferences
+        // ----------------------------------------------------
+        await client.query(
+            `INSERT INTO user_notification_preferences (
+                user_id,
+                booking_reminders,
+                booking_confirmations,
+                movie_releases,
+                promotions,
+                new_movies,
+                created_at,
+                updated_at
             )
             VALUES (
-                :userId
-            )
-            `,
-            {
-                userId
-            }
-        );
-
-        // ----------------------------------------
-        // CREATE CUSTOMER PROFILE
-        // ----------------------------------------
-
-        await connection.execute(
-            `
-            INSERT INTO CUSTOMER_PROFILES (
-                USER_ID,
-                CURRENT_LOYALTY_POINTS,
-                CREATED_AT
-            )
-            VALUES (
-                :userId,
-                0,
+                $1,
+                'Y',
+                'Y',
+                'Y',
+                'Y',
+                'Y',
+                CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
-            )
-            `,
-            {
-                userId
-            }
+            )`,
+            [userId]
         );
 
-        // ----------------------------------------
-// ASSIGN CUSTOMER ROLE
-// ----------------------------------------
+        // ----------------------------------------------------
+        // Create customer profile
+        // ----------------------------------------------------
+        await client.query(
+            `INSERT INTO customer_profiles (
+                user_id,
+                current_loyalty_points,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                $1,
+                0,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )`,
+            [userId]
+        );
 
-const customerRole = await connection.execute(
-    `
-    SELECT ROLE_ID
-    FROM USER_ROLES
-    WHERE ROLE_NAME = 'CUSTOMER'
-    `
-);
+        // ----------------------------------------------------
+        // Get CUSTOMER role
+        // ----------------------------------------------------
+        const roleResult = await client.query(
+            `SELECT role_id
+             FROM user_roles
+             WHERE role_name = $1`,
+            ['CUSTOMER']
+        );
 
-if (customerRole.rows.length === 0) {
-    throw new Error('CUSTOMER role does not exist');
-}
+        if (roleResult.rows.length === 0) {
+            throw new Error('CUSTOMER role does not exist');
+        }
 
-const customerRoleId = customerRole.rows[0][0];
+        const roleId = roleResult.rows[0].role_id;
 
-await connection.execute(
-    `
-    INSERT INTO USER_ROLE_ASSIGNMENTS (
-        USER_ID,
-        ROLE_ID,
-        ASSIGNED_BY
-    )
-    VALUES (
-        :userId,
-        :roleId,
-        :assignedBy
-    )
-    `,
-    {
-        userId,
-        roleId: customerRoleId,
-        assignedBy: userId
-    }
-);
+        // ----------------------------------------------------
+        // Assign CUSTOMER role
+        // ----------------------------------------------------
+        await client.query(
+            `INSERT INTO user_role_assignments (
+                user_id,
+                role_id,
+                assigned_at
+            )
+            VALUES (
+                $1,
+                $2,
+                CURRENT_TIMESTAMP
+            )`,
+            [userId, roleId]
+        );
 
-        // ----------------------------------------
-        // COMMIT
-        // ----------------------------------------
+        // ----------------------------------------------------
+        // Commit transaction
+        // ----------------------------------------------------
+        await client.query('COMMIT');
 
-        await connection.commit();
-
-        // ----------------------------------------
-        // CREATE JWT
-        // ----------------------------------------
-
+        // ----------------------------------------------------
+        // Generate JWT
+        // ----------------------------------------------------
         const token = jwt.sign(
             {
-                userId,
-                email: normalizedEmail
+                userId: userId,
+                email: normalizedEmail,
+                role: 'CUSTOMER'
             },
             JWT_SECRET,
             {
@@ -221,126 +201,76 @@ await connection.execute(
             }
         );
 
-        // ----------------------------------------
-        // RESPONSE
-        // ----------------------------------------
-
         return res.status(201).json({
             success: true,
-            message: 'Account created successfully',
-
+            message: 'Registration successful',
             token,
-
             user: {
                 userId,
                 email: normalizedEmail,
                 forenames: forenames.trim(),
                 surname: surname.trim(),
-                phoneNumber: phoneNumber
-                    ? phoneNumber.trim()
-                    : null
+                phoneNumber: phoneNumber || null,
+                role: 'CUSTOMER'
             }
         });
 
     } catch (error) {
 
-        // Rollback if something failed
-        if (connection) {
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-                console.error(
-                    'Rollback error:',
-                    rollbackError
-                );
-            }
-        }
+        await client.query('ROLLBACK');
 
         console.error('Registration error:', error);
 
         return res.status(500).json({
             success: false,
-            message: 'Server error during registration'
+            message: 'Registration failed'
         });
 
     } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    'Error closing registration connection:',
-                    error
-                );
-            }
-        }
+        client.release();
     }
-}
+};
 
 
 // ============================================================
 // LOGIN
 // ============================================================
+const login = async (req, res) => {
+    const {
+        email,
+        password
+    } = req.body;
 
-async function login(req, res) {
-    let connection;
+    // --------------------------------------------------------
+    // Validation
+    // --------------------------------------------------------
+    if (!email || !password) {
+        return res.status(400).json({
+            success: false,
+            message: 'Email and password are required'
+        });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
-        const {
-            email,
-            password
-        } = req.body;
 
-        // ----------------------------------------
-        // VALIDATION
-        // ----------------------------------------
-
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email and password are required'
-            });
-        }
-
-        const normalizedEmail = email.trim().toLowerCase();
-
-        if (!JWT_SECRET) {
-            throw new Error('JWT_SECRET is not configured');
-        }
-
-        // ----------------------------------------
-        // DATABASE CONNECTION
-        // ----------------------------------------
-
-        connection = await getConnection();
-
-        // ----------------------------------------
-        // FIND USER
-        // ----------------------------------------
-
-        const result = await connection.execute(
-            `
-            SELECT
-                USER_ID,
-                EMAIL,
-                PASSWORD_HASH,
-                FORENAMES,
-                SURNAME,
-                PHONE_NUMBER,
-                IS_ACTIVE,
-                CREATED_AT
-            FROM USERS
-            WHERE LOWER(EMAIL) = :email
-            `,
-            {
-                email: normalizedEmail
-            }
+        // ----------------------------------------------------
+        // Find user
+        // ----------------------------------------------------
+        const result = await pool.query(
+            `SELECT
+                user_id,
+                email,
+                password_hash,
+                forenames,
+                surname,
+                phone_number,
+                is_active
+             FROM users
+             WHERE LOWER(email) = LOWER($1)`,
+            [normalizedEmail]
         );
-
-        // ----------------------------------------
-        // USER NOT FOUND
-        // ----------------------------------------
 
         if (result.rows.length === 0) {
             return res.status(401).json({
@@ -351,37 +281,22 @@ async function login(req, res) {
 
         const user = result.rows[0];
 
-        // ----------------------------------------
-        // EXTRACT USER DATA
-        // ----------------------------------------
-
-        const userId = user[0];
-        const userEmail = user[1];
-        const passwordHash = user[2];
-        const forenames = user[3];
-        const surname = user[4];
-        const phoneNumber = user[5];
-        const isActive = user[6];
-        const createdAt = user[7];
-
-        // ----------------------------------------
-        // CHECK ACCOUNT STATUS
-        // ----------------------------------------
-
-        if (isActive !== 'Y') {
+        // ----------------------------------------------------
+        // Check account status
+        // ----------------------------------------------------
+        if (user.is_active !== 'Y') {
             return res.status(403).json({
                 success: false,
-                message: 'This account is inactive'
+                message: 'Your account is inactive'
             });
         }
 
-        // ----------------------------------------
-        // CHECK PASSWORD
-        // ----------------------------------------
-
+        // ----------------------------------------------------
+        // Compare password
+        // ----------------------------------------------------
         const passwordMatch = await bcrypt.compare(
             password,
-            passwordHash
+            user.password_hash
         );
 
         if (!passwordMatch) {
@@ -391,14 +306,34 @@ async function login(req, res) {
             });
         }
 
-        // ----------------------------------------
-        // CREATE JWT
-        // ----------------------------------------
+        // ----------------------------------------------------
+        // Get user's role
+        // ----------------------------------------------------
+        const roleResult = await pool.query(
+            `SELECT
+                ur.role_id,
+                ur.role_name
+             FROM user_roles ur
+             INNER JOIN user_role_assignments ura
+                 ON ur.role_id = ura.role_id
+             WHERE ura.user_id = $1
+             ORDER BY ur.role_id
+             LIMIT 1`,
+            [user.user_id]
+        );
 
+        const role = roleResult.rows.length > 0
+            ? roleResult.rows[0].role_name
+            : 'CUSTOMER';
+
+        // ----------------------------------------------------
+        // Generate JWT
+        // ----------------------------------------------------
         const token = jwt.sign(
             {
-                userId,
-                email: userEmail
+                userId: user.user_id,
+                email: user.email,
+                role
             },
             JWT_SECRET,
             {
@@ -406,23 +341,17 @@ async function login(req, res) {
             }
         );
 
-        // ----------------------------------------
-        // RESPONSE
-        // ----------------------------------------
-
-        return res.json({
+        return res.status(200).json({
             success: true,
             message: 'Login successful',
-
             token,
-
             user: {
-                userId,
-                email: userEmail,
-                forenames,
-                surname,
-                phoneNumber,
-                memberSince: createdAt
+                userId: user.user_id,
+                email: user.email,
+                forenames: user.forenames,
+                surname: user.surname,
+                phoneNumber: user.phone_number,
+                role
             }
         });
 
@@ -432,58 +361,40 @@ async function login(req, res) {
 
         return res.status(500).json({
             success: false,
-            message: 'Server error during login'
+            message: 'Login failed'
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    'Error closing login connection:',
-                    error
-                );
-            }
-        }
     }
-}
+};
+
 
 // ============================================================
 // GET CURRENT USER
 // ============================================================
-
-async function getCurrentUser(req, res) {
-    let connection;
+const getCurrentUser = async (req, res) => {
 
     try {
-        const userId = req.user.userId;
 
-        connection = await getConnection();
+        const result = await pool.query(
+            `SELECT
+                u.user_id,
+                u.email,
+                u.forenames,
+                u.surname,
+                u.phone_number,
+                u.is_active,
 
-        const result = await connection.execute(
-            `
-            SELECT
-                U.USER_ID,
-                U.EMAIL,
-                U.FORENAMES,
-                U.SURNAME,
-                U.PHONE_NUMBER,
-                U.IS_ACTIVE,
-                U.CREATED_AT,
-                CP.CUSTOMER_ID,
-                CP.DATE_OF_BIRTH,
-                CP.GENDER,
-                CP.CURRENT_LOYALTY_POINTS
-            FROM USERS U
-            LEFT JOIN CUSTOMER_PROFILES CP
-                ON CP.USER_ID = U.USER_ID
-            WHERE U.USER_ID = :userId
-            `,
-            {
-                userId
-            }
+                cp.customer_id,
+                cp.date_of_birth,
+                cp.gender,
+                cp.current_loyalty_points
+
+             FROM users u
+
+             LEFT JOIN customer_profiles cp
+                 ON u.user_id = cp.user_id
+
+             WHERE u.user_id = $1`,
+            [req.user.userId]
         );
 
         if (result.rows.length === 0) {
@@ -495,45 +406,50 @@ async function getCurrentUser(req, res) {
 
         const user = result.rows[0];
 
-        const {
-            USER_ID,
-            EMAIL,
-            FORENAMES,
-            SURNAME,
-            PHONE_NUMBER,
-            IS_ACTIVE,
-            CREATED_AT,
-            CUSTOMER_ID,
-            DATE_OF_BIRTH,
-            GENDER,
-            CURRENT_LOYALTY_POINTS
-        } = result.metaData.reduce((obj, column, index) => {
-            obj[column.name] = user[index];
-            return obj;
-        }, {});
-
-        if (IS_ACTIVE !== 'Y') {
+        // ----------------------------------------------------
+        // Check account status
+        // ----------------------------------------------------
+        if (user.is_active !== 'Y') {
             return res.status(403).json({
                 success: false,
-                message: 'This account is inactive'
+                message: 'Your account is inactive'
             });
         }
 
-        return res.json({
+        // ----------------------------------------------------
+        // Get role
+        // ----------------------------------------------------
+        const roleResult = await pool.query(
+            `SELECT
+                ur.role_id,
+                ur.role_name
+             FROM user_roles ur
+             INNER JOIN user_role_assignments ura
+                 ON ur.role_id = ura.role_id
+             WHERE ura.user_id = $1
+             ORDER BY ur.role_id
+             LIMIT 1`,
+            [user.user_id]
+        );
+
+        const role = roleResult.rows.length > 0
+            ? roleResult.rows[0].role_name
+            : 'CUSTOMER';
+
+        return res.status(200).json({
             success: true,
             user: {
-                userId: USER_ID,
-                email: EMAIL,
-                forenames: FORENAMES,
-                surname: SURNAME,
-                phoneNumber: PHONE_NUMBER,
-                memberSince: CREATED_AT,
-
+                userId: user.user_id,
+                email: user.email,
+                forenames: user.forenames,
+                surname: user.surname,
+                phoneNumber: user.phone_number,
+                role,
                 customerProfile: {
-                    customerId: CUSTOMER_ID,
-                    dateOfBirth: DATE_OF_BIRTH,
-                    gender: GENDER,
-                    loyaltyPoints: CURRENT_LOYALTY_POINTS
+                    customerId: user.customer_id,
+                    dateOfBirth: user.date_of_birth,
+                    gender: user.gender,
+                    currentLoyaltyPoints: user.current_loyalty_points
                 }
             }
         });
@@ -544,28 +460,11 @@ async function getCurrentUser(req, res) {
 
         return res.status(500).json({
             success: false,
-            message: 'Server error retrieving user'
+            message: 'Failed to retrieve current user'
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    'Error closing connection:',
-                    error
-                );
-            }
-        }
     }
-}
+};
 
-
-// ============================================================
-// EXPORTS
-// ============================================================
 
 module.exports = {
     register,

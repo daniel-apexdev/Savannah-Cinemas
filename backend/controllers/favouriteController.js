@@ -1,4 +1,5 @@
-const { getConnection } = require('../config/database');
+js
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -7,9 +8,11 @@ const { getConnection } = require('../config/database');
 
 async function addFavourite(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -27,8 +30,7 @@ async function addFavourite(req, res) {
             referenceId
         } = req.body;
 
-        const parsedReferenceId =
-            Number(referenceId);
+        const parsedReferenceId = Number(referenceId);
 
         // ----------------------------------------------------
         // Validate type
@@ -57,8 +59,6 @@ async function addFavourite(req, res) {
 
         }
 
-        connection = await getConnection();
-
         // ----------------------------------------------------
         // Validate referenced object
         // ----------------------------------------------------
@@ -67,39 +67,31 @@ async function addFavourite(req, res) {
 
         if (favouriteType === 'MOVIE') {
 
-            result = await connection.execute(
+            result = await pool.query(
                 `
                 SELECT
-                    MOVIE_ID,
-                    TITLE,
-                    POSTER_URL
-
-                FROM MOVIES
-
-                WHERE MOVIE_ID = :referenceId
+                    movie_id,
+                    title,
+                    poster_url
+                FROM movies
+                WHERE movie_id = $1
                 `,
-                {
-                    referenceId: parsedReferenceId
-                }
+                [parsedReferenceId]
             );
 
         } else {
 
-            result = await connection.execute(
+            result = await pool.query(
                 `
                 SELECT
-                    CINEMA_ID,
-                    CINEMA_NAME,
-                    ADDRESS,
-                    CITY
-
-                FROM CINEMAS
-
-                WHERE CINEMA_ID = :referenceId
+                    cinema_id,
+                    cinema_name,
+                    address,
+                    city
+                FROM cinemas
+                WHERE cinema_id = $1
                 `,
-                {
-                    referenceId: parsedReferenceId
-                }
+                [parsedReferenceId]
             );
 
         }
@@ -118,29 +110,21 @@ async function addFavourite(req, res) {
         // Check existing favourite
         // ----------------------------------------------------
 
-        const existing =
-            await connection.execute(
-                `
-                SELECT
-                    FAVOURITE_ID
-
-                FROM USER_FAVOURITES
-
-                WHERE USER_ID = :userId
-
-                  AND FAVOURITE_TYPE =
-                      :favouriteType
-
-                  AND REFERENCE_ID =
-                      :referenceId
-                `,
-                {
-                    userId,
-                    favouriteType,
-                    referenceId:
-                        parsedReferenceId
-                }
-            );
+        const existing = await pool.query(
+            `
+            SELECT
+                favourite_id
+            FROM user_favourites
+            WHERE user_id = $1
+              AND favourite_type = $2
+              AND reference_id = $3
+            `,
+            [
+                userId,
+                favouriteType,
+                parsedReferenceId
+            ]
+        );
 
         if (existing.rows.length > 0) {
 
@@ -156,46 +140,25 @@ async function addFavourite(req, res) {
         // Insert favourite
         // ----------------------------------------------------
 
-        const insertResult =
-            await connection.execute(
-                `
-                INSERT INTO USER_FAVOURITES (
-                    USER_ID,
-                    FAVOURITE_TYPE,
-                    REFERENCE_ID
-                )
-                VALUES (
-                    :userId,
-                    :favouriteType,
-                    :referenceId
-                )
-
-                RETURNING FAVOURITE_ID
-                INTO :favouriteId
-                `,
-                {
-                    userId,
-
-                    favouriteType,
-
-                    referenceId:
-                        parsedReferenceId,
-
-                    favouriteId: {
-                        dir:
-                            require('oracledb').BIND_OUT,
-
-                        type:
-                            require('oracledb').NUMBER
-                    }
-                }
-            );
+        const insertResult = await pool.query(
+            `
+            INSERT INTO user_favourites (
+                user_id,
+                favourite_type,
+                reference_id
+            )
+            VALUES ($1, $2, $3)
+            RETURNING favourite_id
+            `,
+            [
+                userId,
+                favouriteType,
+                parsedReferenceId
+            ]
+        );
 
         const favouriteId =
-            insertResult.outBinds
-                .favouriteId[0];
-
-        await connection.commit();
+            insertResult.rows[0].favourite_id;
 
         return res.status(201).json({
 
@@ -224,16 +187,14 @@ async function addFavourite(req, res) {
             error
         );
 
-        if (connection) {
+        // PostgreSQL unique constraint violation
+        if (error.code === '23505') {
 
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-            }
+            return res.status(409).json({
+                success: false,
+                message:
+                    'Item is already in your favourites'
+            });
 
         }
 
@@ -249,21 +210,6 @@ async function addFavourite(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
@@ -275,9 +221,11 @@ async function addFavourite(req, res) {
 
 async function removeFavourite(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -302,26 +250,24 @@ async function removeFavourite(req, res) {
 
         }
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Delete favourite
+        // ----------------------------------------------------
 
-        const result =
-            await connection.execute(
-                `
-                DELETE FROM USER_FAVOURITES
+        const result = await pool.query(
+            `
+            DELETE FROM user_favourites
+            WHERE favourite_id = $1
+              AND user_id = $2
+            `,
+            [
+                favouriteId,
+                userId
+            ]
+        );
 
-                WHERE FAVOURITE_ID =
-                      :favouriteId
-
-                  AND USER_ID =
-                      :userId
-                `,
-                {
-                    favouriteId,
-                    userId
-                }
-            );
-
-        if (result.rowsAffected !== 1) {
+        // PostgreSQL uses rowCount instead of rowsAffected
+        if (result.rowCount !== 1) {
 
             return res.status(404).json({
                 success: false,
@@ -329,8 +275,6 @@ async function removeFavourite(req, res) {
             });
 
         }
-
-        await connection.commit();
 
         return res.json({
 
@@ -348,17 +292,6 @@ async function removeFavourite(req, res) {
             error
         );
 
-        if (connection) {
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-            }
-        }
-
         return res.status(500).json({
 
             success: false,
@@ -371,20 +304,6 @@ async function removeFavourite(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-        }
-
     }
 
 }
@@ -396,9 +315,11 @@ async function removeFavourite(req, res) {
 
 async function getMyFavourites(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -411,116 +332,125 @@ async function getMyFavourites(req, res) {
 
         const userId = req.user.userId;
 
-        connection = await getConnection();
-
         // ----------------------------------------------------
         // Movies
         // ----------------------------------------------------
 
-        const moviesResult =
-            await connection.execute(
-                `
-                SELECT
-                    F.FAVOURITE_ID,
-                    M.MOVIE_ID,
-                    M.TITLE,
-                    M.ORIGINAL_TITLE,
-                    M.POSTER_URL,
-                    M.BACKDROP_URL,
-                    M.RATING,
-                    M.RELEASE_DATE,
-                    F.CREATED_AT
+        const moviesResult = await pool.query(
+            `
+            SELECT
+                f.favourite_id,
+                m.movie_id,
+                m.title,
+                m.original_title,
+                m.poster_url,
+                m.backdrop_url,
+                m.rating,
+                m.release_date,
+                f.created_at
 
-                FROM USER_FAVOURITES F
+            FROM user_favourites f
 
-                JOIN MOVIES M
-                    ON M.MOVIE_ID =
-                       F.REFERENCE_ID
+            JOIN movies m
+                ON m.movie_id = f.reference_id
 
-                WHERE F.USER_ID = :userId
+            WHERE f.user_id = $1
+              AND f.favourite_type = 'MOVIE'
 
-                  AND F.FAVOURITE_TYPE =
-                      'MOVIE'
-
-                ORDER BY
-                    F.CREATED_AT DESC
-                `,
-                {
-                    userId
-                }
-            );
+            ORDER BY
+                f.created_at DESC
+            `,
+            [userId]
+        );
 
         // ----------------------------------------------------
         // Cinemas
         // ----------------------------------------------------
 
-        const cinemasResult =
-            await connection.execute(
-                `
-                SELECT
-                    F.FAVOURITE_ID,
-                    C.CINEMA_ID,
-                    C.CINEMA_NAME,
-                    C.ADDRESS,
-                    C.CITY,
-                    F.CREATED_AT
+        const cinemasResult = await pool.query(
+            `
+            SELECT
+                f.favourite_id,
+                c.cinema_id,
+                c.cinema_name,
+                c.address,
+                c.city,
+                f.created_at
 
-                FROM USER_FAVOURITES F
+            FROM user_favourites f
 
-                JOIN CINEMAS C
-                    ON C.CINEMA_ID =
-                       F.REFERENCE_ID
+            JOIN cinemas c
+                ON c.cinema_id = f.reference_id
 
-                WHERE F.USER_ID = :userId
+            WHERE f.user_id = $1
+              AND f.favourite_type = 'CINEMA'
 
-                  AND F.FAVOURITE_TYPE =
-                      'CINEMA'
+            ORDER BY
+                f.created_at DESC
+            `,
+            [userId]
+        );
 
-                ORDER BY
-                    F.CREATED_AT DESC
-                `,
-                {
-                    userId
-                }
-            );
+        // ----------------------------------------------------
+        // Format movies
+        // ----------------------------------------------------
 
         const movies =
             moviesResult.rows.map(row => ({
 
-                favouriteId: row[0],
+                favouriteId:
+                    row.favourite_id,
 
-                movieId: row[1],
+                movieId:
+                    row.movie_id,
 
-                title: row[2],
+                title:
+                    row.title,
 
-                originalTitle: row[3],
+                originalTitle:
+                    row.original_title,
 
-                posterUrl: row[4],
+                posterUrl:
+                    row.poster_url,
 
-                backdropUrl: row[5],
+                backdropUrl:
+                    row.backdrop_url,
 
-                rating: row[6],
+                rating:
+                    row.rating,
 
-                releaseDate: row[7],
+                releaseDate:
+                    row.release_date,
 
-                createdAt: row[8]
+                createdAt:
+                    row.created_at
 
             }));
+
+        // ----------------------------------------------------
+        // Format cinemas
+        // ----------------------------------------------------
 
         const cinemas =
             cinemasResult.rows.map(row => ({
 
-                favouriteId: row[0],
+                favouriteId:
+                    row.favourite_id,
 
-                cinemaId: row[1],
+                cinemaId:
+                    row.cinema_id,
 
-                name: row[2],
+                name:
+                    row.cinema_name,
 
-                address: row[3],
+                address:
+                    row.address,
 
-                city: row[4],
+                city:
+                    row.city,
 
-                createdAt: row[5]
+                createdAt:
+                    row.created_at
 
             }));
 
@@ -561,21 +491,6 @@ async function getMyFavourites(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
@@ -587,9 +502,11 @@ async function getMyFavourites(req, res) {
 
 async function checkFavourite(req, res) {
 
-    let connection;
-
     try {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
         if (!req.user || !req.user.userId) {
 
@@ -610,6 +527,10 @@ async function checkFavourite(req, res) {
         const parsedReferenceId =
             Number(referenceId);
 
+        // ----------------------------------------------------
+        // Validate type
+        // ----------------------------------------------------
+
         if (
             !['MOVIE', 'CINEMA']
                 .includes(favouriteType)
@@ -622,6 +543,10 @@ async function checkFavourite(req, res) {
 
         }
 
+        // ----------------------------------------------------
+        // Validate reference ID
+        // ----------------------------------------------------
+
         if (!Number.isInteger(parsedReferenceId)) {
 
             return res.status(400).json({
@@ -631,33 +556,25 @@ async function checkFavourite(req, res) {
 
         }
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Check favourite
+        // ----------------------------------------------------
 
-        const result =
-            await connection.execute(
-                `
-                SELECT
-                    FAVOURITE_ID
-
-                FROM USER_FAVOURITES
-
-                WHERE USER_ID = :userId
-
-                  AND FAVOURITE_TYPE =
-                      :favouriteType
-
-                  AND REFERENCE_ID =
-                      :referenceId
-                `,
-                {
-                    userId,
-
-                    favouriteType,
-
-                    referenceId:
-                        parsedReferenceId
-                }
-            );
+        const result = await pool.query(
+            `
+            SELECT
+                favourite_id
+            FROM user_favourites
+            WHERE user_id = $1
+              AND favourite_type = $2
+              AND reference_id = $3
+            `,
+            [
+                userId,
+                favouriteType,
+                parsedReferenceId
+            ]
+        );
 
         return res.json({
 
@@ -668,7 +585,7 @@ async function checkFavourite(req, res) {
 
             favouriteId:
                 result.rows.length > 0
-                    ? result.rows[0][0]
+                    ? result.rows[0].favourite_id
                     : null
 
         });
@@ -692,25 +609,14 @@ async function checkFavourite(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
 
+
+// ============================================================
+// EXPORTS
+// ============================================================
 
 module.exports = {
     addFavourite,
@@ -718,3 +624,4 @@ module.exports = {
     getMyFavourites,
     checkFavourite
 };
+

@@ -1,47 +1,41 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 // ============================================================
 // GET ALL CINEMAS
 // ============================================================
 
 async function getCinemas(req, res) {
-
-    let connection;
-
     try {
-
-        connection = await getConnection();
-
-        const result = await connection.execute(`
+        const result = await pool.query(`
             SELECT
-                CINEMA_ID,
-                CINEMA_NAME,
-                DESCRIPTION,
-                ADDRESS,
-                CITY,
-                REGION,
-                PHONE_NUMBER,
-                EMAIL,
-                IS_ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
-            FROM CINEMAS
-            WHERE IS_ACTIVE = 'Y'
-            ORDER BY CINEMA_NAME
+                cinema_id,
+                cinema_name,
+                description,
+                address,
+                city,
+                region,
+                phone_number,
+                email,
+                is_active,
+                created_at,
+                updated_at
+            FROM cinemas
+            WHERE is_active = 'Y'
+            ORDER BY cinema_name
         `);
 
         const cinemas = result.rows.map(row => ({
-            cinemaId: row[0],
-            cinemaName: row[1],
-            description: row[2],
-            address: row[3],
-            city: row[4],
-            region: row[5],
-            phoneNumber: row[6],
-            email: row[7],
-            isActive: row[8] === 'Y',
-            createdAt: row[9],
-            updatedAt: row[10]
+            cinemaId: row.cinema_id,
+            cinemaName: row.cinema_name,
+            description: row.description,
+            address: row.address,
+            city: row.city,
+            region: row.region,
+            phoneNumber: row.phone_number,
+            email: row.email,
+            isActive: row.is_active === 'Y',
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
         }));
 
         res.json({
@@ -51,7 +45,6 @@ async function getCinemas(req, res) {
         });
 
     } catch (error) {
-
         console.error('❌ Get cinemas error:', error);
 
         res.status(500).json({
@@ -59,19 +52,6 @@ async function getCinemas(req, res) {
             message: 'Server error fetching cinemas',
             error: error.message
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing cinema connection:',
-                    error.message
-                );
-            }
-        }
     }
 }
 
@@ -81,11 +61,7 @@ async function getCinemas(req, res) {
 // ============================================================
 
 async function getCinemaById(req, res) {
-
-    let connection;
-
     try {
-
         const cinemaId = Number(req.params.cinemaId);
 
         if (!Number.isInteger(cinemaId)) {
@@ -95,32 +71,27 @@ async function getCinemaById(req, res) {
             });
         }
 
-        connection = await getConnection();
-
-        const result = await connection.execute(
+        const result = await pool.query(
             `
             SELECT
-                CINEMA_ID,
-                CINEMA_NAME,
-                DESCRIPTION,
-                ADDRESS,
-                CITY,
-                REGION,
-                PHONE_NUMBER,
-                EMAIL,
-                IS_ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
-            FROM CINEMAS
-            WHERE CINEMA_ID = :cinemaId
+                cinema_id,
+                cinema_name,
+                description,
+                address,
+                city,
+                region,
+                phone_number,
+                email,
+                is_active,
+                created_at,
+                updated_at
+            FROM cinemas
+            WHERE cinema_id = $1
             `,
-            {
-                cinemaId
-            }
+            [cinemaId]
         );
 
         if (result.rows.length === 0) {
-
             return res.status(404).json({
                 success: false,
                 message: 'Cinema not found'
@@ -132,22 +103,21 @@ async function getCinemaById(req, res) {
         res.json({
             success: true,
             cinema: {
-                cinemaId: row[0],
-                cinemaName: row[1],
-                description: row[2],
-                address: row[3],
-                city: row[4],
-                region: row[5],
-                phoneNumber: row[6],
-                email: row[7],
-                isActive: row[8] === 'Y',
-                createdAt: row[9],
-                updatedAt: row[10]
+                cinemaId: row.cinema_id,
+                cinemaName: row.cinema_name,
+                description: row.description,
+                address: row.address,
+                city: row.city,
+                region: row.region,
+                phoneNumber: row.phone_number,
+                email: row.email,
+                isActive: row.is_active === 'Y',
+                createdAt: row.created_at,
+                updatedAt: row.updated_at
             }
         });
 
     } catch (error) {
-
         console.error('❌ Get cinema error:', error);
 
         res.status(500).json({
@@ -155,19 +125,6 @@ async function getCinemaById(req, res) {
             message: 'Server error fetching cinema',
             error: error.message
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing cinema connection:',
-                    error.message
-                );
-            }
-        }
     }
 }
 
@@ -177,11 +134,7 @@ async function getCinemaById(req, res) {
 // ============================================================
 
 async function getCinemaScreens(req, res) {
-
-    let connection;
-
     try {
-
         const cinemaId = Number(req.params.cinemaId);
 
         if (!Number.isInteger(cinemaId)) {
@@ -191,42 +144,38 @@ async function getCinemaScreens(req, res) {
             });
         }
 
-        connection = await getConnection();
-
-        const result = await connection.execute(
+        const result = await pool.query(
             `
             SELECT
-                SCREEN_ID,
-                CINEMA_ID,
-                SCREEN_NAME,
-                SCREEN_NUMBER,
-                CAPACITY,
-                SCREEN_TYPE,
-                SOUND_SYSTEM,
-                IS_ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
-            FROM SCREENS
-            WHERE CINEMA_ID = :cinemaId
-              AND IS_ACTIVE = 'Y'
-            ORDER BY SCREEN_NUMBER
+                screen_id,
+                cinema_id,
+                screen_name,
+                screen_number,
+                capacity,
+                screen_type,
+                sound_system,
+                is_active,
+                created_at,
+                updated_at
+            FROM screens
+            WHERE cinema_id = $1
+              AND is_active = 'Y'
+            ORDER BY screen_number
             `,
-            {
-                cinemaId
-            }
+            [cinemaId]
         );
 
         const screens = result.rows.map(row => ({
-            screenId: row[0],
-            cinemaId: row[1],
-            screenName: row[2],
-            screenNumber: row[3],
-            capacity: row[4],
-            screenType: row[5],
-            soundSystem: row[6],
-            isActive: row[7] === 'Y',
-            createdAt: row[8],
-            updatedAt: row[9]
+            screenId: row.screen_id,
+            cinemaId: row.cinema_id,
+            screenName: row.screen_name,
+            screenNumber: row.screen_number,
+            capacity: row.capacity,
+            screenType: row.screen_type,
+            soundSystem: row.sound_system,
+            isActive: row.is_active === 'Y',
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
         }));
 
         res.json({
@@ -237,7 +186,6 @@ async function getCinemaScreens(req, res) {
         });
 
     } catch (error) {
-
         console.error('❌ Get cinema screens error:', error);
 
         res.status(500).json({
@@ -245,19 +193,6 @@ async function getCinemaScreens(req, res) {
             message: 'Server error fetching cinema screens',
             error: error.message
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing screen connection:',
-                    error.message
-                );
-            }
-        }
     }
 }
 
@@ -267,11 +202,7 @@ async function getCinemaScreens(req, res) {
 // ============================================================
 
 async function getScreenById(req, res) {
-
-    let connection;
-
     try {
-
         const cinemaId = Number(req.params.cinemaId);
         const screenId = Number(req.params.screenId);
 
@@ -285,38 +216,31 @@ async function getScreenById(req, res) {
             });
         }
 
-        connection = await getConnection();
-
-        const result = await connection.execute(
+        const result = await pool.query(
             `
             SELECT
-                SCREEN_ID,
-                CINEMA_ID,
-                SCREEN_NAME,
-                SCREEN_NUMBER,
-                CAPACITY,
-                SCREEN_TYPE,
-                SOUND_SYSTEM,
-                IS_ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
-            FROM SCREENS
-            WHERE SCREEN_ID = :screenId
-              AND CINEMA_ID = :cinemaId
+                screen_id,
+                cinema_id,
+                screen_name,
+                screen_number,
+                capacity,
+                screen_type,
+                sound_system,
+                is_active,
+                created_at,
+                updated_at
+            FROM screens
+            WHERE screen_id = $1
+              AND cinema_id = $2
             `,
-            {
-                screenId,
-                cinemaId
-            }
+            [screenId, cinemaId]
         );
 
         if (result.rows.length === 0) {
-
             return res.status(404).json({
                 success: false,
                 message: 'Screen not found for this cinema'
             });
-
         }
 
         const row = result.rows[0];
@@ -324,21 +248,20 @@ async function getScreenById(req, res) {
         res.json({
             success: true,
             screen: {
-                screenId: row[0],
-                cinemaId: row[1],
-                screenName: row[2],
-                screenNumber: row[3],
-                capacity: row[4],
-                screenType: row[5],
-                soundSystem: row[6],
-                isActive: row[7] === 'Y',
-                createdAt: row[8],
-                updatedAt: row[9]
+                screenId: row.screen_id,
+                cinemaId: row.cinema_id,
+                screenName: row.screen_name,
+                screenNumber: row.screen_number,
+                capacity: row.capacity,
+                screenType: row.screen_type,
+                soundSystem: row.sound_system,
+                isActive: row.is_active === 'Y',
+                createdAt: row.created_at,
+                updatedAt: row.updated_at
             }
         });
 
     } catch (error) {
-
         console.error('❌ Get screen error:', error);
 
         res.status(500).json({
@@ -346,32 +269,16 @@ async function getScreenById(req, res) {
             message: 'Server error fetching screen',
             error: error.message
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing screen connection:',
-                    error.message
-                );
-            }
-        }
     }
 }
+
 
 // ============================================================
 // GET SEATS FOR SCREEN
 // ============================================================
 
 async function getScreenSeats(req, res) {
-
-    let connection;
-
     try {
-
         const cinemaId = Number(req.params.cinemaId);
         const screenId = Number(req.params.screenId);
 
@@ -385,73 +292,65 @@ async function getScreenSeats(req, res) {
             });
         }
 
-        connection = await getConnection();
-
         // ----------------------------------------------------
         // VERIFY SCREEN BELONGS TO CINEMA
         // ----------------------------------------------------
 
-        const screenResult = await connection.execute(
+        const screenResult = await pool.query(
             `
             SELECT
-                SCREEN_ID,
-                CINEMA_ID,
-                SCREEN_NAME,
-                CAPACITY
-            FROM SCREENS
-            WHERE SCREEN_ID = :screenId
-              AND CINEMA_ID = :cinemaId
+                screen_id,
+                cinema_id,
+                screen_name,
+                capacity
+            FROM screens
+            WHERE screen_id = $1
+              AND cinema_id = $2
             `,
-            {
-                screenId,
-                cinemaId
-            }
+            [screenId, cinemaId]
         );
 
         if (screenResult.rows.length === 0) {
-
             return res.status(404).json({
                 success: false,
                 message: 'Screen not found for this cinema'
             });
-
         }
 
         // ----------------------------------------------------
         // GET SEATS
         // ----------------------------------------------------
 
-        const result = await connection.execute(
+        const result = await pool.query(
             `
             SELECT
-                SEAT_ID,
-                SCREEN_ID,
-                ROW_LABEL,
-                SEAT_NUMBER,
-                SEAT_LABEL,
-                SEAT_TYPE,
-                IS_ACTIVE,
-                CREATED_AT
-            FROM SEATS
-            WHERE SCREEN_ID = :screenId
+                seat_id,
+                screen_id,
+                row_label,
+                seat_number,
+                seat_label,
+                seat_type,
+                is_active,
+                created_at
+            FROM seats
+            WHERE screen_id = $1
+              AND is_active = 'Y'
             ORDER BY
-                ROW_LABEL,
-                SEAT_NUMBER
+                row_label,
+                seat_number
             `,
-            {
-                screenId
-            }
+            [screenId]
         );
 
         const seats = result.rows.map(row => ({
-            seatId: row[0],
-            screenId: row[1],
-            rowLabel: row[2],
-            seatNumber: row[3],
-            seatLabel: row[4],
-            seatType: row[5],
-            isActive: row[6] === 'Y',
-            createdAt: row[7]
+            seatId: row.seat_id,
+            screenId: row.screen_id,
+            rowLabel: row.row_label,
+            seatNumber: row.seat_number,
+            seatLabel: row.seat_label,
+            seatType: row.seat_type,
+            isActive: row.is_active === 'Y',
+            createdAt: row.created_at
         }));
 
         res.json({
@@ -463,7 +362,6 @@ async function getScreenSeats(req, res) {
         });
 
     } catch (error) {
-
         console.error('❌ Get screen seats error:', error);
 
         res.status(500).json({
@@ -471,22 +369,13 @@ async function getScreenSeats(req, res) {
             message: 'Server error fetching seats',
             error: error.message
         });
-
-    } finally {
-
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing seat connection:',
-                    error.message
-                );
-            }
-        }
     }
 }
 
+
+// ============================================================
+// EXPORTS
+// ============================================================
 
 module.exports = {
     getCinemas,

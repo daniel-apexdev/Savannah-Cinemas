@@ -1,4 +1,4 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -6,8 +6,6 @@ const { getConnection } = require('../config/database');
 // ============================================================
 
 async function getMyPreferences(req, res) {
-
-    let connection;
 
     try {
 
@@ -26,33 +24,29 @@ async function getMyPreferences(req, res) {
 
         const userId = req.user.userId;
 
-        connection = await getConnection();
-
         // ----------------------------------------------------
         // Get general preferences
         // ----------------------------------------------------
 
         const preferencesResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    PREFERENCE_ID,
-                    PREFERENCE_TYPE,
-                    PREFERENCE_VALUE,
-                    CREATED_AT,
-                    UPDATED_AT
+                    preference_id,
+                    preference_type,
+                    preference_value,
+                    created_at,
+                    updated_at
 
-                FROM USER_PREFERENCES
+                FROM user_preferences
 
-                WHERE USER_ID = :userId
+                WHERE user_id = $1
 
                 ORDER BY
-                    PREFERENCE_TYPE,
-                    PREFERENCE_VALUE
+                    preference_type,
+                    preference_value
                 `,
-                {
-                    userId
-                }
+                [userId]
             );
 
         // ----------------------------------------------------
@@ -60,25 +54,23 @@ async function getMyPreferences(req, res) {
         // ----------------------------------------------------
 
         const notificationResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    NOTIFICATION_PREFERENCE_ID,
-                    BOOKING_REMINDERS,
-                    BOOKING_CONFIRMATIONS,
-                    MOVIE_RELEASES,
-                    PROMOTIONS,
-                    NEW_MOVIES,
-                    CREATED_AT,
-                    UPDATED_AT
+                    notification_preference_id,
+                    booking_reminders,
+                    booking_confirmations,
+                    movie_releases,
+                    promotions,
+                    new_movies,
+                    created_at,
+                    updated_at
 
-                FROM USER_NOTIFICATION_PREFERENCES
+                FROM user_notification_preferences
 
-                WHERE USER_ID = :userId
+                WHERE user_id = $1
                 `,
-                {
-                    userId
-                }
+                [userId]
             );
 
         // ----------------------------------------------------
@@ -87,16 +79,23 @@ async function getMyPreferences(req, res) {
 
         const preferences = {};
 
-        for (const row of preferencesResult.rows) {
+        for (
+            const row
+            of preferencesResult.rows
+        ) {
 
-            const type = row[1];
-            const value = row[2];
+            const type =
+                row.preference_type;
+
+            const value =
+                row.preference_value;
 
             if (!preferences[type]) {
                 preferences[type] = [];
             }
 
             preferences[type].push(value);
+
         }
 
         // ----------------------------------------------------
@@ -105,36 +104,41 @@ async function getMyPreferences(req, res) {
 
         let notifications = null;
 
-        if (notificationResult.rows.length > 0) {
+        if (
+            notificationResult.rows.length > 0
+        ) {
 
             const row =
                 notificationResult.rows[0];
 
             notifications = {
 
-                preferenceId: row[0],
+                preferenceId:
+                    row.notification_preference_id,
 
                 bookingReminders:
-                    row[1] === 'Y',
+                    row.booking_reminders === 'Y',
 
                 bookingConfirmations:
-                    row[2] === 'Y',
+                    row.booking_confirmations === 'Y',
 
                 movieReleases:
-                    row[3] === 'Y',
+                    row.movie_releases === 'Y',
 
                 promotions:
-                    row[4] === 'Y',
+                    row.promotions === 'Y',
 
                 newMovies:
-                    row[5] === 'Y',
+                    row.new_movies === 'Y',
 
                 createdAt:
-                    row[6],
+                    row.created_at,
 
                 updatedAt:
-                    row[7]
+                    row.updated_at
+
             };
+
         }
 
         // ----------------------------------------------------
@@ -170,25 +174,6 @@ async function getMyPreferences(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
     }
 
 }
@@ -200,7 +185,7 @@ async function getMyPreferences(req, res) {
 
 async function updateMyPreferences(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
@@ -258,7 +243,10 @@ async function updateMyPreferences(req, res) {
 
         ];
 
-        for (const group of preferenceGroups) {
+        for (
+            const group
+            of preferenceGroups
+        ) {
 
             if (
                 group.values !== undefined &&
@@ -278,80 +266,94 @@ async function updateMyPreferences(req, res) {
 
         }
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Get PostgreSQL client
+        // ----------------------------------------------------
+
+        client = await pool.connect();
 
         // ----------------------------------------------------
         // Start transaction
         // ----------------------------------------------------
 
-        await connection.execute(
-            `SAVEPOINT PREFERENCES_START`
-        );
+        await client.query('BEGIN');
 
         // ----------------------------------------------------
         // Delete existing preferences
         // ----------------------------------------------------
 
-        await connection.execute(
+        await client.query(
             `
-            DELETE FROM USER_PREFERENCES
-            WHERE USER_ID = :userId
+            DELETE FROM user_preferences
+            WHERE user_id = $1
             `,
-            {
-                userId
-            }
+            [userId]
         );
 
         // ----------------------------------------------------
         // Insert new preferences
         // ----------------------------------------------------
 
-        for (const group of preferenceGroups) {
+        for (
+            const group
+            of preferenceGroups
+        ) {
 
             if (
                 !group.values ||
                 group.values.length === 0
             ) {
+
                 continue;
+
             }
+
+            // ------------------------------------------------
+            // Remove duplicate values
+            // ------------------------------------------------
 
             const uniqueValues =
                 [
                     ...new Set(
                         group.values.map(
-                            value => String(value).trim()
+                            value =>
+                                String(value).trim()
                         )
                     )
                 ];
 
-            for (const value of uniqueValues) {
+            // ------------------------------------------------
+            // Insert each preference
+            // ------------------------------------------------
+
+            for (
+                const value
+                of uniqueValues
+            ) {
 
                 if (!value) {
                     continue;
                 }
 
-                await connection.execute(
+                await client.query(
                     `
-                    INSERT INTO USER_PREFERENCES (
-                        USER_ID,
-                        PREFERENCE_TYPE,
-                        PREFERENCE_VALUE
+                    INSERT INTO user_preferences (
+                        user_id,
+                        preference_type,
+                        preference_value
                     )
+
                     VALUES (
-                        :userId,
-                        :preferenceType,
-                        :preferenceValue
+                        $1,
+                        $2,
+                        $3
                     )
                     `,
-                    {
+                    [
                         userId,
-
-                        preferenceType:
-                            group.type,
-
-                        preferenceValue:
-                            value
-                    }
+                        group.type,
+                        value
+                    ]
                 );
 
             }
@@ -362,7 +364,7 @@ async function updateMyPreferences(req, res) {
         // Commit
         // ----------------------------------------------------
 
-        await connection.commit();
+        await client.query('COMMIT');
 
         console.log(
             `✅ Preferences updated | User: ${userId}`
@@ -384,10 +386,16 @@ async function updateMyPreferences(req, res) {
             error
         );
 
-        if (connection) {
+        // ----------------------------------------------------
+        // Rollback
+        // ----------------------------------------------------
+
+        if (client) {
 
             try {
-                await connection.rollback();
+
+                await client.query('ROLLBACK');
+
             } catch (rollbackError) {
 
                 console.error(
@@ -413,20 +421,13 @@ async function updateMyPreferences(req, res) {
 
     } finally {
 
-        if (connection) {
+        // ----------------------------------------------------
+        // Release client
+        // ----------------------------------------------------
 
-            try {
+        if (client) {
 
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
+            client.release();
 
         }
 
@@ -441,7 +442,7 @@ async function updateMyPreferences(req, res) {
 
 async function updateNotificationPreferences(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
@@ -509,45 +510,54 @@ async function updateNotificationPreferences(req, res) {
 
         }
 
-        connection = await getConnection();
+        // ----------------------------------------------------
+        // Get PostgreSQL client
+        // ----------------------------------------------------
+
+        client = await pool.connect();
+
+        // ----------------------------------------------------
+        // Start transaction
+        // ----------------------------------------------------
+
+        await client.query('BEGIN');
 
         // ----------------------------------------------------
         // Check existing preferences
         // ----------------------------------------------------
 
         const existing =
-            await connection.execute(
+            await client.query(
                 `
                 SELECT
-                    NOTIFICATION_PREFERENCE_ID
+                    notification_preference_id
 
-                FROM USER_NOTIFICATION_PREFERENCES
+                FROM user_notification_preferences
 
-                WHERE USER_ID = :userId
+                WHERE user_id = $1
                 `,
-                {
-                    userId
-                }
+                [userId]
             );
 
         // ----------------------------------------------------
         // Create if missing
         // ----------------------------------------------------
 
-        if (existing.rows.length === 0) {
+        if (
+            existing.rows.length === 0
+        ) {
 
-            await connection.execute(
+            await client.query(
                 `
-                INSERT INTO USER_NOTIFICATION_PREFERENCES (
-                    USER_ID
+                INSERT INTO user_notification_preferences (
+                    user_id
                 )
+
                 VALUES (
-                    :userId
+                    $1
                 )
                 `,
-                {
-                    userId
-                }
+                [userId]
             );
 
         }
@@ -557,58 +567,109 @@ async function updateNotificationPreferences(req, res) {
         // ----------------------------------------------------
 
         const updates = [];
-        const binds = {
-            userId
-        };
 
-        if (bookingReminders !== undefined) {
+        const values = [userId];
+
+        let parameterIndex = 2;
+
+        // ----------------------------------------------------
+        // Booking reminders
+        // ----------------------------------------------------
+
+        if (
+            bookingReminders !== undefined
+        ) {
 
             updates.push(
-                `BOOKING_REMINDERS = :bookingReminders`
+                `booking_reminders = $${parameterIndex}`
             );
 
-            binds.bookingReminders =
-                bookingReminders ? 'Y' : 'N';
+            values.push(
+                bookingReminders ? 'Y' : 'N'
+            );
+
+            parameterIndex++;
+
         }
 
-        if (bookingConfirmations !== undefined) {
+        // ----------------------------------------------------
+        // Booking confirmations
+        // ----------------------------------------------------
+
+        if (
+            bookingConfirmations !== undefined
+        ) {
 
             updates.push(
-                `BOOKING_CONFIRMATIONS = :bookingConfirmations`
+                `booking_confirmations = $${parameterIndex}`
             );
 
-            binds.bookingConfirmations =
-                bookingConfirmations ? 'Y' : 'N';
+            values.push(
+                bookingConfirmations ? 'Y' : 'N'
+            );
+
+            parameterIndex++;
+
         }
 
-        if (movieReleases !== undefined) {
+        // ----------------------------------------------------
+        // Movie releases
+        // ----------------------------------------------------
+
+        if (
+            movieReleases !== undefined
+        ) {
 
             updates.push(
-                `MOVIE_RELEASES = :movieReleases`
+                `movie_releases = $${parameterIndex}`
             );
 
-            binds.movieReleases =
-                movieReleases ? 'Y' : 'N';
+            values.push(
+                movieReleases ? 'Y' : 'N'
+            );
+
+            parameterIndex++;
+
         }
 
-        if (promotions !== undefined) {
+        // ----------------------------------------------------
+        // Promotions
+        // ----------------------------------------------------
+
+        if (
+            promotions !== undefined
+        ) {
 
             updates.push(
-                `PROMOTIONS = :promotions`
+                `promotions = $${parameterIndex}`
             );
 
-            binds.promotions =
-                promotions ? 'Y' : 'N';
+            values.push(
+                promotions ? 'Y' : 'N'
+            );
+
+            parameterIndex++;
+
         }
 
-        if (newMovies !== undefined) {
+        // ----------------------------------------------------
+        // New movies
+        // ----------------------------------------------------
+
+        if (
+            newMovies !== undefined
+        ) {
 
             updates.push(
-                `NEW_MOVIES = :newMovies`
+                `new_movies = $${parameterIndex}`
             );
 
-            binds.newMovies =
-                newMovies ? 'Y' : 'N';
+            values.push(
+                newMovies ? 'Y' : 'N'
+            );
+
+            parameterIndex++;
+
         }
 
         // ----------------------------------------------------
@@ -616,6 +677,8 @@ async function updateNotificationPreferences(req, res) {
         // ----------------------------------------------------
 
         if (updates.length === 0) {
+
+            await client.query('ROLLBACK');
 
             return res.status(400).json({
 
@@ -629,26 +692,34 @@ async function updateNotificationPreferences(req, res) {
         }
 
         // ----------------------------------------------------
-        // Update
+        // Updated timestamp
         // ----------------------------------------------------
 
         updates.push(
-            `UPDATED_AT = CURRENT_TIMESTAMP`
+            `updated_at = CURRENT_TIMESTAMP`
         );
 
-        await connection.execute(
+        // ----------------------------------------------------
+        // Update preferences
+        // ----------------------------------------------------
+
+        await client.query(
             `
-            UPDATE USER_NOTIFICATION_PREFERENCES
+            UPDATE user_notification_preferences
 
             SET
                 ${updates.join(', ')}
 
-            WHERE USER_ID = :userId
+            WHERE user_id = $1
             `,
-            binds
+            values
         );
 
-        await connection.commit();
+        // ----------------------------------------------------
+        // Commit
+        // ----------------------------------------------------
+
+        await client.query('COMMIT');
 
         console.log(
             `✅ Notification preferences updated | User: ${userId}`
@@ -670,16 +741,23 @@ async function updateNotificationPreferences(req, res) {
             error
         );
 
-        if (connection) {
+        // ----------------------------------------------------
+        // Rollback
+        // ----------------------------------------------------
+
+        if (client) {
 
             try {
-                await connection.rollback();
+
+                await client.query('ROLLBACK');
+
             } catch (rollbackError) {
 
                 console.error(
                     '❌ Rollback error:',
                     rollbackError
                 );
+
             }
 
         }
@@ -698,20 +776,13 @@ async function updateNotificationPreferences(req, res) {
 
     } finally {
 
-        if (connection) {
+        // ----------------------------------------------------
+        // Release client
+        // ----------------------------------------------------
 
-            try {
+        if (client) {
 
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
+            client.release();
 
         }
 
@@ -719,6 +790,10 @@ async function updateNotificationPreferences(req, res) {
 
 }
 
+
+// ============================================================
+// EXPORT
+// ============================================================
 
 module.exports = {
     getMyPreferences,

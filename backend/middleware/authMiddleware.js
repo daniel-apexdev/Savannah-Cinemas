@@ -1,8 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-const { getConnection } = require('../config/database');
-
-
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -10,8 +7,6 @@ const { getConnection } = require('../config/database');
 // ============================================================
 
 async function authenticateToken(req, res, next) {
-
-    let connection;
 
     try {
 
@@ -108,39 +103,30 @@ async function authenticateToken(req, res, next) {
         // GET CURRENT USER ROLE
         // ----------------------------------------
 
-        connection =
-            await getConnection();
-
         const roleResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    R.ROLE_ID,
-                    R.ROLE_NAME
+                    r.role_id,
+                    r.role_name
 
-                FROM USER_ROLE_ASSIGNMENTS UR
+                FROM user_role_assignments ura
 
-                JOIN USER_ROLES R
-                    ON R.ROLE_ID =
-                       UR.ROLE_ID
+                JOIN user_roles r
+                    ON r.role_id = ura.role_id
 
-                JOIN USERS U
-                    ON U.USER_ID =
-                       UR.USER_ID
+                JOIN users u
+                    ON u.user_id = ura.user_id
 
-                WHERE UR.USER_ID =
-                      :userId
+                WHERE ura.user_id = $1
 
-                  AND R.IS_ACTIVE = 'Y'
+                  AND r.is_active = 'Y'
 
-                  AND U.IS_ACTIVE = 'Y'
+                  AND u.is_active = 'Y'
 
-                ORDER BY R.ROLE_ID
+                ORDER BY r.role_id
                 `,
-                {
-                    userId:
-                        decoded.userId
-                }
+                [decoded.userId]
             );
 
 
@@ -163,7 +149,7 @@ async function authenticateToken(req, res, next) {
 
         /*
             If a user has multiple roles,
-            the first active role is used.
+            the highest-priority active role is used.
 
             ROLE PRIORITY:
 
@@ -190,8 +176,8 @@ async function authenticateToken(req, res, next) {
             const row of roleResult.rows
         ) {
 
-            const roleId = row[0];
-            const roleName = row[1];
+            const roleId = row.role_id;
+            const roleName = row.role_name;
 
             const priority =
                 rolePriority[roleName] || 0;
@@ -245,6 +231,10 @@ async function authenticateToken(req, res, next) {
 
         };
 
+
+        // ----------------------------------------
+        // CONTINUE REQUEST
+        // ----------------------------------------
 
         next();
 
@@ -302,25 +292,6 @@ async function authenticateToken(req, res, next) {
             message:
                 'Authentication failed'
         });
-
-    } finally {
-
-        if (connection) {
-
-            try {
-
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing authentication connection:',
-                    error.message
-                );
-
-            }
-
-        }
 
     }
 
@@ -396,4 +367,3 @@ module.exports = {
     requireRole
 
 };
-

@@ -4,7 +4,7 @@
 // ============================================================
 
 // Server Configuration - Update this with your server IP
-const SERVER_IP = '192.168.8.104';  // Your computer's IP address
+const SERVER_IP = 'localhost';  // Your computer's IP address
 const SERVER_PORT = '5000';        // Server port
 
 // Build API URLs

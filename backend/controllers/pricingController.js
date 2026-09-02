@@ -1,4 +1,4 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -7,11 +7,7 @@ const { getConnection } = require('../config/database');
 
 async function getPrices(req, res) {
 
-    let connection;
-
     try {
-
-        connection = await getConnection();
 
         const {
             cinemaId,
@@ -21,99 +17,144 @@ async function getPrices(req, res) {
 
         let sql = `
             SELECT
-                PRICE_ID,
-                CINEMA_ID,
-                SCREEN_ID,
-                PRICE_NAME,
-                TICKET_TYPE,
-                AMOUNT,
-                CURRENCY,
-                DAY_TYPE,
-                START_TIME,
-                END_TIME,
-                IS_ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
+                price_id,
+                cinema_id,
+                screen_id,
+                price_name,
+                ticket_type,
+                amount,
+                currency,
+                day_type,
+                start_time,
+                end_time,
+                is_active,
+                created_at,
+                updated_at
 
-            FROM TICKET_PRICES
+            FROM ticket_prices
 
-            WHERE IS_ACTIVE = 'Y'
+            WHERE is_active = 'Y'
         `;
 
-        const binds = {};
+        const params = [];
+
+        // ----------------------------------------------------
+        // Filter by cinema
+        // ----------------------------------------------------
 
         if (cinemaId) {
 
-            sql += `
-                AND CINEMA_ID = :cinemaId
-            `;
+            const parsedCinemaId = Number(cinemaId);
 
-            binds.cinemaId =
-                Number(cinemaId);
+            if (!Number.isInteger(parsedCinemaId)) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        'Invalid cinema ID'
+
+                });
+
+            }
+
+            params.push(parsedCinemaId);
+
+            sql += `
+                AND cinema_id = $${params.length}
+            `;
         }
+
+        // ----------------------------------------------------
+        // Filter by ticket type
+        // ----------------------------------------------------
 
         if (ticketType) {
 
-            sql += `
-                AND TICKET_TYPE = :ticketType
-            `;
+            params.push(
+                ticketType.toUpperCase()
+            );
 
-            binds.ticketType =
-                ticketType.toUpperCase();
+            sql += `
+                AND ticket_type = $${params.length}
+            `;
         }
+
+        // ----------------------------------------------------
+        // Filter by day type
+        // ----------------------------------------------------
 
         if (dayType) {
 
-            sql += `
-                AND DAY_TYPE = :dayType
-            `;
+            params.push(
+                dayType.toUpperCase()
+            );
 
-            binds.dayType =
-                dayType.toUpperCase();
+            sql += `
+                AND day_type = $${params.length}
+            `;
         }
+
+        // ----------------------------------------------------
+        // Ordering
+        // ----------------------------------------------------
 
         sql += `
             ORDER BY
-                CINEMA_ID,
-                TICKET_TYPE,
-                DAY_TYPE,
-                AMOUNT
+                cinema_id,
+                ticket_type,
+                day_type,
+                amount
         `;
 
         const result =
-            await connection.execute(
+            await pool.query(
                 sql,
-                binds
+                params
             );
 
         const prices =
             result.rows.map(row => ({
 
-                priceId: row[0],
+                priceId:
+                    row.price_id,
 
-                cinemaId: row[1],
+                cinemaId:
+                    row.cinema_id,
 
-                screenId: row[2],
+                screenId:
+                    row.screen_id,
 
-                priceName: row[3],
+                priceName:
+                    row.price_name,
 
-                ticketType: row[4],
+                ticketType:
+                    row.ticket_type,
 
-                amount: row[5],
+                amount:
+                    row.amount,
 
-                currency: row[6],
+                currency:
+                    row.currency,
 
-                dayType: row[7],
+                dayType:
+                    row.day_type,
 
-                startTime: row[8],
+                startTime:
+                    row.start_time,
 
-                endTime: row[9],
+                endTime:
+                    row.end_time,
 
-                isActive: row[10],
+                isActive:
+                    row.is_active,
 
-                createdAt: row[11],
+                createdAt:
+                    row.created_at,
 
-                updatedAt: row[12]
+                updatedAt:
+                    row.updated_at
 
             }));
 
@@ -147,21 +188,6 @@ async function getPrices(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
@@ -172,8 +198,6 @@ async function getPrices(req, res) {
 // ============================================================
 
 async function getPriceById(req, res) {
-
-    let connection;
 
     try {
 
@@ -193,35 +217,29 @@ async function getPriceById(req, res) {
 
         }
 
-        connection =
-            await getConnection();
-
         const result =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    PRICE_ID,
-                    CINEMA_ID,
-                    SCREEN_ID,
-                    PRICE_NAME,
-                    TICKET_TYPE,
-                    AMOUNT,
-                    CURRENCY,
-                    DAY_TYPE,
-                    START_TIME,
-                    END_TIME,
-                    IS_ACTIVE,
-                    CREATED_AT,
-                    UPDATED_AT
+                    price_id,
+                    cinema_id,
+                    screen_id,
+                    price_name,
+                    ticket_type,
+                    amount,
+                    currency,
+                    day_type,
+                    start_time,
+                    end_time,
+                    is_active,
+                    created_at,
+                    updated_at
 
-                FROM TICKET_PRICES
+                FROM ticket_prices
 
-                WHERE PRICE_ID =
-                      :priceId
+                WHERE price_id = $1
                 `,
-                {
-                    priceId
-                }
+                [priceId]
             );
 
         if (result.rows.length === 0) {
@@ -246,31 +264,44 @@ async function getPriceById(req, res) {
 
             price: {
 
-                priceId: row[0],
+                priceId:
+                    row.price_id,
 
-                cinemaId: row[1],
+                cinemaId:
+                    row.cinema_id,
 
-                screenId: row[2],
+                screenId:
+                    row.screen_id,
 
-                priceName: row[3],
+                priceName:
+                    row.price_name,
 
-                ticketType: row[4],
+                ticketType:
+                    row.ticket_type,
 
-                amount: row[5],
+                amount:
+                    row.amount,
 
-                currency: row[6],
+                currency:
+                    row.currency,
 
-                dayType: row[7],
+                dayType:
+                    row.day_type,
 
-                startTime: row[8],
+                startTime:
+                    row.start_time,
 
-                endTime: row[9],
+                endTime:
+                    row.end_time,
 
-                isActive: row[10],
+                isActive:
+                    row.is_active,
 
-                createdAt: row[11],
+                createdAt:
+                    row.created_at,
 
-                updatedAt: row[12]
+                updatedAt:
+                    row.updated_at
 
             }
 
@@ -295,21 +326,6 @@ async function getPriceById(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
@@ -320,8 +336,6 @@ async function getPriceById(req, res) {
 // ============================================================
 
 async function getShowtimePricing(req, res) {
-
-    let connection;
 
     try {
 
@@ -341,37 +355,32 @@ async function getShowtimePricing(req, res) {
 
         }
 
-        connection =
-            await getConnection();
-
         // ----------------------------------------------------
         // Get showtime
         // ----------------------------------------------------
 
         const showtimeResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
+                    showtime_id,
+                    cinema_id,
+                    screen_id,
+                    show_date,
+                    start_time,
+                    status,
+                    is_active
 
-                    SHOWTIME_ID,
-                    CINEMA_ID,
-                    SCREEN_ID,
-                    SHOW_DATE,
-                    START_TIME,
-                    STATUS,
-                    IS_ACTIVE
+                FROM showtimes
 
-                FROM SHOWTIMES
-
-                WHERE SHOWTIME_ID =
-                      :showtimeId
+                WHERE showtime_id = $1
                 `,
-                {
-                    showtimeId
-                }
+                [showtimeId]
             );
 
-        if (showtimeResult.rows.length === 0) {
+        if (
+            showtimeResult.rows.length === 0
+        ) {
 
             return res.status(404).json({
 
@@ -388,129 +397,130 @@ async function getShowtimePricing(req, res) {
             showtimeResult.rows[0];
 
         const cinemaId =
-            showtime[1];
+            showtime.cinema_id;
 
         const screenId =
-            showtime[2];
+            showtime.screen_id;
 
         const showDate =
-            showtime[3];
+            showtime.show_date;
 
         const startTime =
-            showtime[4];
+            showtime.start_time;
+
 
         // ----------------------------------------------------
         // Determine day type
         // ----------------------------------------------------
+        //
+        // PostgreSQL EXTRACT(DOW):
+        //
+        // Sunday    = 0
+        // Monday    = 1
+        // Tuesday   = 2
+        // Wednesday = 3
+        // Thursday  = 4
+        // Friday    = 5
+        // Saturday  = 6
+        //
+        // Therefore 0 and 6 = weekend.
+        // ----------------------------------------------------
 
         const dayResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-
                     CASE
-
-                        WHEN TO_CHAR(
-                            :showDate,
-                            'DY',
-                            'NLS_DATE_LANGUAGE=ENGLISH'
-                        ) IN ('SAT', 'SUN')
+                        WHEN EXTRACT(
+                            DOW FROM $1::date
+                        ) IN (0, 6)
 
                         THEN 'WEEKEND'
 
                         ELSE 'WEEKDAY'
 
-                    END AS DAY_TYPE
-
-                FROM DUAL
+                    END AS day_type
                 `,
-                {
-                    showDate
-                }
+                [showDate]
             );
 
         const dayType =
-            dayResult.rows[0][0];
+            dayResult.rows[0].day_type;
+
 
         // ----------------------------------------------------
         // Find applicable prices
         // ----------------------------------------------------
 
         const priceResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
 
-                    PRICE_ID,
-                    PRICE_NAME,
-                    TICKET_TYPE,
-                    AMOUNT,
-                    CURRENCY,
-                    DAY_TYPE,
-                    START_TIME,
-                    END_TIME
+                    price_id,
+                    price_name,
+                    ticket_type,
+                    amount,
+                    currency,
+                    day_type,
+                    start_time,
+                    end_time,
+                    screen_id
 
-                FROM TICKET_PRICES
+                FROM ticket_prices
 
-                WHERE CINEMA_ID =
-                      :cinemaId
+                WHERE cinema_id = $1
 
-                  AND IS_ACTIVE =
-                      'Y'
+                  AND is_active = 'Y'
 
                   AND (
-                        SCREEN_ID IS NULL
-                        OR SCREEN_ID = :screenId
+                        screen_id IS NULL
+                        OR screen_id = $2
                   )
 
                   AND (
-                        DAY_TYPE IS NULL
-                        OR DAY_TYPE = :dayType
+                        day_type IS NULL
+                        OR day_type = $3
                   )
 
                   AND (
-                        START_TIME IS NULL
+                        start_time IS NULL
 
                         OR
-                        CAST(:startTime AS TIMESTAMP)
-                        >= START_TIME
+                        $4::time >= start_time
                   )
 
                   AND (
-                        END_TIME IS NULL
+                        end_time IS NULL
 
                         OR
-                        CAST(:startTime AS TIMESTAMP)
-                        <= END_TIME
+                        $4::time <= end_time
                   )
 
                 ORDER BY
 
-                    TICKET_TYPE,
+                    ticket_type,
 
                     CASE
-                        WHEN SCREEN_ID = :screenId
+                        WHEN screen_id = $2
                         THEN 1
                         ELSE 2
                     END,
 
                     CASE
-                        WHEN DAY_TYPE = :dayType
+                        WHEN day_type = $3
                         THEN 1
                         ELSE 2
                     END
-
                 `,
-                {
+                [
                     cinemaId,
-
                     screenId,
-
                     dayType,
-
                     startTime
-                }
+                ]
             );
+
 
         // ----------------------------------------------------
         // Remove duplicate ticket types
@@ -525,7 +535,7 @@ async function getShowtimePricing(req, res) {
         ) {
 
             const ticketType =
-                row[2];
+                row.ticket_type;
 
             if (
                 !priceMap.has(ticketType)
@@ -536,28 +546,28 @@ async function getShowtimePricing(req, res) {
                     {
 
                         priceId:
-                            row[0],
+                            row.price_id,
 
                         priceName:
-                            row[1],
+                            row.price_name,
 
                         ticketType:
-                            row[2],
+                            row.ticket_type,
 
                         amount:
-                            row[3],
+                            row.amount,
 
                         currency:
-                            row[4],
+                            row.currency,
 
                         dayType:
-                            row[5],
+                            row.day_type,
 
                         startTime:
-                            row[6],
+                            row.start_time,
 
                         endTime:
-                            row[7]
+                            row.end_time
 
                     }
                 );
@@ -570,6 +580,11 @@ async function getShowtimePricing(req, res) {
             Array.from(
                 priceMap.values()
             );
+
+
+        // ----------------------------------------------------
+        // Response
+        // ----------------------------------------------------
 
         return res.json({
 
@@ -619,25 +634,14 @@ async function getShowtimePricing(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
 
+
+// ============================================================
+// EXPORTS
+// ============================================================
 
 module.exports = {
 

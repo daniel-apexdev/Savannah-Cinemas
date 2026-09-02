@@ -1,6 +1,5 @@
 const express = require('express');
 
-
 const {
     getMovies,
     getMovieById,
@@ -10,36 +9,46 @@ const {
     searchMovies,
     getComingSoonMovies,
     getMovieDetails,
-    getTopRatedMovies,
-    getPopularMovies,
-    getRecommendedMovies
+    getTopRatedMovies
 } = require('../controllers/movieController');
-
-const {
-    authenticateToken
-} = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-
 // ============================================================
-// MOVIE ROUTES
+// SPECIFIC ROUTES FIRST
 // ============================================================
 
-// Specific routes FIRST
 router.get('/now-showing', getNowShowing);
+
 router.get('/upcoming', getUpcomingMovies);
-router.get('/popular', getPopularMovies);
+
+router.get('/popular', (req, res) => {
+    res.status(501).json({
+        success: false,
+        message: 'Popular movies endpoint will be added next'
+    });
+});
+
 router.get('/top-rated', getTopRatedMovies);
-router.get('/search',searchMovies);
+
+router.get('/search', searchMovies);
+
 router.get('/coming-soon', getComingSoonMovies);
-router.get('/recommended', authenticateToken, getRecommendedMovies);
-router.get('/:movieId', getMovieDetails);
+
+// ============================================================
+// MOVIE DETAILS / SHOWTIMES
+// ============================================================
+
 router.get('/:movieId/showtimes', getMovieShowtimes);
 
+router.get('/:movieId/details', getMovieDetails);
 
-// General routes
+router.get('/:movieId', getMovieById);
+
+// ============================================================
+// ALL MOVIES
+// ============================================================
+
 router.get('/', getMovies);
-router.get('/:id', getMovieById);
 
 module.exports = router;

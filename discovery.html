@@ -1275,490 +1275,1293 @@
     JAVASCRIPT
     ============================================================ -->
     <script src="backend/config.js"></script>
-    <script>
-        (function() {
-            'use strict';
+<script>
+    (function() {
+        'use strict';
 
-            // ============================================================
-            // CONFIGURATION
-            // ============================================================
+        // ============================================================
+        // CONFIGURATION
+        // ============================================================
 
-            const API_KEY = 'a0b31df2c8c2865ebe236c9e1eb7cbd9';
-            const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
-            const STORAGE_KEY = 'savannah_watchlist';
-            const ITEMS_PER_PAGE = 20;
-            const token = localStorage.getItem('token');
-            const userData = JSON.parse(localStorage.getItem('user') || 'null');
-            const isAuthenticated = !!token && !!userData;
+        /*
+         * IMPORTANT:
+         * Replace the IP address below with the Network IP shown
+         * when your Node.js server starts.
+         *
+         * Example:
+         * 📍 Network: http://192.168.1.100:5000
+         */
 
-            // ============================================================
-            // DOM REFS
-            // ============================================================
+        const API_BASE_URL = 'http://localhost:5000';
 
-            const DOM = {
-                grid: document.getElementById('discoveryGrid'),
-                searchInput: document.getElementById('searchInput'),
-                clearBtn: document.getElementById('clearBtn'),
-                resultCount: document.getElementById('resultCount'),
-                scrollLoader: document.getElementById('scrollLoader'),
-                toast: document.getElementById('toast'),
-                toastIcon: document.getElementById('toastIcon'),
-                toastMessage: document.getElementById('toastMessage'),
-                menuToggle: document.getElementById('menuToggle'),
-                mobileMenu: document.getElementById('mobileMenu'),
-                mobileOverlay: document.getElementById('mobileOverlay'),
-                mobileMenuClose: document.getElementById('mobileMenuClose'),
-                navRight: document.getElementById('navRight'),
-                mobileMenuLinks: document.getElementById('mobileMenuLinks'),
-                mobileDivider: document.getElementById('mobileDivider')
+        /*
+         * TMDB configuration
+         *
+         * NOTE:
+         * We will eventually move the TMDB API key completely
+         * behind the Node.js backend so it is not exposed here.
+         */
+
+        const API_KEY = 'a0b31df2c8c2865ebe236c9e1eb7cbd9';
+
+        const IMAGE_BASE =
+            'https://image.tmdb.org/t/p/w500';
+
+        const STORAGE_KEY =
+            'savannah_watchlist';
+
+        const ITEMS_PER_PAGE = 20;
+
+        // ============================================================
+        // AUTHENTICATION
+        // ============================================================
+
+        const token =
+            localStorage.getItem('token');
+
+        const userData =
+            JSON.parse(
+                localStorage.getItem('user') || 'null'
+            );
+
+        const isAuthenticated =
+            !!token && !!userData;
+
+        // ============================================================
+        // DOM REFS
+        // ============================================================
+
+        const DOM = {
+
+            grid:
+                document.getElementById(
+                    'discoveryGrid'
+                ),
+
+            searchInput:
+                document.getElementById(
+                    'searchInput'
+                ),
+
+            clearBtn:
+                document.getElementById(
+                    'clearBtn'
+                ),
+
+            resultCount:
+                document.getElementById(
+                    'resultCount'
+                ),
+
+            scrollLoader:
+                document.getElementById(
+                    'scrollLoader'
+                ),
+
+            toast:
+                document.getElementById(
+                    'toast'
+                ),
+
+            toastIcon:
+                document.getElementById(
+                    'toastIcon'
+                ),
+
+            toastMessage:
+                document.getElementById(
+                    'toastMessage'
+                ),
+
+            menuToggle:
+                document.getElementById(
+                    'menuToggle'
+                ),
+
+            mobileMenu:
+                document.getElementById(
+                    'mobileMenu'
+                ),
+
+            mobileOverlay:
+                document.getElementById(
+                    'mobileOverlay'
+                ),
+
+            mobileMenuClose:
+                document.getElementById(
+                    'mobileMenuClose'
+                ),
+
+            navRight:
+                document.getElementById(
+                    'navRight'
+                ),
+
+            mobileMenuLinks:
+                document.getElementById(
+                    'mobileMenuLinks'
+                ),
+
+            mobileDivider:
+                document.getElementById(
+                    'mobileDivider'
+                )
+
+        };
+
+        // ============================================================
+        // NAV RENDER
+        // ============================================================
+
+        function renderNav() {
+
+            if (
+                isAuthenticated &&
+                userData
+            ) {
+
+                const initials =
+                    userData.name
+                        .split(' ')
+                        .map(
+                            n => n[0]
+                        )
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2);
+
+                DOM.navRight.innerHTML = `
+                    <div
+                        class="profile-wrapper"
+                        id="profileWrapper"
+                    >
+
+                        <div
+                            class="avatar"
+                            id="avatarBtn"
+                        >
+                            ${initials}
+                        </div>
+
+                        <div
+                            class="profile-menu"
+                            id="profileMenu"
+                        >
+
+                            <div class="who">
+
+                                <div class="name">
+                                    ${userData.name}
+                                </div>
+
+                                <div
+                                    class="stat"
+                                    id="navStat"
+                                >
+                                    0 films watched
+                                </div>
+
+                            </div>
+
+                            <a href="profile.html">
+                                My Profile
+                            </a>
+
+                            <a
+                                href="#"
+                                id="logoutBtn"
+                            >
+                                Sign out
+                            </a>
+
+                        </div>
+
+                    </div>
+                `;
+
+                const logoutLink =
+                    document.createElement('li');
+
+                logoutLink.innerHTML = `
+                    <a
+                        href="#"
+                        class="mobile-logout"
+                        id="mobileLogoutBtn"
+                    >
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sign out
+                    </a>
+                `;
+
+                DOM.mobileMenuLinks.appendChild(
+                    logoutLink
+                );
+
+                if (DOM.mobileDivider) {
+                    DOM.mobileDivider.style.display =
+                        'block';
+                }
+
+                setupProfileDropdown();
+
+                document
+                    .getElementById('logoutBtn')
+                    .addEventListener(
+                        'click',
+                        function(e) {
+
+                            e.preventDefault();
+
+                            logout();
+
+                        }
+                    );
+
+                document
+                    .getElementById('mobileLogoutBtn')
+                    .addEventListener(
+                        'click',
+                        function(e) {
+
+                            e.preventDefault();
+
+                            logout();
+
+                        }
+                    );
+
+                fetchWatchCount();
+
+            } else {
+
+                DOM.navRight.innerHTML = `
+                    <a
+                        href="logout.html"
+                        class="btn-signin"
+                    >
+                        <i class="fas fa-sign-in-alt"></i>
+                        Sign In
+                    </a>
+                `;
+
+                const signInLink =
+                    document.createElement('li');
+
+                signInLink.innerHTML = `
+                    <a
+                        href="logout.html"
+                        style="color:var(--gold);"
+                    >
+                        <i class="fas fa-sign-in-alt"></i>
+                        Sign In / Create Account
+                    </a>
+                `;
+
+                DOM.mobileMenuLinks.appendChild(
+                    signInLink
+                );
+
+                if (DOM.mobileDivider) {
+                    DOM.mobileDivider.style.display =
+                        'block';
+                }
+
+            }
+
+        }
+
+        // ============================================================
+        // PROFILE DROPDOWN
+        // ============================================================
+
+        function setupProfileDropdown() {
+
+            const profileWrapper =
+                document.getElementById(
+                    'profileWrapper'
+                );
+
+            const avatarBtn =
+                document.getElementById(
+                    'avatarBtn'
+                );
+
+            if (
+                !profileWrapper ||
+                !avatarBtn
+            ) {
+                return;
+            }
+
+            let closeTimer;
+
+            profileWrapper.addEventListener(
+                'mouseenter',
+                function() {
+
+                    clearTimeout(
+                        closeTimer
+                    );
+
+                    this.classList.add(
+                        'is-open'
+                    );
+
+                }
+            );
+
+            profileWrapper.addEventListener(
+                'mouseleave',
+                function() {
+
+                    closeTimer =
+                        setTimeout(
+                            () => {
+
+                                this.classList.remove(
+                                    'is-open'
+                                );
+
+                            },
+                            150
+                        );
+
+                }
+            );
+
+            avatarBtn.addEventListener(
+                'click',
+                function(e) {
+
+                    e.stopPropagation();
+
+                    profileWrapper.classList.toggle(
+                        'is-open'
+                    );
+
+                }
+            );
+
+            document.addEventListener(
+                'click',
+                function(e) {
+
+                    if (
+                        !profileWrapper.contains(
+                            e.target
+                        )
+                    ) {
+
+                        profileWrapper.classList.remove(
+                            'is-open'
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+
+        // ============================================================
+        // FETCH WATCH COUNT
+        // ============================================================
+
+        async function fetchWatchCount() {
+
+            if (!token) {
+                return;
+            }
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/api/watchlist`,
+                        {
+                            headers: {
+                                'Authorization':
+                                    `Bearer ${token}`
+                            }
+                        }
+                    );
+
+                if (response.ok) {
+
+                    const watchlist =
+                        await response.json();
+
+                    const watchedCount =
+                        watchlist.filter(
+                            item =>
+                                item.watched
+                        ).length;
+
+                    const statEl =
+                        document.getElementById(
+                            'navStat'
+                        );
+
+                    if (statEl) {
+
+                        statEl.textContent =
+                            `${watchedCount} films watched`;
+
+                    }
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'Error fetching watch count:',
+                    error
+                );
+
+            }
+
+        }
+
+        // ============================================================
+        // LOGOUT
+        // ============================================================
+
+        function logout() {
+
+            localStorage.removeItem(
+                'token'
+            );
+
+            localStorage.removeItem(
+                'user'
+            );
+
+            window.location.href =
+                'logout.html';
+
+        }
+
+        // ============================================================
+        // STATE
+        // ============================================================
+
+        let allFilms = [];
+
+        let currentPage = 1;
+
+        let totalPages = 0;
+
+        let isLoading = false;
+
+        let searchQuery = '';
+
+        let debounceTimer = null;
+
+        let hasMore = true;
+
+        let isInitialLoad = true;
+
+        let seenIds = new Set();
+
+        // ============================================================
+        // WATCHLIST STORAGE
+        // ============================================================
+
+        function getWatchlist() {
+
+            try {
+
+                const data =
+                    localStorage.getItem(
+                        STORAGE_KEY
+                    );
+
+                return data
+                    ? JSON.parse(data)
+                    : [];
+
+            } catch (e) {
+
+                return [];
+
+            }
+
+        }
+
+        function saveWatchlist(
+            watchlist
+        ) {
+
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(
+                    watchlist
+                )
+            );
+
+        }
+
+        function isInWatchlist(
+            movieId
+        ) {
+
+            const watchlist =
+                getWatchlist();
+
+            return watchlist.some(
+                item =>
+                    item.id === movieId
+            );
+
+        }
+
+        // ============================================================
+        // TOAST
+        // ============================================================
+
+        let toastTimeout = null;
+
+        function showToast(
+            message,
+            type
+        ) {
+
+            const iconMap = {
+
+                success: '✅',
+
+                info: 'ℹ️',
+
+                error: '❌'
+
             };
 
-            // ============================================================
-            // NAV RENDER
-            // ============================================================
+            DOM.toastIcon.textContent =
+                iconMap[type] || 'ℹ️';
 
-            function renderNav() {
-                if (isAuthenticated && userData) {
-                    const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                    
-                    DOM.navRight.innerHTML = `
-                        <div class="profile-wrapper" id="profileWrapper">
-                            <div class="avatar" id="avatarBtn">${initials}</div>
-                            <div class="profile-menu" id="profileMenu">
-                                <div class="who">
-                                    <div class="name">${userData.name}</div>
-                                    <div class="stat" id="navStat">0 films watched</div>
-                                </div>
-                                <a href="profile.html">My Profile</a>
-                                <a href="#" id="logoutBtn">Sign out</a>
-                            </div>
-                        </div>
-                    `;
-                    
-                    const logoutLink = document.createElement('li');
-                    logoutLink.innerHTML = `<a href="#" class="mobile-logout" id="mobileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Sign out</a>`;
-                    DOM.mobileMenuLinks.appendChild(logoutLink);
-                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
-                    
-                    setupProfileDropdown();
-                    
-                    document.getElementById('logoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    document.getElementById('mobileLogoutBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        logout();
-                    });
-                    
-                    fetchWatchCount();
-                    
-                } else {
-                    DOM.navRight.innerHTML = `
-                        <a href="logout.html" class="btn-signin">
-                            <i class="fas fa-sign-in-alt"></i> Sign In
-                        </a>
-                    `;
-                    
-                    const signInLink = document.createElement('li');
-                    signInLink.innerHTML = `<a href="logout.html" style="color:var(--gold);"><i class="fas fa-sign-in-alt"></i> Sign In / Create Account</a>`;
-                    DOM.mobileMenuLinks.appendChild(signInLink);
-                    if (DOM.mobileDivider) DOM.mobileDivider.style.display = 'block';
-                }
-            }
+            DOM.toastIcon.className =
+                `toast-icon ${type}`;
 
-            // ============================================================
-            // PROFILE DROPDOWN
-            // ============================================================
+            DOM.toastMessage.textContent =
+                message;
 
-            function setupProfileDropdown() {
-                const profileWrapper = document.getElementById('profileWrapper');
-                const avatarBtn = document.getElementById('avatarBtn');
-                if (!profileWrapper || !avatarBtn) return;
-                
-                let closeTimer;
-                profileWrapper.addEventListener('mouseenter', function() {
-                    clearTimeout(closeTimer);
-                    this.classList.add('is-open');
-                });
-                profileWrapper.addEventListener('mouseleave', function() {
-                    closeTimer = setTimeout(() => {
-                        this.classList.remove('is-open');
-                    }, 150);
-                });
-                avatarBtn.addEventListener('click', function(e) {
+            DOM.toast.classList.add(
+                'show'
+            );
+
+            clearTimeout(
+                toastTimeout
+            );
+
+            toastTimeout =
+                setTimeout(
+                    () => {
+
+                        DOM.toast.classList.remove(
+                            'show'
+                        );
+
+                    },
+                    3000
+                );
+
+        }
+
+        // ============================================================
+        // MOBILE MENU
+        // ============================================================
+
+        function setupMobileMenu() {
+
+            DOM.menuToggle.addEventListener(
+                'click',
+                function(e) {
+
                     e.stopPropagation();
-                    profileWrapper.classList.toggle('is-open');
-                });
-                document.addEventListener('click', function(e) {
-                    if (!profileWrapper.contains(e.target)) {
-                        profileWrapper.classList.remove('is-open');
-                    }
-                });
-            }
 
-            // ============================================================
-            // FETCH WATCH COUNT
-            // ============================================================
+                    DOM.mobileMenu.classList.toggle(
+                        'open'
+                    );
 
-            async function fetchWatchCount() {
-                try {
-                    const response = await fetch(`http://${SERVER_IP}:${SERVER_PORT}/api/watchlist`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (response.ok) {
-                        const watchlist = await response.json();
-                        const watchedCount = watchlist.filter(item => item.watched).length;
-                        const statEl = document.getElementById('navStat');
-                        if (statEl) {
-                            statEl.textContent = `${watchedCount} films watched`;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching watch count:', error);
+                    DOM.mobileOverlay.classList.toggle(
+                        'active'
+                    );
+
+                    DOM.menuToggle.classList.toggle(
+                        'active'
+                    );
+
+                    document.body.style.overflow =
+                        DOM.mobileMenu.classList.contains(
+                            'open'
+                        )
+                            ? 'hidden'
+                            : '';
+
                 }
-            }
+            );
 
-            // ============================================================
-            // LOGOUT
-            // ============================================================
+            DOM.mobileMenuClose.addEventListener(
+                'click',
+                closeMobileMenu
+            );
 
-            function logout() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = 'logout.html';
-            }
+            DOM.mobileOverlay.addEventListener(
+                'click',
+                closeMobileMenu
+            );
 
-            // ============================================================
-            // STATE
-            // ============================================================
+            DOM.mobileMenu
+                .querySelectorAll('a')
+                .forEach(
+                    function(link) {
 
-            let allFilms = [];
-            let currentPage = 1;
-            let totalPages = 0;
-            let isLoading = false;
-            let searchQuery = '';
-            let debounceTimer = null;
-            let hasMore = true;
-            let isInitialLoad = true;
-            let seenIds = new Set();
+                        link.addEventListener(
+                            'click',
+                            closeMobileMenu
+                        );
 
-            // ============================================================
-            // WATCHLIST STORAGE
-            // ============================================================
+                    }
+                );
 
-            function getWatchlist() {
-                try {
-                    const data = localStorage.getItem(STORAGE_KEY);
-                    return data ? JSON.parse(data) : [];
-                } catch (e) {
-                    return [];
-                }
-            }
+            document.addEventListener(
+                'keydown',
+                function(e) {
 
-            function saveWatchlist(watchlist) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist));
-            }
+                    if (
+                        e.key === 'Escape' &&
+                        DOM.mobileMenu.classList.contains(
+                            'open'
+                        )
+                    ) {
 
-            function isInWatchlist(movieId) {
-                const watchlist = getWatchlist();
-                return watchlist.some(item => item.id === movieId);
-            }
-
-            // ============================================================
-            // TOAST
-            // ============================================================
-
-            let toastTimeout = null;
-
-            function showToast(message, type) {
-                const iconMap = {
-                    success: '✅',
-                    info: 'ℹ️',
-                    error: '❌'
-                };
-                
-                DOM.toastIcon.textContent = iconMap[type] || 'ℹ️';
-                DOM.toastIcon.className = `toast-icon ${type}`;
-                DOM.toastMessage.textContent = message;
-                
-                DOM.toast.classList.add('show');
-                
-                clearTimeout(toastTimeout);
-                toastTimeout = setTimeout(() => {
-                    DOM.toast.classList.remove('show');
-                }, 3000);
-            }
-
-            // ============================================================
-            // MOBILE MENU
-            // ============================================================
-
-            function setupMobileMenu() {
-                DOM.menuToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    DOM.mobileMenu.classList.toggle('open');
-                    DOM.mobileOverlay.classList.toggle('active');
-                    DOM.menuToggle.classList.toggle('active');
-                    document.body.style.overflow = DOM.mobileMenu.classList.contains('open') ? 'hidden' : '';
-                });
-
-                DOM.mobileMenuClose.addEventListener('click', closeMobileMenu);
-                DOM.mobileOverlay.addEventListener('click', closeMobileMenu);
-
-                DOM.mobileMenu.querySelectorAll('a').forEach(function(link) {
-                    link.addEventListener('click', closeMobileMenu);
-                });
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && DOM.mobileMenu.classList.contains('open')) {
                         closeMobileMenu();
-                    }
-                });
-            }
 
-            function closeMobileMenu() {
-                DOM.mobileMenu.classList.remove('open');
-                DOM.mobileOverlay.classList.remove('active');
-                DOM.menuToggle.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-
-            // ============================================================
-            // FETCH FILMS WITH DEDUPLICATION
-            // ============================================================
-
-            async function fetchFilms(page = 1, query = '') {
-                let url;
-                if (query.trim()) {
-                    url = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&language=en-US&page=${page}&query=${encodeURIComponent(query.trim())}`;
-                } else {
-                    url = `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
-                }
-
-                try {
-                    const response = await fetch(url);
-                    
-                    if (!response.ok) {
-                        throw new Error(`API Error: ${response.status}`);
                     }
 
-                    const data = await response.json();
-                    totalPages = data.total_pages;
-                    
-                    // Filter out films without posters AND remove duplicates using seenIds
-                    const films = data.results.filter(film => {
-                        // Must have a poster
-                        if (!film.poster_path) return false;
-                        // Check if we've already seen this film
-                        if (seenIds.has(film.id)) return false;
-                        // Add to seen set
-                        seenIds.add(film.id);
-                        return true;
-                    });
-                    
-                    return films;
-                } catch (error) {
-                    console.error('Error fetching films:', error);
-                    return [];
                 }
+            );
+
+        }
+
+        function closeMobileMenu() {
+
+            DOM.mobileMenu.classList.remove(
+                'open'
+            );
+
+            DOM.mobileOverlay.classList.remove(
+                'active'
+            );
+
+            DOM.menuToggle.classList.remove(
+                'active'
+            );
+
+            document.body.style.overflow =
+                '';
+
+        }
+
+        // ============================================================
+        // FETCH FILMS WITH DEDUPLICATION
+        // ============================================================
+
+        async function fetchFilms(
+            page = 1,
+            query = ''
+        ) {
+
+            let url;
+
+            if (
+                query.trim()
+            ) {
+
+                url =
+                    `https://api.themoviedb.org/3/search/movie` +
+                    `?api_key=${API_KEY}` +
+                    `&language=en-US` +
+                    `&page=${page}` +
+                    `&query=${encodeURIComponent(
+                        query.trim()
+                    )}`;
+
+            } else {
+
+                url =
+                    `https://api.themoviedb.org/3/movie/popular` +
+                    `?api_key=${API_KEY}` +
+                    `&language=en-US` +
+                    `&page=${page}`;
+
             }
 
-            // ============================================================
-            // RENDER FILMS
-            // ============================================================
+            try {
 
-            function renderFilms(films, append = false) {
-                const grid = DOM.grid;
-                
-                if (!append) {
-                    grid.innerHTML = '';
+                const response =
+                    await fetch(url);
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        `API Error: ${response.status}`
+                    );
+
                 }
 
-                if (films.length === 0 && !append) {
-                    grid.innerHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-film"></i>
-                            <h3>No Films Found</h3>
-                            <p>${searchQuery ? `No results found for "${searchQuery}".` : 'Try adjusting your search to find more films.'}</p>
-                        </div>
+                const data =
+                    await response.json();
+
+                totalPages =
+                    data.total_pages;
+
+                // ----------------------------------------------------
+                // Filter films
+                // ----------------------------------------------------
+
+                const films =
+                    data.results.filter(
+                        film => {
+
+                            // Must have a poster
+                            if (
+                                !film.poster_path
+                            ) {
+                                return false;
+                            }
+
+                            // Remove duplicates
+                            if (
+                                seenIds.has(
+                                    film.id
+                                )
+                            ) {
+                                return false;
+                            }
+
+                            seenIds.add(
+                                film.id
+                            );
+
+                            return true;
+
+                        }
+                    );
+
+                return films;
+
+            } catch (error) {
+
+                console.error(
+                    'Error fetching films:',
+                    error
+                );
+
+                return [];
+
+            }
+
+        }
+
+        // ============================================================
+        // RENDER FILMS
+        // ============================================================
+
+        function renderFilms(
+            films,
+            append = false
+        ) {
+
+            const grid =
+                DOM.grid;
+
+            if (!append) {
+
+                grid.innerHTML =
+                    '';
+
+            }
+
+            if (
+                films.length === 0 &&
+                !append
+            ) {
+
+                grid.innerHTML = `
+                    <div class="empty-state">
+
+                        <i class="fas fa-film"></i>
+
+                        <h3>
+                            No Films Found
+                        </h3>
+
+                        <p>
+                            ${
+                                searchQuery
+                                    ? `No results found for "${searchQuery}".`
+                                    : 'Try adjusting your search to find more films.'
+                            }
+                        </p>
+
+                    </div>
+                `;
+
+                DOM.resultCount.textContent =
+                    '0';
+
+                DOM.scrollLoader.classList.remove(
+                    'show'
+                );
+
+                return;
+
+            }
+
+            DOM.resultCount.textContent =
+                allFilms.length;
+
+            const filmsHTML =
+                films.map(
+                    film => {
+
+                        const posterUrl =
+                            film.poster_path
+                                ? `${IMAGE_BASE}${film.poster_path}`
+                                : '';
+
+                        const rating =
+                            film.vote_average
+                                ? film.vote_average.toFixed(1)
+                                : 'N/A';
+
+                        const inWatchlist =
+                            isInWatchlist(
+                                film.id
+                            );
+
+                        return `
+                            <div
+                                class="movie-card"
+                                onclick="viewMovie(${film.id})"
+                            >
+
+                                <div
+                                    class="poster"
+                                    style="
+                                        background-image:
+                                            url('${posterUrl}');
+                                        background-color:
+                                            var(--ink-raised);
+                                    "
+                                >
+
+                                    ${
+                                        inWatchlist
+                                            ? `
+                                                <div class="watchlist-badge">
+                                                    <i class="fas fa-heart"></i>
+                                                </div>
+                                            `
+                                            : ''
+                                    }
+
+                                </div>
+
+                            </div>
+                        `;
+
+                    }
+                ).join('');
+
+            if (append) {
+
+                grid.insertAdjacentHTML(
+                    'beforeend',
+                    filmsHTML
+                );
+
+            } else {
+
+                grid.innerHTML =
+                    filmsHTML;
+
+            }
+
+            // ========================================================
+            // UPDATE SCROLL LOADER
+            // ========================================================
+
+            if (
+                hasMore &&
+                currentPage <= totalPages
+            ) {
+
+                DOM.scrollLoader.classList.add(
+                    'show'
+                );
+
+                DOM.scrollLoader.innerHTML = `
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading more films...
+                `;
+
+            } else {
+
+                DOM.scrollLoader.classList.remove(
+                    'show'
+                );
+
+            }
+
+        }
+
+        // ============================================================
+        // LOAD FILMS FUNCTION
+        // ============================================================
+
+        async function loadFilms(
+            reset = true
+        ) {
+
+            if (isLoading) {
+                return;
+            }
+
+            if (
+                !hasMore &&
+                !reset
+            ) {
+                return;
+            }
+
+            isLoading =
+                true;
+
+            if (reset) {
+
+                currentPage =
+                    1;
+
+                allFilms =
+                    [];
+
+                hasMore =
+                    true;
+
+                isInitialLoad =
+                    true;
+
+                seenIds =
+                    new Set();
+
+            }
+
+            const films =
+                await fetchFilms(
+                    currentPage,
+                    searchQuery
+                );
+
+                if (DOM.loadingState) {
+    DOM.loadingState.style.display = 'none';
+}
+
+            if (
+                films.length > 0
+            ) {
+
+                allFilms =
+                    reset
+                        ? films
+                        : [
+                            ...allFilms,
+                            ...films
+                        ];
+
+                renderFilms(
+                    films,
+                    !reset
+                );
+
+                currentPage++;
+
+                // ----------------------------------------------------
+                // Check for more pages
+                // ----------------------------------------------------
+
+                if (
+                    currentPage >
+                    totalPages
+                ) {
+
+                    hasMore =
+                        false;
+
+                    DOM.scrollLoader.innerHTML = `
+                        <span class="end-message">
+                            You've reached the end
+                        </span>
                     `;
-                    DOM.resultCount.textContent = '0';
-                    DOM.scrollLoader.classList.remove('show');
+
+                    DOM.scrollLoader.classList.add(
+                        'show'
+                    );
+
+                } else {
+
+                    DOM.scrollLoader.classList.add(
+                        'show'
+                    );
+
+                    DOM.scrollLoader.innerHTML = `
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading more films...
+                    `;
+
+                }
+
+            } else {
+
+                if (reset) {
+
+                    renderFilms(
+                        []
+                    );
+
+                }
+
+                hasMore =
+                    false;
+
+                DOM.scrollLoader.innerHTML = `
+                    <span class="end-message">
+                        You've reached the end
+                    </span>
+                `;
+
+                DOM.scrollLoader.classList.add(
+                    'show'
+                );
+
+            }
+
+            isLoading =
+                false;
+
+            isInitialLoad =
+                false;
+
+        }
+
+        // ============================================================
+        // INFINITE SCROLL
+        // ============================================================
+
+        function handleScroll() {
+
+            if (
+                isLoading ||
+                !hasMore
+            ) {
+                return;
+            }
+
+            const scrollPosition =
+                window.innerHeight +
+                window.scrollY;
+
+            const threshold =
+                document.documentElement.scrollHeight -
+                400;
+
+            if (
+                scrollPosition >=
+                threshold
+            ) {
+
+                loadFilms(
+                    false
+                );
+
+            }
+
+        }
+
+        // ============================================================
+        // VIEW MOVIE
+        // ============================================================
+
+        window.viewMovie =
+            function(movieId) {
+
+                window.location.href =
+                    `movie-details.html?id=${movieId}`;
+
+            };
+
+        // ============================================================
+        // SEARCH FUNCTIONALITY
+        // ============================================================
+
+        function handleSearch() {
+
+            clearTimeout(
+                debounceTimer
+            );
+
+            debounceTimer =
+                setTimeout(
+                    () => {
+
+                        searchQuery =
+                            DOM.searchInput.value;
+
+                        DOM.clearBtn.classList.toggle(
+                            'visible',
+                            searchQuery.length > 0
+                        );
+
+                        currentPage =
+                            1;
+
+                        allFilms =
+                            [];
+
+                        hasMore =
+                            true;
+
+                        seenIds =
+                            new Set();
+
+                        loadFilms(
+                            true
+                        );
+
+                    },
+                    500
+                );
+
+        }
+
+        function clearSearch() {
+
+            DOM.searchInput.value =
+                '';
+
+            DOM.clearBtn.classList.remove(
+                'visible'
+            );
+
+            searchQuery =
+                '';
+
+            currentPage =
+                1;
+
+            allFilms =
+                [];
+
+            hasMore =
+                true;
+
+            seenIds =
+                new Set();
+
+            loadFilms(
+                true
+            );
+
+            DOM.searchInput.focus();
+
+        }
+
+        // ============================================================
+        // EVENT LISTENERS
+        // ============================================================
+
+        DOM.searchInput.addEventListener(
+            'input',
+            handleSearch
+        );
+
+        DOM.clearBtn.addEventListener(
+            'click',
+            clearSearch
+        );
+
+        // ============================================================
+        // THROTTLED SCROLL LISTENER
+        // ============================================================
+
+        let scrollTimeout =
+            null;
+
+        window.addEventListener(
+            'scroll',
+            function() {
+
+                if (
+                    scrollTimeout
+                ) {
                     return;
                 }
 
-                DOM.resultCount.textContent = allFilms.length;
+                scrollTimeout =
+                    setTimeout(
+                        () => {
 
-                const filmsHTML = films.map(film => {
-                    const posterUrl = film.poster_path ? `${IMAGE_BASE}${film.poster_path}` : '';
-                    const rating = film.vote_average ? film.vote_average.toFixed(1) : 'N/A';
-                    const inWatchlist = isInWatchlist(film.id);
+                            handleScroll();
 
-                    return `
-                        <div class="movie-card" onclick="viewMovie(${film.id})">
-                            <div class="poster" style="background-image: url('${posterUrl}'); background-color: var(--ink-raised);">
-                                ${inWatchlist ? '<div class="watchlist-badge"><i class="fas fa-heart"></i></div>' : ''}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                            scrollTimeout =
+                                null;
 
-                if (append) {
-                    grid.insertAdjacentHTML('beforeend', filmsHTML);
-                } else {
-                    grid.innerHTML = filmsHTML;
-                }
+                        },
+                        100
+                    );
 
-                // Update scroll loader
-                if (hasMore && currentPage <= totalPages) {
-                    DOM.scrollLoader.classList.add('show');
-                    DOM.scrollLoader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading more films...';
-                } else {
-                    DOM.scrollLoader.classList.remove('show');
-                }
             }
+        );
 
-            // ============================================================
-            // LOAD FILMS FUNCTION
-            // ============================================================
+        // ============================================================
+        // INITIALIZE
+        // ============================================================
 
-            async function loadFilms(reset = true) {
-                if (isLoading) return;
-                if (!hasMore && !reset) return;
-                
-                isLoading = true;
-                
-                if (reset) {
-                    currentPage = 1;
-                    allFilms = [];
-                    hasMore = true;
-                    isInitialLoad = true;
-                    seenIds = new Set(); // Reset seen IDs on new search
-                }
+        async function init() {
 
-                const films = await fetchFilms(currentPage, searchQuery);
+            renderNav();
 
-                if (films.length > 0) {
-                    allFilms = reset ? films : [...allFilms, ...films];
-                    renderFilms(films, !reset);
-                    currentPage++;
-                    
-                    // Check if there are more pages
-                    if (currentPage > totalPages) {
-                        hasMore = false;
-                        DOM.scrollLoader.innerHTML = '<span class="end-message">You\'ve reached the end</span>';
-                        DOM.scrollLoader.classList.add('show');
-                    } else {
-                        DOM.scrollLoader.classList.add('show');
-                        DOM.scrollLoader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading more films...';
-                    }
-                } else {
-                    if (reset) {
-                        renderFilms([]);
-                    }
-                    hasMore = false;
-                    DOM.scrollLoader.innerHTML = '<span class="end-message">You\'ve reached the end</span>';
-                    DOM.scrollLoader.classList.add('show');
-                }
+            setupMobileMenu();
 
-                isLoading = false;
-                isInitialLoad = false;
-            }
+            await loadFilms(
+                true
+            );
 
-            // ============================================================
-            // INFINITE SCROLL
-            // ============================================================
+        }
 
-            function handleScroll() {
-                if (isLoading || !hasMore) return;
-                
-                const scrollPosition = window.innerHeight + window.scrollY;
-                const threshold = document.documentElement.scrollHeight - 400;
-                
-                if (scrollPosition >= threshold) {
-                    loadFilms(false);
-                }
-            }
+        // ============================================================
+        // START
+        // ============================================================
 
-            // ============================================================
-            // VIEW MOVIE
-            // ============================================================
+        if (
+            document.readyState === 'complete' ||
+            document.readyState === 'interactive'
+        ) {
 
-            window.viewMovie = function(movieId) {
-                window.location.href = `movie-details.html?id=${movieId}`;
-            };
+            init();
 
-            // ============================================================
-            // SEARCH FUNCTIONALITY
-            // ============================================================
+        } else {
 
-            function handleSearch() {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    searchQuery = DOM.searchInput.value;
-                    
-                    DOM.clearBtn.classList.toggle('visible', searchQuery.length > 0);
-                    
-                    currentPage = 1;
-                    allFilms = [];
-                    hasMore = true;
-                    seenIds = new Set(); // Reset seen IDs on new search
-                    loadFilms(true);
-                }, 500);
-            }
+            document.addEventListener(
+                'DOMContentLoaded',
+                init
+            );
 
-            function clearSearch() {
-                DOM.searchInput.value = '';
-                DOM.clearBtn.classList.remove('visible');
-                searchQuery = '';
-                currentPage = 1;
-                allFilms = [];
-                hasMore = true;
-                seenIds = new Set(); // Reset seen IDs when clearing search
-                loadFilms(true);
-                DOM.searchInput.focus();
-            }
+        }
 
-            // ============================================================
-            // EVENT LISTENERS
-            // ============================================================
-
-            DOM.searchInput.addEventListener('input', handleSearch);
-            DOM.clearBtn.addEventListener('click', clearSearch);
-            
-            // Throttled scroll listener
-            let scrollTimeout = null;
-            window.addEventListener('scroll', function() {
-                if (scrollTimeout) return;
-                scrollTimeout = setTimeout(() => {
-                    handleScroll();
-                    scrollTimeout = null;
-                }, 100);
-            });
-
-            // ============================================================
-            // INITIALIZE
-            // ============================================================
-
-            async function init() {
-                renderNav();
-                setupMobileMenu();
-                await loadFilms(true);
-            }
-
-            // ============================================================
-            // START
-            // ============================================================
-
-            if (document.readyState === 'complete' || document.readyState === 'interactive') {
-                init();
-            } else {
-                document.addEventListener('DOMContentLoaded', init);
-            }
-
-        })();
-    </script>
+    })();
+</script>
 </body>
 </html>

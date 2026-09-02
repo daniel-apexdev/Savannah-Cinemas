@@ -1,4 +1,5 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
+
 
 /**
  * Restrict access to users who have at least one
@@ -16,8 +17,6 @@ function authorize(...allowedRoles) {
 
     return async (req, res, next) => {
 
-        let connection;
-
         try {
 
             // ========================================================
@@ -33,6 +32,7 @@ function authorize(...allowedRoles) {
                 });
 
             }
+
 
             // ========================================================
             // VALIDATE ALLOWED ROLES
@@ -51,36 +51,40 @@ function authorize(...allowedRoles) {
 
             }
 
-            // ========================================================
-            // DATABASE CONNECTION
-            // ========================================================
-
-            connection = await getConnection();
 
             // ========================================================
             // GET USER ROLES
             // ========================================================
 
-            const result = await connection.execute(
+            const result = await pool.query(
                 `
                 SELECT
-                    r.ROLE_NAME
-                FROM USER_ROLE_ASSIGNMENTS ura
-                INNER JOIN USER_ROLES r
-                    ON r.ROLE_ID = ura.ROLE_ID
-                WHERE ura.USER_ID = :userId
+                    r.role_name
+
+                FROM user_role_assignments ura
+
+                INNER JOIN user_roles r
+                    ON r.role_id = ura.role_id
+
+                WHERE ura.user_id = $1
+
+                  AND r.is_active = 'Y'
                 `,
-                {
-                    userId: req.user.userId
-                }
+                [req.user.userId]
             );
 
-            const userRoles = result.rows.map(
-                row => String(row[0]).toUpperCase()
-            );
 
             // ========================================================
-            // CHECK AUTHORIZATION
+            // NORMALIZE USER ROLES
+            // ========================================================
+
+            const userRoles = result.rows.map(
+                row => String(row.role_name).toUpperCase()
+            );
+
+
+            // ========================================================
+            // NORMALIZE ALLOWED ROLES
             // ========================================================
 
             const normalizedAllowedRoles =
@@ -88,9 +92,15 @@ function authorize(...allowedRoles) {
                     role => String(role).toUpperCase()
                 );
 
+
+            // ========================================================
+            // CHECK AUTHORIZATION
+            // ========================================================
+
             const hasPermission = userRoles.some(
                 role => normalizedAllowedRoles.includes(role)
             );
+
 
             // ========================================================
             // DENY ACCESS
@@ -106,10 +116,12 @@ function authorize(...allowedRoles) {
 
                 return res.status(403).json({
                     success: false,
-                    message: 'You are not authorized to perform this action'
+                    message:
+                        'You are not authorized to perform this action'
                 });
 
             }
+
 
             // ========================================================
             // ATTACH ROLES TO REQUEST
@@ -122,6 +134,11 @@ function authorize(...allowedRoles) {
                 `Roles: [${userRoles.join(', ')}]`
             );
 
+
+            // ========================================================
+            // CONTINUE REQUEST
+            // ========================================================
+
             next();
 
         } catch (error) {
@@ -133,26 +150,13 @@ function authorize(...allowedRoles) {
 
             return res.status(500).json({
                 success: false,
-                message: 'Server error checking authorization'
+                message:
+                    'Server error checking authorization'
             });
 
-        } finally {
-
-            if (connection) {
-
-                try {
-                    await connection.close();
-                } catch (error) {
-
-                    console.error(
-                        '❌ Error closing authorization connection:',
-                        error.message
-                    );
-
-                }
-            }
         }
     };
 }
+
 
 module.exports = authorize;

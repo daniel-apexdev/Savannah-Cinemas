@@ -1,6 +1,4 @@
-const { getConnection } = require('../config/database');
-
-const oracledb = require('oracledb');
+const pool = require('../config/database');
 
 const {
     sendBookingConfirmation
@@ -13,7 +11,7 @@ const {
 
 async function createPayment(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
@@ -83,79 +81,82 @@ async function createPayment(req, res) {
         }
 
         // ----------------------------------------------------
-        // Database connection
+        // Get database client
         // ----------------------------------------------------
 
-        connection = await getConnection();
+        client = await pool.connect();
+
+        // ----------------------------------------------------
+        // Start transaction
+        // ----------------------------------------------------
+
+        await client.query('BEGIN');
 
         // ----------------------------------------------------
         // Get booking
         // ----------------------------------------------------
 
         const bookingResult =
-            await connection.execute(
+            await client.query(
                 `
                 SELECT
-                    B.BOOKING_ID,
-                    B.BOOKING_REF,
-                    B.USER_ID,
-                    B.SHOWTIME_ID,
-                    B.TICKET_QUANTITY,
-                    B.TICKET_PRICE,
-                    B.TOTAL_AMOUNT,
-                    B.STATUS,
+                    b.booking_id,
+                    b.booking_ref,
+                    b.user_id,
+                    b.showtime_id,
+                    b.ticket_quantity,
+                    b.ticket_price,
+                    b.total_amount,
+                    b.status,
 
-                    M.MOVIE_ID,
-                    M.TITLE,
-                    M.POSTER_URL,
+                    m.movie_id,
+                    m.title,
+                    m.poster_url,
 
-                    C.CINEMA_ID,
-                    C.CINEMA_NAME,
-                    C.ADDRESS,
-                    C.CITY,
+                    c.cinema_id,
+                    c.cinema_name,
+                    c.address,
+                    c.city,
 
-                    S.SCREEN_ID,
-                    S.SCREEN_NAME,
+                    s.screen_id,
+                    s.screen_name,
 
-                    ST.SHOW_DATE,
-                    ST.START_TIME,
-                    ST.END_TIME
+                    st.show_date,
+                    st.start_time,
+                    st.end_time
 
-                FROM BOOKINGS B
+                FROM bookings b
 
-                JOIN SHOWTIMES ST
-                    ON ST.SHOWTIME_ID =
-                       B.SHOWTIME_ID
+                JOIN showtimes st
+                    ON st.showtime_id =
+                       b.showtime_id
 
-                JOIN MOVIES M
-                    ON M.MOVIE_ID =
-                       ST.MOVIE_ID
+                JOIN movies m
+                    ON m.movie_id =
+                       st.movie_id
 
-                JOIN CINEMAS C
-                    ON C.CINEMA_ID =
-                       ST.CINEMA_ID
+                JOIN cinemas c
+                    ON c.cinema_id =
+                       st.cinema_id
 
-                JOIN SCREENS S
-                    ON S.SCREEN_ID =
-                       ST.SCREEN_ID
+                JOIN screens s
+                    ON s.screen_id =
+                       st.screen_id
 
-                WHERE B.BOOKING_ID =
-                      :bookingId
-
-                  AND B.USER_ID =
-                      :userId
+                WHERE b.booking_id = $1
+                  AND b.user_id = $2
                 `,
-                {
-                    bookingId:
-                        parsedBookingId,
-
+                [
+                    parsedBookingId,
                     userId
-                }
+                ]
             );
 
         if (
             bookingResult.rows.length === 0
         ) {
+
+            await client.query('ROLLBACK');
 
             return res.status(404).json({
                 success: false,
@@ -167,41 +168,18 @@ async function createPayment(req, res) {
         const booking =
             bookingResult.rows[0];
 
-        /*
-            INDEXES
-
-            0  BOOKING_ID
-            1  BOOKING_REF
-            2  USER_ID
-            3  SHOWTIME_ID
-            4  TICKET_QUANTITY
-            5  TICKET_PRICE
-            6  TOTAL_AMOUNT
-            7  STATUS
-            8  MOVIE_ID
-            9  MOVIE TITLE
-            10 POSTER_URL
-            11 CINEMA_ID
-            12 CINEMA_NAME
-            13 ADDRESS
-            14 CITY
-            15 SCREEN_ID
-            16 SCREEN_NAME
-            17 SHOW_DATE
-            18 START_TIME
-            19 END_TIME
-        */
-
-        const bookingStatus =
-            booking[7];
-
         // ----------------------------------------------------
         // Make sure booking is payable
         // ----------------------------------------------------
 
+        const bookingStatus =
+            booking.status;
+
         if (
             bookingStatus !== 'PENDING'
         ) {
+
+            await client.query('ROLLBACK');
 
             return res.status(400).json({
                 success: false,
@@ -216,28 +194,26 @@ async function createPayment(req, res) {
         // ----------------------------------------------------
 
         const userResult =
-            await connection.execute(
+            await client.query(
                 `
                 SELECT
-                    EMAIL,
-                    FORENAMES,
-                    SURNAME
+                    email,
+                    forenames,
+                    surname
 
-                FROM USERS
+                FROM users
 
-                WHERE USER_ID =
-                      :userId
-
-                  AND IS_ACTIVE = 'Y'
+                WHERE user_id = $1
+                  AND is_active = 'Y'
                 `,
-                {
-                    userId
-                }
+                [userId]
             );
 
         if (
             userResult.rows.length === 0
         ) {
+
+            await client.query('ROLLBACK');
 
             return res.status(404).json({
                 success: false,
@@ -246,40 +222,40 @@ async function createPayment(req, res) {
 
         }
 
+        const user =
+            userResult.rows[0];
+
         const userEmail =
-            userResult.rows[0][0];
+            user.email;
 
         const customerName =
-            `${userResult.rows[0][1]} ${userResult.rows[0][2]}`;
+            `${user.forenames} ${user.surname}`;
 
         // ----------------------------------------------------
         // Check for existing successful payment
         // ----------------------------------------------------
 
         const existingPayment =
-            await connection.execute(
+            await client.query(
                 `
                 SELECT
-                    PAYMENT_ID,
-                    PAYMENT_REFERENCE,
-                    STATUS
+                    payment_id,
+                    payment_reference,
+                    status
 
-                FROM PAYMENTS
+                FROM payments
 
-                WHERE BOOKING_ID =
-                      :bookingId
-
-                  AND STATUS = 'SUCCESS'
+                WHERE booking_id = $1
+                  AND status = 'SUCCESS'
                 `,
-                {
-                    bookingId:
-                        parsedBookingId
-                }
+                [parsedBookingId]
             );
 
         if (
             existingPayment.rows.length > 0
         ) {
+
+            await client.query('ROLLBACK');
 
             return res.status(409).json({
                 success: false,
@@ -309,67 +285,67 @@ async function createPayment(req, res) {
         // ----------------------------------------------------
 
         const amount =
-            Number(booking[6]);
+            Number(booking.total_amount);
+
+        if (
+            !Number.isFinite(amount) ||
+            amount < 0
+        ) {
+
+            await client.query('ROLLBACK');
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Invalid booking amount'
+            });
+
+        }
 
         // ----------------------------------------------------
         // Create payment
         // ----------------------------------------------------
 
         const paymentResult =
-            await connection.execute(
+            await client.query(
                 `
-                INSERT INTO PAYMENTS (
-                    BOOKING_ID,
-                    PAYMENT_REFERENCE,
-                    AMOUNT,
-                    CURRENCY,
-                    PAYMENT_METHOD,
-                    STATUS
+                INSERT INTO payments (
+                    booking_id,
+                    payment_reference,
+                    amount,
+                    currency,
+                    payment_method,
+                    status
                 )
 
                 VALUES (
-                    :bookingId,
-                    :paymentReference,
-                    :amount,
+                    $1,
+                    $2,
+                    $3,
                     'GHS',
-                    :paymentMethod,
+                    $4,
                     'PENDING'
                 )
 
-                RETURNING PAYMENT_ID
-                INTO :paymentId
+                RETURNING payment_id
                 `,
-                {
-                    bookingId:
-                        parsedBookingId,
-
+                [
+                    parsedBookingId,
                     paymentReference,
-
                     amount,
-
-                    paymentMethod,
-
-                    paymentId: {
-
-                        dir:
-                            oracledb.BIND_OUT,
-
-                        type:
-                            oracledb.NUMBER
-
-                    }
-                }
+                    paymentMethod
+                ]
             );
 
         const paymentId =
-            paymentResult.outBinds
-                .paymentId[0];
+            paymentResult.rows[0].payment_id;
 
         // ----------------------------------------------------
         // MOCK PAYMENT
         //
         // For now we automatically succeed.
-        // Later this section will be replaced with
+        //
+        // Later this section can be replaced with
         // the actual payment provider.
         // ----------------------------------------------------
 
@@ -378,32 +354,22 @@ async function createPayment(req, res) {
             Date.now()
                 .toString();
 
-        await connection.execute(
+        await client.query(
             `
-            UPDATE PAYMENTS
+            UPDATE payments
 
             SET
-                STATUS =
-                    'SUCCESS',
+                status = 'SUCCESS',
+                transaction_reference = $1,
+                payment_date = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
 
-                TRANSACTION_REFERENCE =
-                    :transactionReference,
-
-                PAYMENT_DATE =
-                    CURRENT_TIMESTAMP,
-
-                UPDATED_AT =
-                    CURRENT_TIMESTAMP
-
-            WHERE PAYMENT_ID =
-                  :paymentId
+            WHERE payment_id = $2
             `,
-            {
-                paymentId,
-
-                transactionReference:
-                    mockTransactionReference
-            }
+            [
+                mockTransactionReference,
+                paymentId
+            ]
         );
 
         // ----------------------------------------------------
@@ -411,32 +377,22 @@ async function createPayment(req, res) {
         // ----------------------------------------------------
 
         const bookingUpdate =
-            await connection.execute(
+            await client.query(
                 `
-                UPDATE BOOKINGS
+                UPDATE bookings
 
                 SET
-                    STATUS =
-                        'CONFIRMED',
+                    status = 'CONFIRMED',
+                    updated_at = CURRENT_TIMESTAMP
 
-                    UPDATED_AT =
-                        CURRENT_TIMESTAMP
-
-                WHERE BOOKING_ID =
-                      :bookingId
-
-                  AND USER_ID =
-                      :userId
-
-                  AND STATUS =
-                      'PENDING'
+                WHERE booking_id = $1
+                  AND user_id = $2
+                  AND status = 'PENDING'
                 `,
-                {
-                    bookingId:
-                        parsedBookingId,
-
+                [
+                    parsedBookingId,
                     userId
-                }
+                ]
             );
 
         // ----------------------------------------------------
@@ -444,7 +400,7 @@ async function createPayment(req, res) {
         // ----------------------------------------------------
 
         if (
-            bookingUpdate.rowsAffected !== 1
+            bookingUpdate.rowCount !== 1
         ) {
 
             throw new Error(
@@ -454,266 +410,257 @@ async function createPayment(req, res) {
         }
 
         // ----------------------------------------------------
-// Create digital ticket
-// ----------------------------------------------------
-
-const ticketCode =
-    'TKT-' +
-    Date.now()
-        .toString()
-        .slice(-8) +
-    '-' +
-    Math.random()
-        .toString(36)
-        .substring(2, 8)
-        .toUpperCase();
-
-const qrCodeData =
-    `SAVANNAH:TICKET:${ticketCode}`;
-
-const ticketResult =
-    await connection.execute(
-        `
-        INSERT INTO TICKETS (
-            BOOKING_ID,
-            TICKET_CODE,
-            QR_CODE_DATA,
-            STATUS
-        )
-
-        VALUES (
-            :bookingId,
-            :ticketCode,
-            :qrCodeData,
-            'VALID'
-        )
-
-        RETURNING TICKET_ID
-        INTO :ticketId
-        `,
-        {
-            bookingId:
-                parsedBookingId,
-
-            ticketCode,
-
-            qrCodeData,
-
-            ticketId: {
-                dir:
-                    oracledb.BIND_OUT,
-
-                type:
-                    oracledb.NUMBER
-            }
-        }
-    );
-
-const ticketId =
-    ticketResult.outBinds
-        .ticketId[0];
-
-console.log(
-    `🎟️ Ticket created: ${ticketCode}`
-);
-
-        // ----------------------------------------------------
-        // Commit payment + booking
+        // Create digital ticket
         // ----------------------------------------------------
 
-        await connection.commit();
+        const ticketCode =
+            'TKT-' +
+            Date.now()
+                .toString()
+                .slice(-8) +
+            '-' +
+            Math.random()
+                .toString(36)
+                .substring(2, 8)
+                .toUpperCase();
+
+        const qrCodeData =
+            `SAVANNAH:TICKET:${ticketCode}`;
+
+        const ticketResult =
+            await client.query(
+                `
+                INSERT INTO tickets (
+                    booking_id,
+                    ticket_code,
+                    qr_code_data,
+                    status
+                )
+
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    'VALID'
+                )
+
+                RETURNING ticket_id
+                `,
+                [
+                    parsedBookingId,
+                    ticketCode,
+                    qrCodeData
+                ]
+            );
+
+        const ticketId =
+            ticketResult.rows[0].ticket_id;
+
+        console.log(
+            `🎟️ Ticket created: ${ticketCode}`
+        );
+
+        // ----------------------------------------------------
+        // Get booked seats
+        //
+        // Still inside the transaction so we have the
+        // exact seats associated with this booking.
+        // ----------------------------------------------------
+
+        const seatsResult =
+            await client.query(
+                `
+                SELECT
+                    bs.seat_id,
+                    se.row_label,
+                    se.seat_number,
+                    se.seat_label,
+                    se.seat_type,
+                    bs.ticket_price
+
+                FROM booking_seats bs
+
+                JOIN seats se
+                    ON se.seat_id = bs.seat_id
+
+                WHERE bs.booking_id = $1
+
+                ORDER BY
+                    se.row_label,
+                    se.seat_number
+                `,
+                [parsedBookingId]
+            );
+
+        const seats =
+            seatsResult.rows.map(seat => ({
+
+                seatId:
+                    seat.seat_id,
+
+                rowLabel:
+                    seat.row_label,
+
+                seatNumber:
+                    seat.seat_number,
+
+                seatLabel:
+                    seat.seat_label,
+
+                seatType:
+                    seat.seat_type,
+
+                ticketPrice:
+                    seat.ticket_price
+
+            }));
+
+        // ----------------------------------------------------
+        // Commit payment + booking + ticket
+        // ----------------------------------------------------
+
+        await client.query('COMMIT');
 
         console.log(
             `✅ Payment successful: ${paymentReference}`
         );
 
         // ----------------------------------------------------
+        // Release database client
+        //
+        // Email happens AFTER COMMIT.
+        // ----------------------------------------------------
+
+        client.release();
+        client = null;
+
+        // ----------------------------------------------------
         // Send confirmation email
         //
         // IMPORTANT:
-        // Email happens AFTER COMMIT.
         //
         // If email fails, payment remains successful.
         // ----------------------------------------------------
 
-        // ----------------------------------------------------
-// Get booked seats for confirmation email
-// ----------------------------------------------------
+        let emailSent = false;
 
-const seatsResult =
-    await connection.execute(
-        `
-        SELECT
-            BS.SEAT_ID,
-            SE.ROW_LABEL,
-            SE.SEAT_NUMBER,
-            SE.SEAT_LABEL,
-            SE.SEAT_TYPE,
-            BS.TICKET_PRICE
+        try {
 
-        FROM BOOKING_SEATS BS
+            const emailResult =
+                await sendBookingConfirmation({
 
-        JOIN SEATS SE
-            ON SE.SEAT_ID = BS.SEAT_ID
+                    to:
+                        userEmail,
 
-        WHERE BS.BOOKING_ID = :bookingId
+                    customerName,
 
-        ORDER BY
-            SE.ROW_LABEL,
-            SE.SEAT_NUMBER
-        `,
-        {
-            bookingId:
-                parsedBookingId
+                    booking: {
+
+                        bookingId:
+                            booking.booking_id,
+
+                        bookingRef:
+                            booking.booking_ref,
+
+                        showtimeId:
+                            booking.showtime_id,
+
+                        movie: {
+
+                            movieId:
+                                booking.movie_id,
+
+                            title:
+                                booking.title,
+
+                            posterUrl:
+                                booking.poster_url
+
+                        },
+
+                        cinema: {
+
+                            cinemaId:
+                                booking.cinema_id,
+
+                            name:
+                                booking.cinema_name,
+
+                            address:
+                                booking.address,
+
+                            city:
+                                booking.city
+
+                        },
+
+                        screen: {
+
+                            screenId:
+                                booking.screen_id,
+
+                            name:
+                                booking.screen_name
+
+                        },
+
+                        showDate:
+                            booking.show_date,
+
+                        startTime:
+                            booking.start_time,
+
+                        endTime:
+                            booking.end_time,
+
+                        ticketQuantity:
+                            booking.ticket_quantity,
+
+                        ticketPrice:
+                            booking.ticket_price,
+
+                        totalAmount:
+                            amount,
+
+                        status:
+                            'CONFIRMED',
+
+                        seats,
+
+                        ticket: {
+
+                            ticketId,
+
+                            ticketCode,
+
+                            qrCodeData,
+
+                            status:
+                                'VALID'
+
+                        }
+
+                    }
+
+                });
+
+            emailSent =
+                emailResult?.sent === true;
+
+            console.log(
+                emailSent
+                    ? `📧 Booking confirmation email sent to ${userEmail}`
+                    : `⚠️ Booking email was not confirmed as sent to ${userEmail}`
+            );
+
+        } catch (emailError) {
+
+            console.error(
+                '⚠️ Payment succeeded but confirmation email failed:',
+                emailError
+            );
+
         }
-    );
-
-const seats =
-    seatsResult.rows.map(seat => ({
-
-        seatId:
-            seat[0],
-
-        rowLabel:
-            seat[1],
-
-        seatNumber:
-            seat[2],
-
-        seatLabel:
-            seat[3],
-
-        seatType:
-            seat[4],
-
-        ticketPrice:
-            seat[5]
-
-    }));
-
-// ----------------------------------------------------
-// Send confirmation email
-// ----------------------------------------------------
-
-let emailSent = false;
-
-try {
-
-    const emailResult =
-        await sendBookingConfirmation({
-
-            to:
-                userEmail,
-
-            customerName,
-
-            booking: {
-
-    bookingId:
-        booking[0],
-
-    bookingRef:
-        booking[1],
-
-    showtimeId:
-        booking[3],
-
-    movie: {
-
-        movieId:
-            booking[8],
-
-        title:
-            booking[9],
-
-        posterUrl:
-            booking[10]
-
-    },
-
-    cinema: {
-
-        cinemaId:
-            booking[11],
-
-        name:
-            booking[12],
-
-        address:
-            booking[13],
-
-        city:
-            booking[14]
-
-    },
-
-    screen: {
-
-        screenId:
-            booking[15],
-
-        name:
-            booking[16]
-
-    },
-
-    showDate:
-        booking[17],
-
-    startTime:
-        booking[18],
-
-    endTime:
-        booking[19],
-
-    ticketQuantity:
-        booking[4],
-
-    ticketPrice:
-        booking[5],
-
-    totalAmount:
-        amount,
-
-    status:
-        'CONFIRMED',
-
-    seats,
-
-    ticket: {
-
-        ticketId,
-
-        ticketCode,
-
-        qrCodeData,
-
-        status:
-            'VALID'
-
-    }
-
-}
-
-        });
-
-    emailSent =
-        emailResult?.sent === true;
-
-    console.log(
-        emailSent
-            ? `📧 Booking confirmation email sent to ${userEmail}`
-            : `⚠️ Booking email was not confirmed as sent to ${userEmail}`
-    );
-
-} catch (emailError) {
-
-    console.error(
-        '⚠️ Payment succeeded but confirmation email failed:',
-        emailError
-    );
-
-}
 
         // ----------------------------------------------------
         // Response
@@ -753,67 +700,67 @@ try {
             booking: {
 
                 bookingId:
-                    booking[0],
+                    booking.booking_id,
 
                 bookingRef:
-                    booking[1],
+                    booking.booking_ref,
 
                 showtimeId:
-                    booking[3],
+                    booking.showtime_id,
 
                 movie: {
 
                     movieId:
-                        booking[8],
+                        booking.movie_id,
 
                     title:
-                        booking[9],
+                        booking.title,
 
                     posterUrl:
-                        booking[10]
+                        booking.poster_url
 
                 },
 
                 cinema: {
 
                     cinemaId:
-                        booking[11],
+                        booking.cinema_id,
 
                     name:
-                        booking[12],
+                        booking.cinema_name,
 
                     address:
-                        booking[13],
+                        booking.address,
 
                     city:
-                        booking[14]
+                        booking.city
 
                 },
 
                 screen: {
 
                     screenId:
-                        booking[15],
+                        booking.screen_id,
 
                     name:
-                        booking[16]
+                        booking.screen_name
 
                 },
 
                 showDate:
-                    booking[17],
+                    booking.show_date,
 
                 startTime:
-                    booking[18],
+                    booking.start_time,
 
                 endTime:
-                    booking[19],
+                    booking.end_time,
 
                 ticketQuantity:
-                    booking[4],
+                    booking.ticket_quantity,
 
                 ticketPrice:
-                    booking[5],
+                    booking.ticket_price,
 
                 totalAmount:
                     amount,
@@ -831,7 +778,8 @@ try {
 
                 qrCodeData,
 
-                status: 'VALID'
+                status:
+                    'VALID'
 
             },
 
@@ -851,11 +799,15 @@ try {
             error
         );
 
-        if (connection) {
+        // ----------------------------------------------------
+        // Rollback transaction
+        // ----------------------------------------------------
+
+        if (client) {
 
             try {
 
-                await connection.rollback();
+                await client.query('ROLLBACK');
 
             } catch (rollbackError) {
 
@@ -865,6 +817,23 @@ try {
                 );
 
             }
+
+        }
+
+        // ----------------------------------------------------
+        // PostgreSQL duplicate constraint
+        // ----------------------------------------------------
+
+        if (error.code === '23505') {
+
+            return res.status(409).json({
+
+                success: false,
+
+                message:
+                    'A payment or ticket already exists for this booking'
+
+            });
 
         }
 
@@ -882,20 +851,13 @@ try {
 
     } finally {
 
-        if (connection) {
+        // ----------------------------------------------------
+        // Release client if it has not already been released
+        // ----------------------------------------------------
 
-            try {
+        if (client) {
 
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
+            client.release();
 
         }
 

@@ -1,5 +1,5 @@
-const { getConnection } = require('../config/database');
 const axios = require('axios');
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -36,7 +36,6 @@ async function getTMDBMovie(tmdbId) {
                 language: 'en-US',
                 append_to_response: 'credits,videos'
             },
-
             timeout: 15000
         }
     );
@@ -64,7 +63,11 @@ function getTrailerUrl(videos) {
                 video.site === 'YouTube'
         );
 
+
+    // --------------------------------------------------------
     // Prefer official trailers
+    // --------------------------------------------------------
+
     const officialTrailer =
         youtubeVideos.find(
             video =>
@@ -78,7 +81,11 @@ function getTrailerUrl(videos) {
 
     }
 
+
+    // --------------------------------------------------------
     // Then any trailer
+    // --------------------------------------------------------
+
     const trailer =
         youtubeVideos.find(
             video =>
@@ -91,7 +98,11 @@ function getTrailerUrl(videos) {
 
     }
 
+
+    // --------------------------------------------------------
     // Finally teaser
+    // --------------------------------------------------------
+
     const teaser =
         youtubeVideos.find(
             video =>
@@ -119,7 +130,345 @@ function buildImageUrl(path, size) {
     }
 
     return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
+}
 
+
+// ============================================================
+// HELPER - GET OR CREATE STUDIO
+// ============================================================
+
+async function getOrCreateStudio(client, studioName) {
+
+    if (!studioName) {
+        return null;
+    }
+
+
+    // --------------------------------------------------------
+    // Check if studio already exists
+    // --------------------------------------------------------
+
+    const existingResult =
+        await client.query(
+            `
+            SELECT
+                studio_id
+            FROM studios
+            WHERE LOWER(studio_name) = LOWER($1)
+            LIMIT 1
+            `,
+            [studioName]
+        );
+
+
+    if (existingResult.rows.length > 0) {
+
+        const studioId =
+            existingResult.rows[0].studio_id;
+
+
+        await client.query(
+            `
+            UPDATE studios
+            SET
+                updated_at = CURRENT_TIMESTAMP
+            WHERE studio_id = $1
+            `,
+            [studioId]
+        );
+
+
+        return studioId;
+    }
+
+
+    // --------------------------------------------------------
+    // Create studio
+    // --------------------------------------------------------
+
+    const insertResult =
+        await client.query(
+            `
+            INSERT INTO studios (
+                studio_name,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                $1,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            RETURNING studio_id
+            `,
+            [studioName]
+        );
+
+
+    return insertResult.rows[0].studio_id;
+}
+
+
+// ============================================================
+// HELPER - GET OR CREATE GENRE
+// ============================================================
+
+async function getOrCreateGenre(client, genre) {
+
+    if (
+        !genre ||
+        !genre.id ||
+        !genre.name
+    ) {
+        return null;
+    }
+
+
+    const genreName = genre.name;
+    const tmdbGenreId = genre.id;
+
+
+    // --------------------------------------------------------
+    // First check by TMDB genre ID
+    // --------------------------------------------------------
+
+    const tmdbResult =
+        await client.query(
+            `
+            SELECT
+                genre_id
+            FROM genres
+            WHERE tmdb_genre_id = $1
+            LIMIT 1
+            `,
+            [tmdbGenreId]
+        );
+
+
+    if (tmdbResult.rows.length > 0) {
+
+        const genreId =
+            tmdbResult.rows[0].genre_id;
+
+
+        await client.query(
+            `
+            UPDATE genres
+            SET
+                genre_name = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE genre_id = $2
+            `,
+            [
+                genreName,
+                genreId
+            ]
+        );
+
+
+        return genreId;
+    }
+
+
+    // --------------------------------------------------------
+    // Then check by genre name
+    //
+    // This prevents:
+    //
+    // duplicate key value violates
+    // unique constraint "genres_genre_name_key"
+    // --------------------------------------------------------
+
+    const nameResult =
+        await client.query(
+            `
+            SELECT
+                genre_id
+            FROM genres
+            WHERE LOWER(genre_name) = LOWER($1)
+            LIMIT 1
+            `,
+            [genreName]
+        );
+
+
+    if (nameResult.rows.length > 0) {
+
+        const genreId =
+            nameResult.rows[0].genre_id;
+
+
+        // Add TMDB ID if the existing genre
+        // doesn't already have one
+
+        await client.query(
+            `
+            UPDATE genres
+            SET
+                tmdb_genre_id =
+                    COALESCE(
+                        tmdb_genre_id,
+                        $1
+                    ),
+                updated_at =
+                    CURRENT_TIMESTAMP
+            WHERE genre_id = $2
+            `,
+            [
+                tmdbGenreId,
+                genreId
+            ]
+        );
+
+
+        return genreId;
+    }
+
+
+    // --------------------------------------------------------
+    // Create new genre
+    // --------------------------------------------------------
+
+    const insertResult =
+        await client.query(
+            `
+            INSERT INTO genres (
+                tmdb_genre_id,
+                genre_name,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                $1,
+                $2,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            RETURNING genre_id
+            `,
+            [
+                tmdbGenreId,
+                genreName
+            ]
+        );
+
+
+    return insertResult.rows[0].genre_id;
+}
+
+
+// ============================================================
+// HELPER - GET OR CREATE PERSON
+// ============================================================
+
+async function getOrCreatePerson(client, person) {
+
+    if (
+        !person ||
+        !person.id ||
+        !person.name
+    ) {
+        return null;
+    }
+
+
+    const tmdbPersonId = person.id;
+    const personName = person.name;
+
+    const profileUrl =
+        buildImageUrl(
+            person.profile_path,
+            'w500'
+        );
+
+
+    // --------------------------------------------------------
+    // Check existing person
+    // --------------------------------------------------------
+
+    const existingResult =
+        await client.query(
+            `
+            SELECT
+                person_id
+            FROM people
+            WHERE tmdb_person_id = $1
+            LIMIT 1
+            `,
+            [tmdbPersonId]
+        );
+
+
+    // --------------------------------------------------------
+    // Update existing person
+    // --------------------------------------------------------
+
+    if (existingResult.rows.length > 0) {
+
+        const personId =
+            existingResult.rows[0].person_id;
+
+
+        await client.query(
+            `
+            UPDATE people
+            SET
+                name = $1,
+
+                profile_url =
+                    COALESCE(
+                        $2,
+                        profile_url
+                    ),
+
+                updated_at =
+                    CURRENT_TIMESTAMP
+            WHERE person_id = $3
+            `,
+            [
+                personName,
+                profileUrl,
+                personId
+            ]
+        );
+
+
+        return personId;
+    }
+
+
+    // --------------------------------------------------------
+    // Create person
+    // --------------------------------------------------------
+
+    const insertResult =
+        await client.query(
+            `
+            INSERT INTO people (
+                tmdb_person_id,
+                name,
+                profile_url,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            RETURNING person_id
+            `,
+            [
+                tmdbPersonId,
+                personName,
+                profileUrl
+            ]
+        );
+
+
+    return insertResult.rows[0].person_id;
 }
 
 
@@ -127,30 +476,28 @@ function buildImageUrl(path, size) {
 // ENRICH ONE MOVIE
 // ============================================================
 
-async function enrichMovie(connection, movieId) {
+async function enrichMovie(client, movieId) {
 
-    // --------------------------------------------------------
-    // Get existing movie
-    // --------------------------------------------------------
+
+    // ========================================================
+    // GET EXISTING MOVIE
+    // ========================================================
 
     const movieResult =
-        await connection.execute(
+        await client.query(
             `
             SELECT
-                MOVIE_ID,
-                TMDB_ID,
-                TITLE
-            FROM MOVIES
-            WHERE MOVIE_ID = :movieId
+                movie_id,
+                tmdb_id,
+                title
+            FROM movies
+            WHERE movie_id = $1
             `,
-            {
-                movieId
-            }
+            [movieId]
         );
 
-    if (
-        movieResult.rows.length === 0
-    ) {
+
+    if (movieResult.rows.length === 0) {
 
         throw new Error(
             `Movie ${movieId} not found`
@@ -158,14 +505,16 @@ async function enrichMovie(connection, movieId) {
 
     }
 
+
     const movie =
         movieResult.rows[0];
 
     const tmdbId =
-        movie[1];
+        movie.tmdb_id;
 
     const currentTitle =
-        movie[2];
+        movie.title;
+
 
     if (!tmdbId) {
 
@@ -175,200 +524,128 @@ async function enrichMovie(connection, movieId) {
 
     }
 
+
     console.log(
         `🎬 Enriching movie: ${currentTitle} | TMDB ${tmdbId}`
     );
 
 
-    // --------------------------------------------------------
-    // Get TMDB data
-    // --------------------------------------------------------
+    // ========================================================
+    // GET TMDB DATA
+    // ========================================================
 
     const tmdb =
         await getTMDBMovie(tmdbId);
 
 
-    // --------------------------------------------------------
-    // Extract trailer
-    // --------------------------------------------------------
+    // ========================================================
+    // EXTRACT TRAILER
+    // ========================================================
 
     const trailerUrl =
         getTrailerUrl(tmdb.videos);
 
 
-    // --------------------------------------------------------
-    // Update MOVIES
-    // --------------------------------------------------------
+    // ========================================================
+    // HANDLE STUDIO
+    //
+    // MOVIES currently has one STUDIO_ID.
+    // We use the first TMDB production company.
+    // ========================================================
 
     let studioId = null;
 
 
-    // --------------------------------------------------------
-    // Handle studio
-    //
-    // MOVIES currently has one STUDIO_ID.
-    // We use the first TMDB production company.
-    // --------------------------------------------------------
-
     if (
-        Array.isArray(tmdb.production_companies) &&
+        Array.isArray(
+            tmdb.production_companies
+        ) &&
         tmdb.production_companies.length > 0
     ) {
 
         const studio =
             tmdb.production_companies[0];
 
-        await connection.execute(
-            `
-            MERGE INTO STUDIOS s
 
-            USING (
-                SELECT
-                    :studioName AS STUDIO_NAME
-                FROM dual
-            ) incoming
-
-            ON (
-                UPPER(s.STUDIO_NAME) =
-                UPPER(incoming.STUDIO_NAME)
-            )
-
-            WHEN MATCHED THEN
-                UPDATE SET
-                    s.UPDATED_AT =
-                        CURRENT_TIMESTAMP
-
-            WHEN NOT MATCHED THEN
-                INSERT (
-                    STUDIO_NAME,
-                    CREATED_AT,
-                    UPDATED_AT
-                )
-                VALUES (
-                    incoming.STUDIO_NAME,
-                    CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP
-                )
-            `,
-            {
-                studioName:
-                    studio.name
-            }
-        );
-
-
-        const studioResult =
-            await connection.execute(
-                `
-                SELECT
-                    STUDIO_ID
-                FROM STUDIOS
-                WHERE UPPER(STUDIO_NAME) =
-                      UPPER(:studioName)
-                `,
-                {
-                    studioName:
-                        studio.name
-                }
+        studioId =
+            await getOrCreateStudio(
+                client,
+                studio.name
             );
-
-        if (
-            studioResult.rows.length > 0
-        ) {
-
-            studioId =
-                studioResult.rows[0][0];
-
-        }
 
     }
 
 
-    await connection.execute(
+    // ========================================================
+    // UPDATE MOVIE
+    // ========================================================
+
+    await client.query(
         `
-        UPDATE MOVIES
-
+        UPDATE movies
         SET
-            ORIGINAL_TITLE =
-                :originalTitle,
+            original_title = $1,
 
-            DESCRIPTION =
-                :description,
+            description = $2,
 
-            RELEASE_DATE =
-                CASE
-                    WHEN :releaseDate IS NOT NULL
-                    THEN TO_DATE(
-                        :releaseDate,
-                        'YYYY-MM-DD'
-                    )
-                    ELSE RELEASE_DATE
-                END,
+            release_date =
+            COALESCE(
+                $3::date,
+                release_date
+            ),
 
-            RUNTIME_MINUTES =
-                :runtime,
+            runtime_minutes = $4,
 
-            POSTER_URL =
-                :posterUrl,
+            poster_url = $5,
 
-            BACKDROP_URL =
-                :backdropUrl,
+            backdrop_url = $6,
 
-            TRAILER_URL =
+            trailer_url =
                 COALESCE(
-                    :trailerUrl,
-                    TRAILER_URL
+                    $7,
+                    trailer_url
                 ),
 
-            RATING =
-                :rating,
+            rating = $8,
 
-            STUDIO_ID =
+            studio_id =
                 COALESCE(
-                    :studioId,
-                    STUDIO_ID
+                    $9,
+                    studio_id
                 ),
 
-            UPDATED_AT =
+            updated_at =
                 CURRENT_TIMESTAMP
 
-        WHERE MOVIE_ID =
-              :movieId
+        WHERE movie_id = $10
         `,
-        {
-            originalTitle:
-                tmdb.original_title,
+        [
+            tmdb.original_title || null,
 
-            description:
-                tmdb.overview,
+            tmdb.overview || null,
 
-            releaseDate:
-                tmdb.release_date || null,
+            tmdb.release_date || null,
 
-            runtime:
-                tmdb.runtime || null,
+            tmdb.runtime || null,
 
-            posterUrl:
-                buildImageUrl(
-                    tmdb.poster_path,
-                    'w500'
-                ),
+            buildImageUrl(
+                tmdb.poster_path,
+                'w500'
+            ),
 
-            backdropUrl:
-                buildImageUrl(
-                    tmdb.backdrop_path,
-                    'w1280'
-                ),
+            buildImageUrl(
+                tmdb.backdrop_path,
+                'w1280'
+            ),
 
             trailerUrl,
 
-            rating:
-                tmdb.vote_average ?? null,
+            tmdb.vote_average ?? null,
 
             studioId,
 
             movieId
-        }
+        ]
     );
 
 
@@ -376,15 +653,14 @@ async function enrichMovie(connection, movieId) {
     // GENRES
     // ========================================================
 
-    // Remove existing movie/genre relationships
-    await connection.execute(
+    // Remove existing relationships
+
+    await client.query(
         `
-        DELETE FROM MOVIE_GENRES
-        WHERE MOVIE_ID = :movieId
+        DELETE FROM movie_genres
+        WHERE movie_id = $1
         `,
-        {
-            movieId
-        }
+        [movieId]
     );
 
 
@@ -396,85 +672,35 @@ async function enrichMovie(connection, movieId) {
             const genre of tmdb.genres
         ) {
 
-            // Create genre if it doesn't exist
-            await connection.execute(
-                `
-                MERGE INTO GENRES g
-
-                USING (
-                    SELECT
-                        :genreName AS GENRE_NAME
-                    FROM dual
-                ) incoming
-
-                ON (
-                    UPPER(g.GENRE_NAME) =
-                    UPPER(incoming.GENRE_NAME)
-                )
-
-                WHEN NOT MATCHED THEN
-
-                    INSERT (
-                        GENRE_NAME
-                    )
-
-                    VALUES (
-                        incoming.GENRE_NAME
-                    )
-                `,
-                {
-                    genreName:
-                        genre.name
-                }
-            );
-
-
-            // Get genre ID
-            const genreResult =
-                await connection.execute(
-                    `
-                    SELECT
-                        GENRE_ID
-
-                    FROM GENRES
-
-                    WHERE UPPER(GENRE_NAME) =
-                          UPPER(:genreName)
-                    `,
-                    {
-                        genreName:
-                            genre.name
-                    }
+            const genreId =
+                await getOrCreateGenre(
+                    client,
+                    genre
                 );
 
 
-            if (
-                genreResult.rows.length > 0
-            ) {
-
-                const genreId =
-                    genreResult.rows[0][0];
-
-
-                await connection.execute(
-                    `
-                    INSERT INTO MOVIE_GENRES (
-                        MOVIE_ID,
-                        GENRE_ID
-                    )
-
-                    VALUES (
-                        :movieId,
-                        :genreId
-                    )
-                    `,
-                    {
-                        movieId,
-                        genreId
-                    }
-                );
-
+            if (!genreId) {
+                continue;
             }
+
+
+            await client.query(
+                `
+                INSERT INTO movie_genres (
+                    movie_id,
+                    genre_id
+                )
+                VALUES (
+                    $1,
+                    $2
+                )
+                ON CONFLICT DO NOTHING
+                `,
+                [
+                    movieId,
+                    genreId
+                ]
+            );
 
         }
 
@@ -499,29 +725,25 @@ async function enrichMovie(connection, movieId) {
             : [];
 
 
-    // --------------------------------------------------------
-    // Clear old cast/crew relationships
-    // --------------------------------------------------------
+    // ========================================================
+    // CLEAR OLD CAST / CREW
+    // ========================================================
 
-    await connection.execute(
+    await client.query(
         `
-        DELETE FROM MOVIE_CAST
-        WHERE MOVIE_ID = :movieId
+        DELETE FROM movie_cast
+        WHERE movie_id = $1
         `,
-        {
-            movieId
-        }
+        [movieId]
     );
 
 
-    await connection.execute(
+    await client.query(
         `
-        DELETE FROM MOVIE_CREW
-        WHERE MOVIE_ID = :movieId
+        DELETE FROM movie_crew
+        WHERE movie_id = $1
         `,
-        {
-            movieId
-        }
+        [movieId]
     );
 
 
@@ -533,145 +755,52 @@ async function enrichMovie(connection, movieId) {
         const actor of cast
     ) {
 
-        if (!actor.id || !actor.name) {
-            continue;
-        }
-
-
-        // ----------------------------------------------------
-        // Create person if necessary
-        // ----------------------------------------------------
-
-        await connection.execute(
-            `
-            MERGE INTO PEOPLE p
-
-            USING (
-                SELECT
-                    :tmdbPersonId AS TMDB_PERSON_ID,
-                    :personName AS NAME,
-                    :profileUrl AS PROFILE_URL
-                FROM dual
-            ) incoming
-
-            ON (
-                p.TMDB_PERSON_ID =
-                incoming.TMDB_PERSON_ID
-            )
-
-            WHEN MATCHED THEN
-
-                UPDATE SET
-                    p.NAME =
-                        incoming.NAME,
-
-                    p.PROFILE_URL =
-                        COALESCE(
-                            incoming.PROFILE_URL,
-                            p.PROFILE_URL
-                        ),
-
-                    p.UPDATED_AT =
-                        CURRENT_TIMESTAMP
-
-            WHEN NOT MATCHED THEN
-
-                INSERT (
-                    TMDB_PERSON_ID,
-                    NAME,
-                    PROFILE_URL,
-                    CREATED_AT,
-                    UPDATED_AT
-                )
-
-                VALUES (
-                    incoming.TMDB_PERSON_ID,
-                    incoming.NAME,
-                    incoming.PROFILE_URL,
-                    CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP
-                )
-            `,
-            {
-                tmdbPersonId:
-                    actor.id,
-
-                personName:
-                    actor.name,
-
-                profileUrl:
-                    buildImageUrl(
-                        actor.profile_path,
-                        'w500'
-                    )
-            }
-        );
-
-
-        // ----------------------------------------------------
-        // Get person ID
-        // ----------------------------------------------------
-
-        const personResult =
-            await connection.execute(
-                `
-                SELECT
-                    PERSON_ID
-
-                FROM PEOPLE
-
-                WHERE TMDB_PERSON_ID =
-                      :tmdbPersonId
-                `,
-                {
-                    tmdbPersonId:
-                        actor.id
-                }
-            );
-
-
         if (
-            personResult.rows.length === 0
+            !actor.id ||
+            !actor.name
         ) {
             continue;
         }
 
 
         const personId =
-            personResult.rows[0][0];
+            await getOrCreatePerson(
+                client,
+                actor
+            );
 
 
-        // ----------------------------------------------------
-        // Insert cast
-        // ----------------------------------------------------
+        if (!personId) {
+            continue;
+        }
 
-        await connection.execute(
+
+        await client.query(
             `
-            INSERT INTO MOVIE_CAST (
-                MOVIE_ID,
-                PERSON_ID,
-                CHARACTER_NAME,
-                CAST_ORDER
+            INSERT INTO movie_cast (
+                movie_id,
+                person_id,
+                character_name,
+                cast_order
             )
-
             VALUES (
-                :movieId,
-                :personId,
-                :characterName,
-                :castOrder
+                $1,
+                $2,
+                $3,
+                $4
             )
             `,
-            {
+            [
                 movieId,
 
                 personId,
 
-                characterName:
-                    actor.character || null,
+                actor.character ||
+                    null,
 
-                castOrder:
-                    actor.order ?? null
-            }
+                actor.order ??
+                    null
+            ]
         );
 
     }
@@ -693,142 +822,52 @@ async function enrichMovie(connection, movieId) {
         }
 
 
-        // ----------------------------------------------------
-        // Create/update person
-        // ----------------------------------------------------
-
-        await connection.execute(
-            `
-            MERGE INTO PEOPLE p
-
-            USING (
-                SELECT
-                    :tmdbPersonId AS TMDB_PERSON_ID,
-                    :personName AS NAME,
-                    :profileUrl AS PROFILE_URL
-                FROM dual
-            ) incoming
-
-            ON (
-                p.TMDB_PERSON_ID =
-                incoming.TMDB_PERSON_ID
-            )
-
-            WHEN MATCHED THEN
-
-                UPDATE SET
-                    p.NAME =
-                        incoming.NAME,
-
-                    p.PROFILE_URL =
-                        COALESCE(
-                            incoming.PROFILE_URL,
-                            p.PROFILE_URL
-                        ),
-
-                    p.UPDATED_AT =
-                        CURRENT_TIMESTAMP
-
-            WHEN NOT MATCHED THEN
-
-                INSERT (
-                    TMDB_PERSON_ID,
-                    NAME,
-                    PROFILE_URL,
-                    CREATED_AT,
-                    UPDATED_AT
-                )
-
-                VALUES (
-                    incoming.TMDB_PERSON_ID,
-                    incoming.NAME,
-                    incoming.PROFILE_URL,
-                    CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP
-                )
-            `,
-            {
-                tmdbPersonId:
-                    member.id,
-
-                personName:
-                    member.name,
-
-                profileUrl:
-                    buildImageUrl(
-                        member.profile_path,
-                        'w500'
-                    )
-            }
-        );
-
-
-        const personResult =
-            await connection.execute(
-                `
-                SELECT
-                    PERSON_ID
-
-                FROM PEOPLE
-
-                WHERE TMDB_PERSON_ID =
-                      :tmdbPersonId
-                `,
-                {
-                    tmdbPersonId:
-                        member.id
-                }
+        const personId =
+            await getOrCreatePerson(
+                client,
+                member
             );
 
 
-        if (
-            personResult.rows.length === 0
-        ) {
+        if (!personId) {
             continue;
         }
 
 
-        const personId =
-            personResult.rows[0][0];
-
-
-        // ----------------------------------------------------
-        // Insert crew
-        // ----------------------------------------------------
-
-        await connection.execute(
+        await client.query(
             `
-            INSERT INTO MOVIE_CREW (
-                MOVIE_ID,
-                PERSON_ID,
-                DEPARTMENT,
-                JOB
+            INSERT INTO movie_crew (
+                movie_id,
+                person_id,
+                department,
+                job
             )
-
             VALUES (
-                :movieId,
-                :personId,
-                :department,
-                :job
+                $1,
+                $2,
+                $3,
+                $4
             )
             `,
-            {
+            [
                 movieId,
 
                 personId,
 
-                department:
-                    member.department ||
+                member.department ||
                     null,
 
-                job:
-                    member.job ||
+                member.job ||
                     null
-            }
+            ]
         );
 
     }
 
+
+    // ========================================================
+    // RETURN RESULT
+    // ========================================================
 
     return {
 
@@ -865,7 +904,7 @@ async function enrichMovie(connection, movieId) {
 
 async function enrichMovieController(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
@@ -874,7 +913,8 @@ async function enrichMovieController(req, res) {
 
 
         if (
-            !Number.isInteger(movieId)
+            !Number.isInteger(movieId) ||
+            movieId <= 0
         ) {
 
             return res.status(400).json({
@@ -889,18 +929,41 @@ async function enrichMovieController(req, res) {
         }
 
 
-        connection =
-            await getConnection();
+        // ----------------------------------------------------
+        // Get PostgreSQL client
+        // ----------------------------------------------------
 
+        client =
+            await pool.connect();
+
+
+        // ----------------------------------------------------
+        // Start transaction
+        // ----------------------------------------------------
+
+        await client.query(
+            'BEGIN'
+        );
+
+
+        // ----------------------------------------------------
+        // Enrich movie
+        // ----------------------------------------------------
 
         const result =
             await enrichMovie(
-                connection,
+                client,
                 movieId
             );
 
 
-        await connection.commit();
+        // ----------------------------------------------------
+        // Commit
+        // ----------------------------------------------------
+
+        await client.query(
+            'COMMIT'
+        );
 
 
         return res.status(200).json({
@@ -924,16 +987,20 @@ async function enrichMovieController(req, res) {
         );
 
 
-        if (connection) {
+        if (client) {
 
             try {
-                await connection.rollback();
+
+                await client.query(
+                    'ROLLBACK'
+                );
+
             }
             catch (rollbackError) {
 
                 console.error(
                     '❌ Rollback error:',
-                    rollbackError
+                    rollbackError.message
                 );
 
             }
@@ -956,19 +1023,9 @@ async function enrichMovieController(req, res) {
     }
     finally {
 
-        if (connection) {
+        if (client) {
 
-            try {
-                await connection.close();
-            }
-            catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
+            client.release();
 
         }
 
@@ -983,27 +1040,26 @@ async function enrichMovieController(req, res) {
 
 async function enrichAllMovies(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
-        connection =
-            await getConnection();
-
+        // ----------------------------------------------------
+        // Get movies first
+        //
+        // This query doesn't need to stay inside a transaction.
+        // ----------------------------------------------------
 
         const movieResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    MOVIE_ID,
-                    TMDB_ID,
-                    TITLE
-
-                FROM MOVIES
-
-                WHERE TMDB_ID IS NOT NULL
-
-                ORDER BY MOVIE_ID
+                    movie_id,
+                    tmdb_id,
+                    title
+                FROM movies
+                WHERE tmdb_id IS NOT NULL
+                ORDER BY movie_id
                 `
             );
 
@@ -1029,27 +1085,50 @@ async function enrichAllMovies(req, res) {
         const failures = [];
 
 
+        // ====================================================
+        // ENRICH EACH MOVIE IN ITS OWN TRANSACTION
+        // ====================================================
+
         for (
-            const row of movieResult.rows
+            const movie of movieResult.rows
         ) {
 
             const movieId =
-                row[0];
+                movie.movie_id;
 
             const title =
-                row[2];
+                movie.title;
+
+
+            client = null;
 
 
             try {
 
+                client =
+                    await pool.connect();
+
+
+                await client.query(
+                    'BEGIN'
+                );
+
+
                 const result =
                     await enrichMovie(
-                        connection,
+                        client,
                         movieId
                     );
 
 
-                results.push(result);
+                await client.query(
+                    'COMMIT'
+                );
+
+
+                results.push(
+                    result
+                );
 
 
             }
@@ -1059,6 +1138,31 @@ async function enrichAllMovies(req, res) {
                     `❌ Failed enriching ${title}:`,
                     movieError.message
                 );
+
+
+                // --------------------------------------------
+                // Rollback only this movie
+                // --------------------------------------------
+
+                if (client) {
+
+                    try {
+
+                        await client.query(
+                            'ROLLBACK'
+                        );
+
+                    }
+                    catch (rollbackError) {
+
+                        console.error(
+                            '❌ Movie rollback error:',
+                            rollbackError.message
+                        );
+
+                    }
+
+                }
 
 
                 failures.push({
@@ -1073,16 +1177,22 @@ async function enrichAllMovies(req, res) {
                 });
 
             }
+            finally {
+
+                if (client) {
+
+                    client.release();
+
+                }
+
+            }
 
         }
 
 
-        // ----------------------------------------------------
-        // Commit all successful enrichments
-        // ----------------------------------------------------
-
-        await connection.commit();
-
+        // ====================================================
+        // RESPONSE
+        // ====================================================
 
         return res.status(200).json({
 
@@ -1117,16 +1227,20 @@ async function enrichAllMovies(req, res) {
         );
 
 
-        if (connection) {
+        if (client) {
 
             try {
-                await connection.rollback();
+
+                await client.query(
+                    'ROLLBACK'
+                );
+
             }
             catch (rollbackError) {
 
                 console.error(
                     '❌ Rollback error:',
-                    rollbackError
+                    rollbackError.message
                 );
 
             }
@@ -1147,26 +1261,6 @@ async function enrichAllMovies(req, res) {
         });
 
     }
-    finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            }
-            catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
-    }
-
 }
 
 

@@ -1,4 +1,4 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -6,8 +6,6 @@ const { getConnection } = require('../config/database');
 // ============================================================
 
 async function verifyTicket(req, res) {
-
-    let connection;
 
     try {
 
@@ -44,83 +42,70 @@ async function verifyTicket(req, res) {
                 .trim()
                 .toUpperCase();
 
-        connection =
-            await getConnection();
 
         // ----------------------------------------------------
         // Get ticket
         // ----------------------------------------------------
 
-        const ticketResult =
-            await connection.execute(
-                `
-                SELECT
-                    T.TICKET_ID,
-                    T.TICKET_CODE,
-                    T.QR_CODE_DATA,
-                    T.STATUS,
+        const ticketResult = await pool.query(
+            `
+            SELECT
+                t.ticket_id,
+                t.ticket_code,
+                t.qr_code_data,
+                t.status AS ticket_status,
 
-                    B.BOOKING_ID,
-                    B.BOOKING_REF,
-                    B.USER_ID,
-                    B.TICKET_QUANTITY,
-                    B.TICKET_PRICE,
-                    B.TOTAL_AMOUNT,
-                    B.STATUS,
+                b.booking_id,
+                b.booking_ref,
+                b.user_id,
+                b.ticket_quantity,
+                b.ticket_price,
+                b.total_amount,
+                b.status AS booking_status,
 
-                    ST.SHOWTIME_ID,
-                    ST.SHOW_DATE,
-                    ST.START_TIME,
-                    ST.END_TIME,
-                    ST.STATUS,
+                st.showtime_id,
+                st.show_date,
+                st.start_time,
+                st.end_time,
+                st.status AS showtime_status,
 
-                    M.MOVIE_ID,
-                    M.TITLE,
+                m.movie_id,
+                m.title AS movie_title,
 
-                    C.CINEMA_ID,
-                    C.CINEMA_NAME,
+                c.cinema_id,
+                c.cinema_name,
 
-                    S.SCREEN_ID,
-                    S.SCREEN_NAME
+                s.screen_id,
+                s.screen_name
 
-                FROM TICKETS T
+            FROM tickets t
 
-                JOIN BOOKINGS B
-                    ON B.BOOKING_ID =
-                       T.BOOKING_ID
+            JOIN bookings b
+                ON b.booking_id = t.booking_id
 
-                JOIN SHOWTIMES ST
-                    ON ST.SHOWTIME_ID =
-                       B.SHOWTIME_ID
+            JOIN showtimes st
+                ON st.showtime_id = b.showtime_id
 
-                JOIN MOVIES M
-                    ON M.MOVIE_ID =
-                       ST.MOVIE_ID
+            JOIN movies m
+                ON m.movie_id = st.movie_id
 
-                JOIN CINEMAS C
-                    ON C.CINEMA_ID =
-                       ST.CINEMA_ID
+            JOIN cinemas c
+                ON c.cinema_id = st.cinema_id
 
-                JOIN SCREENS S
-                    ON S.SCREEN_ID =
-                       ST.SCREEN_ID
+            JOIN screens s
+                ON s.screen_id = st.screen_id
 
-                WHERE UPPER(T.TICKET_CODE) =
-                      :ticketCode
-                `,
-                {
-                    ticketCode:
-                        normalizedTicketCode
-                }
-            );
+            WHERE UPPER(t.ticket_code) = $1
+            `,
+            [normalizedTicketCode]
+        );
+
 
         // ----------------------------------------------------
         // Ticket not found
         // ----------------------------------------------------
 
-        if (
-            ticketResult.rows.length === 0
-        ) {
+        if (ticketResult.rows.length === 0) {
 
             return res.status(404).json({
                 success: false,
@@ -130,117 +115,75 @@ async function verifyTicket(req, res) {
 
         }
 
-        const row =
-            ticketResult.rows[0];
 
-        /*
-            INDEXES
-
-            0  TICKET_ID
-            1  TICKET_CODE
-            2  QR_CODE_DATA
-            3  TICKET_STATUS
-
-            4  BOOKING_ID
-            5  BOOKING_REF
-            6  USER_ID
-            7  TICKET_QUANTITY
-            8  TICKET_PRICE
-            9  TOTAL_AMOUNT
-            10 BOOKING_STATUS
-
-            11 SHOWTIME_ID
-            12 SHOW_DATE
-            13 START_TIME
-            14 END_TIME
-            15 SHOWTIME_STATUS
-
-            16 MOVIE_ID
-            17 MOVIE_TITLE
-
-            18 CINEMA_ID
-            19 CINEMA_NAME
-
-            20 SCREEN_ID
-            21 SCREEN_NAME
-        */
+        const row = ticketResult.rows[0];
 
         const ticketId =
-            row[0];
+            row.ticket_id;
 
         const ticketStatus =
-            row[3];
+            row.ticket_status;
 
         const bookingStatus =
-            row[10];
+            row.booking_status;
 
         const showtimeStatus =
-            row[15];
+            row.showtime_status;
 
 
         // ----------------------------------------------------
         // Get seats
         // ----------------------------------------------------
 
-        const seatsResult =
-            await connection.execute(
-                `
-                SELECT
-                    BS.SEAT_ID,
-                    SE.ROW_LABEL,
-                    SE.SEAT_NUMBER,
-                    SE.SEAT_LABEL,
-                    SE.SEAT_TYPE
+        const seatsResult = await pool.query(
+            `
+            SELECT
+                bs.seat_id,
+                se.row_label,
+                se.seat_number,
+                se.seat_label,
+                se.seat_type
 
-                FROM BOOKING_SEATS BS
+            FROM booking_seats bs
 
-                JOIN SEATS SE
-                    ON SE.SEAT_ID =
-                       BS.SEAT_ID
+            JOIN seats se
+                ON se.seat_id = bs.seat_id
 
-                WHERE BS.BOOKING_ID =
-                      :bookingId
+            WHERE bs.booking_id = $1
 
-                ORDER BY
-                    SE.ROW_LABEL,
-                    SE.SEAT_NUMBER
-                `,
-                {
-                    bookingId:
-                        row[4]
-                }
-            );
+            ORDER BY
+                se.row_label,
+                se.seat_number
+            `,
+            [row.booking_id]
+        );
 
-        const seats =
-            seatsResult.rows.map(
-                seat => ({
 
-                    seatId:
-                        seat[0],
+        const seats = seatsResult.rows.map(seat => ({
 
-                    rowLabel:
-                        seat[1],
+            seatId:
+                seat.seat_id,
 
-                    seatNumber:
-                        seat[2],
+            rowLabel:
+                seat.row_label,
 
-                    seatLabel:
-                        seat[3],
+            seatNumber:
+                seat.seat_number,
 
-                    seatType:
-                        seat[4]
+            seatLabel:
+                seat.seat_label,
 
-                })
-            );
+            seatType:
+                seat.seat_type
+
+        }));
 
 
         // ----------------------------------------------------
         // Ticket already used
         // ----------------------------------------------------
 
-        if (
-            ticketStatus === 'USED'
-        ) {
+        if (ticketStatus === 'USED') {
 
             return res.status(409).json({
 
@@ -256,7 +199,7 @@ async function verifyTicket(req, res) {
                     ticketId,
 
                     ticketCode:
-                        row[1],
+                        row.ticket_code,
 
                     status:
                         ticketStatus
@@ -272,9 +215,7 @@ async function verifyTicket(req, res) {
         // Ticket cancelled
         // ----------------------------------------------------
 
-        if (
-            ticketStatus === 'CANCELLED'
-        ) {
+        if (ticketStatus === 'CANCELLED') {
 
             return res.status(409).json({
 
@@ -290,7 +231,7 @@ async function verifyTicket(req, res) {
                     ticketId,
 
                     ticketCode:
-                        row[1],
+                        row.ticket_code,
 
                     status:
                         ticketStatus
@@ -306,9 +247,7 @@ async function verifyTicket(req, res) {
         // Ticket expired
         // ----------------------------------------------------
 
-        if (
-            ticketStatus === 'EXPIRED'
-        ) {
+        if (ticketStatus === 'EXPIRED') {
 
             return res.status(409).json({
 
@@ -324,7 +263,7 @@ async function verifyTicket(req, res) {
                     ticketId,
 
                     ticketCode:
-                        row[1],
+                        row.ticket_code,
 
                     status:
                         ticketStatus
@@ -340,9 +279,7 @@ async function verifyTicket(req, res) {
         // Booking must be confirmed
         // ----------------------------------------------------
 
-        if (
-            bookingStatus !== 'CONFIRMED'
-        ) {
+        if (bookingStatus !== 'CONFIRMED') {
 
             return res.status(409).json({
 
@@ -358,7 +295,7 @@ async function verifyTicket(req, res) {
                     ticketId,
 
                     ticketCode:
-                        row[1],
+                        row.ticket_code,
 
                     status:
                         ticketStatus,
@@ -397,7 +334,7 @@ async function verifyTicket(req, res) {
                     ticketId,
 
                     ticketCode:
-                        row[1],
+                        row.ticket_code,
 
                     status:
                         ticketStatus,
@@ -431,10 +368,10 @@ async function verifyTicket(req, res) {
                 ticketId,
 
                 ticketCode:
-                    row[1],
+                    row.ticket_code,
 
                 qrCodeData:
-                    row[2],
+                    row.qr_code_data,
 
                 status:
                     ticketStatus,
@@ -442,19 +379,19 @@ async function verifyTicket(req, res) {
                 booking: {
 
                     bookingId:
-                        row[4],
+                        row.booking_id,
 
                     bookingRef:
-                        row[5],
+                        row.booking_ref,
 
                     ticketQuantity:
-                        row[7],
+                        row.ticket_quantity,
 
                     ticketPrice:
-                        row[8],
+                        row.ticket_price,
 
                     totalAmount:
-                        row[9],
+                        row.total_amount,
 
                     status:
                         bookingStatus
@@ -464,46 +401,46 @@ async function verifyTicket(req, res) {
                 movie: {
 
                     movieId:
-                        row[16],
+                        row.movie_id,
 
                     title:
-                        row[17]
+                        row.movie_title
 
                 },
 
                 cinema: {
 
                     cinemaId:
-                        row[18],
+                        row.cinema_id,
 
                     name:
-                        row[19]
+                        row.cinema_name
 
                 },
 
                 screen: {
 
                     screenId:
-                        row[20],
+                        row.screen_id,
 
                     name:
-                        row[21]
+                        row.screen_name
 
                 },
 
                 showtime: {
 
                     showtimeId:
-                        row[11],
+                        row.showtime_id,
 
                     showDate:
-                        row[12],
+                        row.show_date,
 
                     startTime:
-                        row[13],
+                        row.start_time,
 
                     endTime:
-                        row[14],
+                        row.end_time,
 
                     status:
                         showtimeStatus
@@ -535,25 +472,6 @@ async function verifyTicket(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing ticket connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
     }
 
 }
@@ -565,7 +483,7 @@ async function verifyTicket(req, res) {
 
 async function useTicket(req, res) {
 
-    let connection;
+    let client;
 
     try {
 
@@ -589,9 +507,7 @@ async function useTicket(req, res) {
         const ticketId =
             Number(req.params.ticketId);
 
-        if (
-            !Number.isInteger(ticketId)
-        ) {
+        if (!Number.isInteger(ticketId)) {
 
             return res.status(400).json({
                 success: false,
@@ -600,68 +516,71 @@ async function useTicket(req, res) {
 
         }
 
-        connection =
-            await getConnection();
+
+        // ----------------------------------------------------
+        // Get PostgreSQL client
+        // ----------------------------------------------------
+
+        client = await pool.connect();
+
+        await client.query('BEGIN');
+
 
         // ----------------------------------------------------
         // Get ticket
         // ----------------------------------------------------
 
-        const ticketResult =
-            await connection.execute(
-                `
-                SELECT
-                    T.TICKET_ID,
-                    T.TICKET_CODE,
-                    T.STATUS,
+        const ticketResult = await client.query(
+            `
+            SELECT
+                t.ticket_id,
+                t.ticket_code,
+                t.status AS ticket_status,
 
-                    B.BOOKING_ID,
-                    B.BOOKING_REF,
-                    B.STATUS,
+                b.booking_id,
+                b.booking_ref,
+                b.status AS booking_status,
 
-                    M.TITLE,
+                m.title AS movie_title,
 
-                    C.CINEMA_NAME,
+                c.cinema_name,
 
-                    S.SCREEN_NAME,
+                s.screen_name,
 
-                    ST.SHOW_DATE,
-                    ST.START_TIME,
-                    ST.STATUS
+                st.show_date,
+                st.start_time,
+                st.status AS showtime_status
 
-                FROM TICKETS T
+            FROM tickets t
 
-                JOIN BOOKINGS B
-                    ON B.BOOKING_ID =
-                       T.BOOKING_ID
+            JOIN bookings b
+                ON b.booking_id = t.booking_id
 
-                JOIN SHOWTIMES ST
-                    ON ST.SHOWTIME_ID =
-                       B.SHOWTIME_ID
+            JOIN showtimes st
+                ON st.showtime_id = b.showtime_id
 
-                JOIN MOVIES M
-                    ON M.MOVIE_ID =
-                       ST.MOVIE_ID
+            JOIN movies m
+                ON m.movie_id = st.movie_id
 
-                JOIN CINEMAS C
-                    ON C.CINEMA_ID =
-                       ST.CINEMA_ID
+            JOIN cinemas c
+                ON c.cinema_id = st.cinema_id
 
-                JOIN SCREENS S
-                    ON S.SCREEN_ID =
-                       ST.SCREEN_ID
+            JOIN screens s
+                ON s.screen_id = st.screen_id
 
-                WHERE T.TICKET_ID =
-                      :ticketId
-                `,
-                {
-                    ticketId
-                }
-            );
+            WHERE t.ticket_id = $1
+            `,
+            [ticketId]
+        );
 
-        if (
-            ticketResult.rows.length === 0
-        ) {
+
+        // ----------------------------------------------------
+        // Ticket not found
+        // ----------------------------------------------------
+
+        if (ticketResult.rows.length === 0) {
+
+            await client.query('ROLLBACK');
 
             return res.status(404).json({
 
@@ -674,37 +593,18 @@ async function useTicket(req, res) {
 
         }
 
+
         const row =
             ticketResult.rows[0];
-
-        /*
-            INDEXES
-
-            0  TICKET_ID
-            1  TICKET_CODE
-            2  TICKET_STATUS
-
-            3  BOOKING_ID
-            4  BOOKING_REF
-            5  BOOKING_STATUS
-
-            6  MOVIE_TITLE
-            7  CINEMA_NAME
-            8  SCREEN_NAME
-
-            9  SHOW_DATE
-            10 START_TIME
-            11 SHOWTIME_STATUS
-        */
 
 
         // ----------------------------------------------------
         // Check ticket status
         // ----------------------------------------------------
 
-        if (
-            row[2] === 'USED'
-        ) {
+        if (row.ticket_status === 'USED') {
+
+            await client.query('ROLLBACK');
 
             return res.status(409).json({
 
@@ -716,13 +616,13 @@ async function useTicket(req, res) {
                 ticket: {
 
                     ticketId:
-                        row[0],
+                        row.ticket_id,
 
                     ticketCode:
-                        row[1],
+                        row.ticket_code,
 
                     status:
-                        row[2]
+                        row.ticket_status
 
                 }
 
@@ -731,27 +631,27 @@ async function useTicket(req, res) {
         }
 
 
-        if (
-            row[2] !== 'VALID'
-        ) {
+        if (row.ticket_status !== 'VALID') {
+
+            await client.query('ROLLBACK');
 
             return res.status(409).json({
 
                 success: false,
 
                 message:
-                    `Ticket cannot be used because its status is ${row[2]}`,
+                    `Ticket cannot be used because its status is ${row.ticket_status}`,
 
                 ticket: {
 
                     ticketId:
-                        row[0],
+                        row.ticket_id,
 
                     ticketCode:
-                        row[1],
+                        row.ticket_code,
 
                     status:
-                        row[2]
+                        row.ticket_status
 
                 }
 
@@ -764,9 +664,9 @@ async function useTicket(req, res) {
         // Booking must be confirmed
         // ----------------------------------------------------
 
-        if (
-            row[5] !== 'CONFIRMED'
-        ) {
+        if (row.booking_status !== 'CONFIRMED') {
+
+            await client.query('ROLLBACK');
 
             return res.status(409).json({
 
@@ -781,43 +681,57 @@ async function useTicket(req, res) {
 
 
         // ----------------------------------------------------
+        // Showtime must be active
+        // ----------------------------------------------------
+
+        if (
+            ![
+                'SCHEDULED',
+                'NOW_SHOWING'
+            ].includes(row.showtime_status)
+        ) {
+
+            await client.query('ROLLBACK');
+
+            return res.status(409).json({
+
+                success: false,
+
+                message:
+                    `Showtime is not available. Current status: ${row.showtime_status}`
+
+            });
+
+        }
+
+
+        // ----------------------------------------------------
         // Mark ticket as used
         // ----------------------------------------------------
 
-        const updateResult =
-            await connection.execute(
-                `
-                UPDATE TICKETS
+        const updateResult = await client.query(
+            `
+            UPDATE tickets
 
-                SET
-                    STATUS = 'USED',
+            SET
+                status = 'USED',
+                used_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
 
-                    USED_AT =
-                        CURRENT_TIMESTAMP,
+            WHERE ticket_id = $1
+              AND status = 'VALID'
+            `,
+            [ticketId]
+        );
 
-                    UPDATED_AT =
-                        CURRENT_TIMESTAMP
-
-                WHERE TICKET_ID =
-                      :ticketId
-
-                  AND STATUS =
-                      'VALID'
-                `,
-                {
-                    ticketId
-                }
-            );
 
         // ----------------------------------------------------
         // Concurrency protection
         // ----------------------------------------------------
 
-        if (
-            updateResult.rowsAffected !== 1
-        ) {
+        if (updateResult.rowCount !== 1) {
 
-            await connection.rollback();
+            await client.query('ROLLBACK');
 
             return res.status(409).json({
 
@@ -835,11 +749,11 @@ async function useTicket(req, res) {
         // Commit
         // ----------------------------------------------------
 
-        await connection.commit();
+        await client.query('COMMIT');
 
 
         console.log(
-            `🎟️ Ticket used: ${row[1]}`
+            `🎟️ Ticket used: ${row.ticket_code}`
         );
 
 
@@ -857,10 +771,10 @@ async function useTicket(req, res) {
             ticket: {
 
                 ticketId:
-                    row[0],
+                    row.ticket_id,
 
                 ticketCode:
-                    row[1],
+                    row.ticket_code,
 
                 status:
                     'USED',
@@ -871,30 +785,30 @@ async function useTicket(req, res) {
                 booking: {
 
                     bookingId:
-                        row[3],
+                        row.booking_id,
 
                     bookingRef:
-                        row[4],
+                        row.booking_ref,
 
                     status:
-                        row[5]
+                        row.booking_status
 
                 },
 
                 movie:
-                    row[6],
+                    row.movie_title,
 
                 cinema:
-                    row[7],
+                    row.cinema_name,
 
                 screen:
-                    row[8],
+                    row.screen_name,
 
                 showDate:
-                    row[9],
+                    row.show_date,
 
                 startTime:
-                    row[10]
+                    row.start_time
 
             }
 
@@ -907,11 +821,11 @@ async function useTicket(req, res) {
             error
         );
 
-        if (connection) {
+        if (client) {
 
             try {
 
-                await connection.rollback();
+                await client.query('ROLLBACK');
 
             } catch (rollbackError) {
 
@@ -938,20 +852,9 @@ async function useTicket(req, res) {
 
     } finally {
 
-        if (connection) {
+        if (client) {
 
-            try {
-
-                await connection.close();
-
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing ticket connection:',
-                    error.message
-                );
-
-            }
+            client.release();
 
         }
 
@@ -971,4 +874,3 @@ module.exports = {
     useTicket
 
 };
-

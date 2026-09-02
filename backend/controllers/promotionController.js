@@ -1,4 +1,4 @@
-const { getConnection } = require('../config/database');
+const pool = require('../config/database');
 
 
 // ============================================================
@@ -7,11 +7,7 @@ const { getConnection } = require('../config/database');
 
 async function getPromotions(req, res) {
 
-    let connection;
-
     try {
-
-        connection = await getConnection();
 
         const {
             cinemaId,
@@ -20,93 +16,137 @@ async function getPromotions(req, res) {
 
         let sql = `
             SELECT
-                PROMOTION_ID,
-                CINEMA_ID,
-                PROMOTION_NAME,
-                PROMOTION_CODE,
-                DESCRIPTION,
-                DISCOUNT_TYPE,
-                DISCOUNT_VALUE,
-                MIN_TICKETS,
-                MAX_DISCOUNT,
-                START_DATE,
-                END_DATE,
-                IS_ACTIVE,
-                CREATED_AT,
-                UPDATED_AT
+                promotion_id,
+                cinema_id,
+                promotion_name,
+                promotion_code,
+                description,
+                discount_type,
+                discount_value,
+                min_tickets,
+                max_discount,
+                start_date,
+                end_date,
+                is_active,
+                created_at,
+                updated_at
 
-            FROM PROMOTIONS
+            FROM promotions
 
-            WHERE IS_ACTIVE = 'Y'
+            WHERE is_active = 'Y'
 
-              AND START_DATE <= CURRENT_TIMESTAMP
+              AND start_date <= CURRENT_TIMESTAMP
 
-              AND END_DATE >= CURRENT_TIMESTAMP
+              AND end_date >= CURRENT_TIMESTAMP
         `;
 
-        const binds = {};
+        const params = [];
+
+        // ----------------------------------------------------
+        // Filter by cinema
+        // ----------------------------------------------------
 
         if (cinemaId) {
 
-            sql += `
-                AND CINEMA_ID = :cinemaId
-            `;
-
-            binds.cinemaId =
+            const parsedCinemaId =
                 Number(cinemaId);
+
+            if (
+                !Number.isInteger(parsedCinemaId)
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        'Invalid cinema ID'
+
+                });
+
+            }
+
+            params.push(parsedCinemaId);
+
+            sql += `
+                AND cinema_id = $${params.length}
+            `;
         }
+
+        // ----------------------------------------------------
+        // Filter by promotion code
+        // ----------------------------------------------------
 
         if (code) {
 
-            sql += `
-                AND UPPER(PROMOTION_CODE)
-                    = UPPER(:code)
-            `;
+            params.push(code);
 
-            binds.code = code;
+            sql += `
+                AND UPPER(promotion_code)
+                    = UPPER($${params.length})
+            `;
         }
 
+        // ----------------------------------------------------
+        // Ordering
+        // ----------------------------------------------------
+
         sql += `
-            ORDER BY START_DATE DESC,
-                     PROMOTION_ID
+            ORDER BY
+                start_date DESC,
+                promotion_id
         `;
 
         const result =
-            await connection.execute(
+            await pool.query(
                 sql,
-                binds
+                params
             );
 
         const promotions =
             result.rows.map(row => ({
 
-                promotionId: row[0],
+                promotionId:
+                    row.promotion_id,
 
-                cinemaId: row[1],
+                cinemaId:
+                    row.cinema_id,
 
-                promotionName: row[2],
+                promotionName:
+                    row.promotion_name,
 
-                promotionCode: row[3],
+                promotionCode:
+                    row.promotion_code,
 
-                description: row[4],
+                description:
+                    row.description,
 
-                discountType: row[5],
+                discountType:
+                    row.discount_type,
 
-                discountValue: row[6],
+                discountValue:
+                    row.discount_value,
 
-                minTickets: row[7],
+                minTickets:
+                    row.min_tickets,
 
-                maxDiscount: row[8],
+                maxDiscount:
+                    row.max_discount,
 
-                startDate: row[9],
+                startDate:
+                    row.start_date,
 
-                endDate: row[10],
+                endDate:
+                    row.end_date,
 
-                isActive: row[11],
+                isActive:
+                    row.is_active,
 
-                createdAt: row[12],
+                createdAt:
+                    row.created_at,
 
-                updatedAt: row[13]
+                updatedAt:
+                    row.updated_at
 
             }));
 
@@ -140,21 +180,6 @@ async function getPromotions(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-
-        }
-
     }
 
 }
@@ -166,14 +191,14 @@ async function getPromotions(req, res) {
 
 async function getPromotionById(req, res) {
 
-    let connection;
-
     try {
 
         const promotionId =
             Number(req.params.promotionId);
 
-        if (!Number.isInteger(promotionId)) {
+        if (
+            !Number.isInteger(promotionId)
+        ) {
 
             return res.status(400).json({
 
@@ -186,39 +211,35 @@ async function getPromotionById(req, res) {
 
         }
 
-        connection =
-            await getConnection();
-
         const result =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    PROMOTION_ID,
-                    CINEMA_ID,
-                    PROMOTION_NAME,
-                    PROMOTION_CODE,
-                    DESCRIPTION,
-                    DISCOUNT_TYPE,
-                    DISCOUNT_VALUE,
-                    MIN_TICKETS,
-                    MAX_DISCOUNT,
-                    START_DATE,
-                    END_DATE,
-                    IS_ACTIVE,
-                    CREATED_AT,
-                    UPDATED_AT
+                    promotion_id,
+                    cinema_id,
+                    promotion_name,
+                    promotion_code,
+                    description,
+                    discount_type,
+                    discount_value,
+                    min_tickets,
+                    max_discount,
+                    start_date,
+                    end_date,
+                    is_active,
+                    created_at,
+                    updated_at
 
-                FROM PROMOTIONS
+                FROM promotions
 
-                WHERE PROMOTION_ID =
-                      :promotionId
+                WHERE promotion_id = $1
                 `,
-                {
-                    promotionId
-                }
+                [promotionId]
             );
 
-        if (result.rows.length === 0) {
+        if (
+            result.rows.length === 0
+        ) {
 
             return res.status(404).json({
 
@@ -240,33 +261,47 @@ async function getPromotionById(req, res) {
 
             promotion: {
 
-                promotionId: row[0],
+                promotionId:
+                    row.promotion_id,
 
-                cinemaId: row[1],
+                cinemaId:
+                    row.cinema_id,
 
-                promotionName: row[2],
+                promotionName:
+                    row.promotion_name,
 
-                promotionCode: row[3],
+                promotionCode:
+                    row.promotion_code,
 
-                description: row[4],
+                description:
+                    row.description,
 
-                discountType: row[5],
+                discountType:
+                    row.discount_type,
 
-                discountValue: row[6],
+                discountValue:
+                    row.discount_value,
 
-                minTickets: row[7],
+                minTickets:
+                    row.min_tickets,
 
-                maxDiscount: row[8],
+                maxDiscount:
+                    row.max_discount,
 
-                startDate: row[9],
+                startDate:
+                    row.start_date,
 
-                endDate: row[10],
+                endDate:
+                    row.end_date,
 
-                isActive: row[11],
+                isActive:
+                    row.is_active,
 
-                createdAt: row[12],
+                createdAt:
+                    row.created_at,
 
-                updatedAt: row[13]
+                updatedAt:
+                    row.updated_at
 
             }
 
@@ -291,23 +326,6 @@ async function getPromotionById(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-
-            }
-
-        }
-
     }
 
 }
@@ -319,8 +337,6 @@ async function getPromotionById(req, res) {
 
 async function validatePromotion(req, res) {
 
-    let connection;
-
     try {
 
         const {
@@ -328,6 +344,7 @@ async function validatePromotion(req, res) {
             showtimeId,
             tickets
         } = req.body;
+
 
         // ----------------------------------------------------
         // Validate request
@@ -375,30 +392,49 @@ async function validatePromotion(req, res) {
 
         }
 
-        connection =
-            await getConnection();
+
+        // ----------------------------------------------------
+        // Validate showtime ID
+        // ----------------------------------------------------
+
+        const parsedShowtimeId =
+            Number(showtimeId);
+
+        if (
+            !Number.isInteger(parsedShowtimeId)
+        ) {
+
+            return res.status(400).json({
+
+                success: false,
+
+                message:
+                    'Invalid showtime ID'
+
+            });
+
+        }
+
 
         // ----------------------------------------------------
         // Get showtime
         // ----------------------------------------------------
 
         const showtimeResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    SHOWTIME_ID,
-                    CINEMA_ID,
-                    SCREEN_ID,
-                    SHOW_DATE,
-                    START_TIME
-                FROM SHOWTIMES
-                WHERE SHOWTIME_ID =
-                      :showtimeId
+                    showtime_id,
+                    cinema_id,
+                    screen_id,
+                    show_date,
+                    start_time
+
+                FROM showtimes
+
+                WHERE showtime_id = $1
                 `,
-                {
-                    showtimeId:
-                        Number(showtimeId)
-                }
+                [parsedShowtimeId]
             );
 
         if (
@@ -420,42 +456,48 @@ async function validatePromotion(req, res) {
             showtimeResult.rows[0];
 
         const cinemaId =
-            showtime[1];
+            showtime.cinema_id;
+
+        const screenId =
+            showtime.screen_id;
+
+        const showDate =
+            showtime.show_date;
+
 
         // ----------------------------------------------------
         // Find promotion
         // ----------------------------------------------------
 
         const promotionResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    PROMOTION_ID,
-                    PROMOTION_NAME,
-                    PROMOTION_CODE,
-                    DISCOUNT_TYPE,
-                    DISCOUNT_VALUE,
-                    MIN_TICKETS,
-                    MAX_DISCOUNT
+                    promotion_id,
+                    promotion_name,
+                    promotion_code,
+                    discount_type,
+                    discount_value,
+                    min_tickets,
+                    max_discount
 
-                FROM PROMOTIONS
+                FROM promotions
 
-                WHERE UPPER(PROMOTION_CODE)
-                      = UPPER(:promotionCode)
+                WHERE UPPER(promotion_code)
+                      = UPPER($1)
 
-                  AND CINEMA_ID =
-                      :cinemaId
+                  AND cinema_id = $2
 
-                  AND IS_ACTIVE = 'Y'
+                  AND is_active = 'Y'
 
-                  AND START_DATE <= CURRENT_TIMESTAMP
+                  AND start_date <= CURRENT_TIMESTAMP
 
-                  AND END_DATE >= CURRENT_TIMESTAMP
+                  AND end_date >= CURRENT_TIMESTAMP
                 `,
-                {
+                [
                     promotionCode,
                     cinemaId
-                }
+                ]
             );
 
         if (
@@ -479,24 +521,31 @@ async function validatePromotion(req, res) {
             promotionResult.rows[0];
 
         const promotionId =
-            promotion[0];
+            promotion.promotion_id;
 
         const promotionName =
-            promotion[1];
+            promotion.promotion_name;
 
         const discountType =
-            promotion[3];
+            promotion.discount_type;
 
         const discountValue =
-            Number(promotion[4]);
+            Number(
+                promotion.discount_value
+            );
 
         const minTickets =
-            promotion[5] || 0;
+            Number(
+                promotion.min_tickets || 0
+            );
 
         const maxDiscount =
-            promotion[6] !== null
-                ? Number(promotion[6])
+            promotion.max_discount !== null
+                ? Number(
+                    promotion.max_discount
+                )
                 : null;
+
 
         // ----------------------------------------------------
         // Calculate ticket quantity
@@ -532,6 +581,7 @@ async function validatePromotion(req, res) {
 
         }
 
+
         // ----------------------------------------------------
         // Minimum ticket requirement
         // ----------------------------------------------------
@@ -553,58 +603,101 @@ async function validatePromotion(req, res) {
 
         }
 
+
+        // ----------------------------------------------------
+        // Determine day type
+        // ----------------------------------------------------
+        //
+        // PostgreSQL EXTRACT(DOW):
+        //
+        // Sunday    = 0
+        // Monday    = 1
+        // Tuesday   = 2
+        // Wednesday = 3
+        // Thursday  = 4
+        // Friday    = 5
+        // Saturday  = 6
+        //
+        // Therefore:
+        // 0 and 6 = WEEKEND
+        // Everything else = WEEKDAY
+        // ----------------------------------------------------
+
+        const dayTypeResult =
+            await pool.query(
+                `
+                SELECT
+                    CASE
+                        WHEN EXTRACT(
+                            DOW FROM $1::date
+                        ) IN (0, 6)
+
+                        THEN 'WEEKEND'
+
+                        ELSE 'WEEKDAY'
+
+                    END AS day_type
+                `,
+                [showDate]
+            );
+
+        const dayType =
+            dayTypeResult.rows[0].day_type;
+
+
         // ----------------------------------------------------
         // Get pricing
         // ----------------------------------------------------
 
         const priceResult =
-            await connection.execute(
+            await pool.query(
                 `
                 SELECT
-                    PRICE_ID,
-                    TICKET_TYPE,
-                    AMOUNT
-                FROM TICKET_PRICES
-                WHERE CINEMA_ID =
-                      :cinemaId
+                    price_id,
+                    ticket_type,
+                    amount,
+                    screen_id,
+                    day_type
 
-                  AND IS_ACTIVE = 'Y'
+                FROM ticket_prices
+
+                WHERE cinema_id = $1
+
+                  AND is_active = 'Y'
 
                   AND (
-                        SCREEN_ID IS NULL
-                        OR SCREEN_ID = :screenId
+                        screen_id IS NULL
+                        OR screen_id = $2
                   )
 
                   AND (
-                        DAY_TYPE IS NULL
-
-                        OR DAY_TYPE =
-                            CASE
-
-                                WHEN TO_CHAR(
-                                    :showDate,
-                                    'DY',
-                                    'NLS_DATE_LANGUAGE=ENGLISH'
-                                )
-                                IN ('SAT', 'SUN')
-
-                                THEN 'WEEKEND'
-
-                                ELSE 'WEEKDAY'
-
-                            END
+                        day_type IS NULL
+                        OR day_type = $3
                   )
+
+                ORDER BY
+
+                    ticket_type,
+
+                    CASE
+                        WHEN screen_id = $2
+                        THEN 1
+                        ELSE 2
+                    END,
+
+                    CASE
+                        WHEN day_type = $3
+                        THEN 1
+                        ELSE 2
+                    END
                 `,
-                {
+                [
                     cinemaId,
-
-                    screenId:
-                        showtime[2],
-
-                    showDate:
-                        showtime[3]
-                }
+                    screenId,
+                    dayType
+                ]
             );
+
 
         // ----------------------------------------------------
         // Build price map
@@ -618,18 +711,22 @@ async function validatePromotion(req, res) {
             of priceResult.rows
         ) {
 
+            const ticketType =
+                row.ticket_type;
+
             if (
-                !priceMap.has(row[1])
+                !priceMap.has(ticketType)
             ) {
 
                 priceMap.set(
-                    row[1],
-                    Number(row[2])
+                    ticketType,
+                    Number(row.amount)
                 );
 
             }
 
         }
+
 
         // ----------------------------------------------------
         // Calculate original total
@@ -675,6 +772,7 @@ async function validatePromotion(req, res) {
 
         }
 
+
         // ----------------------------------------------------
         // Calculate discount
         // ----------------------------------------------------
@@ -687,7 +785,9 @@ async function validatePromotion(req, res) {
 
             discountAmount =
                 originalAmount *
-                (discountValue / 100);
+                (
+                    discountValue / 100
+                );
 
         } else if (
             discountType === 'FIXED'
@@ -697,6 +797,7 @@ async function validatePromotion(req, res) {
                 discountValue;
 
         }
+
 
         // ----------------------------------------------------
         // Apply maximum discount
@@ -712,7 +813,10 @@ async function validatePromotion(req, res) {
 
         }
 
+
+        // ----------------------------------------------------
         // Never discount below zero
+        // ----------------------------------------------------
 
         if (
             discountAmount > originalAmount
@@ -723,9 +827,19 @@ async function validatePromotion(req, res) {
 
         }
 
+
+        // ----------------------------------------------------
+        // Calculate final amount
+        // ----------------------------------------------------
+
         const finalAmount =
             originalAmount -
             discountAmount;
+
+
+        // ----------------------------------------------------
+        // Response
+        // ----------------------------------------------------
 
         return res.json({
 
@@ -748,19 +862,16 @@ async function validatePromotion(req, res) {
             pricing: {
 
                 originalAmount:
-
                     Number(
                         originalAmount.toFixed(2)
                     ),
 
                 discountAmount:
-
                     Number(
                         discountAmount.toFixed(2)
                     ),
 
                 finalAmount:
-
                     Number(
                         finalAmount.toFixed(2)
                     )
@@ -788,28 +899,14 @@ async function validatePromotion(req, res) {
 
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-
-                );
-
-            }
-
-        }
-
     }
 
 }
 
+
+// ============================================================
+// EXPORTS
+// ============================================================
 
 module.exports = {
 

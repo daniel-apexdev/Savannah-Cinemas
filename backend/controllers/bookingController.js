@@ -1,10 +1,8 @@
-const { getConnection } = require('../config/database');
-const oracledb = require('oracledb');
+const pool = require('../config/database');
 
 const {
-    sendBookingConfirmation
+sendBookingConfirmation
 } = require('../utils/emailService');
-
 
 // ============================================================
 // CREATE BOOKING
@@ -12,1163 +10,1328 @@ const {
 
 async function createBooking(req, res) {
 
-    let connection;
 
-    try {
+let client;
 
-        // ----------------------------------------------------
-        // Authentication
-        // ----------------------------------------------------
+try {
 
-        if (!req.user || !req.user.userId) {
+    // ----------------------------------------------------
+    // Authentication
+    // ----------------------------------------------------
 
-            return res.status(401).json({
-                success: false,
-                message: 'Authentication required'
-            });
+    if (!req.user || !req.user.userId) {
 
-        }
+        return res.status(401).json({
+            success: false,
+            message: 'Authentication required'
+        });
 
-        const userId = req.user.userId;
+    }
 
-        // ----------------------------------------------------
-        // Request data
-        // ----------------------------------------------------
-
-        const {
-            showtimeId,
-            seatIds,
-            promotionCode
-        } = req.body;
+    const userId = req.user.userId;
 
 
-        if (!showtimeId) {
+    // ----------------------------------------------------
+    // Request data
+    // ----------------------------------------------------
 
-            return res.status(400).json({
-                success: false,
-                message: 'Showtime ID is required'
-            });
-
-        }
-
-
-        if (
-            !Array.isArray(seatIds) ||
-            seatIds.length === 0
-        ) {
-
-            return res.status(400).json({
-                success: false,
-                message: 'At least one seat must be selected'
-            });
-
-        }
+    const {
+        showtimeId,
+        seatIds,
+        promotionCode
+    } = req.body;
 
 
-        const parsedShowtimeId =
-            Number(showtimeId);
+    if (!showtimeId) {
+
+        return res.status(400).json({
+            success: false,
+            message: 'Showtime ID is required'
+        });
+
+    }
 
 
-        const parsedSeatIds = [
-            ...new Set(
-                seatIds.map(Number)
-            )
-        ];
+    if (
+        !Array.isArray(seatIds) ||
+        seatIds.length === 0
+    ) {
+
+        return res.status(400).json({
+            success: false,
+            message: 'At least one seat must be selected'
+        });
+
+    }
 
 
-        if (
-            !Number.isInteger(parsedShowtimeId) ||
-            parsedSeatIds.some(
-                seatId => !Number.isInteger(seatId)
-            )
-        ) {
+    // ----------------------------------------------------
+    // Parse IDs
+    // ----------------------------------------------------
 
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid showtime or seat ID'
-            });
-
-        }
+    const parsedShowtimeId =
+        Number(showtimeId);
 
 
-        // ----------------------------------------------------
-        // Get connection
-        // ----------------------------------------------------
-
-        connection =
-            await getConnection();
-
-
-        // ----------------------------------------------------
-        // Get user
-        // ----------------------------------------------------
-
-        const userResult =
-            await connection.execute(
-                `
-                SELECT
-                    EMAIL,
-                    FORENAMES,
-                    SURNAME
-
-                FROM USERS
-
-                WHERE USER_ID = :userId
-                  AND IS_ACTIVE = 'Y'
-                `,
-                {
-                    userId
-                }
-            );
+    const parsedSeatIds = [
+        ...new Set(
+            seatIds.map(Number)
+        )
+    ];
 
 
-        if (
-            userResult.rows.length === 0
-        ) {
+    if (
+        !Number.isInteger(parsedShowtimeId) ||
+        parsedShowtimeId <= 0 ||
+        parsedSeatIds.some(
+            seatId =>
+                !Number.isInteger(seatId) ||
+                seatId <= 0
+        )
+    ) {
 
-            return res.status(404).json({
-                success: false,
-                message: 'User account not found'
-            });
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid showtime or seat ID'
+        });
 
-        }
-
-
-        const userEmail =
-            userResult.rows[0][0];
-
-
-        const customerName =
-            `${userResult.rows[0][1]} ${userResult.rows[0][2]}`;
+    }
 
 
-        // ----------------------------------------------------
-        // Build seat placeholders
-        // ----------------------------------------------------
+    // ====================================================
+    // GET POSTGRESQL CLIENT
+    // ====================================================
 
-        const placeholders =
-            parsedSeatIds
-                .map(
-                    (_, index) =>
-                        `:seat${index}`
-                )
-                .join(', ');
+    client = await pool.connect();
+
+    await client.query('BEGIN');
 
 
-        const seatBinds = {};
+    // ====================================================
+    // GET USER
+    // ====================================================
 
-
-        parsedSeatIds.forEach(
-            (seatId, index) => {
-
-                seatBinds[
-                    `seat${index}`
-                ] = seatId;
-
-            }
+    const userResult =
+        await client.query(
+            `
+            SELECT
+                email,
+                forenames,
+                surname
+            FROM users
+            WHERE user_id = $1
+              AND is_active = 'Y'
+            `,
+            [userId]
         );
 
 
-        // ----------------------------------------------------
-        // Get showtime
-        // ----------------------------------------------------
+    if (userResult.rows.length === 0) {
 
-        const showtimeResult =
-            await connection.execute(
-                `
-                SELECT
-                    ST.SHOWTIME_ID,
-                    ST.MOVIE_ID,
-                    M.TITLE,
+        await client.query('ROLLBACK');
 
-                    ST.CINEMA_ID,
-                    C.CINEMA_NAME,
+        return res.status(404).json({
+            success: false,
+            message: 'User account not found'
+        });
 
-                    ST.SCREEN_ID,
-                    S.SCREEN_NAME,
-                    S.CAPACITY,
+    }
 
-                    ST.SHOW_DATE,
-                    ST.START_TIME,
-                    ST.END_TIME,
 
-                    ST.TICKET_PRICE,
-                    ST.STATUS,
-                    ST.IS_ACTIVE
+    const user =
+        userResult.rows[0];
 
-                FROM SHOWTIMES ST
 
-                JOIN MOVIES M
-                    ON M.MOVIE_ID =
-                       ST.MOVIE_ID
+    const userEmail =
+        user.email;
 
-                JOIN CINEMAS C
-                    ON C.CINEMA_ID =
-                       ST.CINEMA_ID
 
-                JOIN SCREENS S
-                    ON S.SCREEN_ID =
-                       ST.SCREEN_ID
+    const customerName =
+        `${user.forenames || ''} ${user.surname || ''}`
+            .trim();
 
-                WHERE ST.SHOWTIME_ID =
-                      :showtimeId
 
-                FOR UPDATE
-                `,
-                {
-                    showtimeId:
-                        parsedShowtimeId
-                }
-            );
+    // ====================================================
+    // GET SHOWTIME
+    // ====================================================
 
+    const showtimeResult =
+        await client.query(
+            `
+            SELECT
+                st.showtime_id,
+                st.movie_id,
+                m.title,
 
-        if (
-            showtimeResult.rows.length === 0
-        ) {
+                st.cinema_id,
+                c.cinema_name,
 
-            return res.status(404).json({
-                success: false,
-                message: 'Showtime not found'
-            });
+                st.screen_id,
+                s.screen_name,
+                s.capacity,
 
-        }
+                st.show_date,
+                st.start_time,
+                st.end_time,
 
+                st.ticket_price,
+                st.status,
+                st.is_active
 
-        const showtime =
-            showtimeResult.rows[0];
+            FROM showtimes st
 
+            JOIN movies m
+                ON m.movie_id =
+                   st.movie_id
 
-        /*
-            SHOWTIME INDEXES
+            JOIN cinemas c
+                ON c.cinema_id =
+                   st.cinema_id
 
-            0  SHOWTIME_ID
-            1  MOVIE_ID
-            2  TITLE
-            3  CINEMA_ID
-            4  CINEMA_NAME
-            5  SCREEN_ID
-            6  SCREEN_NAME
-            7  CAPACITY
-            8  SHOW_DATE
-            9  START_TIME
-            10 END_TIME
-            11 TICKET_PRICE
-            12 STATUS
-            13 IS_ACTIVE
-        */
+            JOIN screens s
+                ON s.screen_id =
+                   st.screen_id
 
+            WHERE st.showtime_id =
+                  $1
 
-        const movieId =
-            showtime[1];
+            FOR UPDATE
+            `,
+            [parsedShowtimeId]
+        );
 
-        const movieTitle =
-            showtime[2];
 
-        const cinemaId =
-            showtime[3];
+    if (showtimeResult.rows.length === 0) {
 
-        const cinemaName =
-            showtime[4];
+        await client.query('ROLLBACK');
 
-        const screenId =
-            showtime[5];
+        return res.status(404).json({
+            success: false,
+            message: 'Showtime not found'
+        });
 
-        const screenName =
-            showtime[6];
+    }
 
-        const showDate =
-            showtime[8];
 
-        const startTime =
-            showtime[9];
+    const showtime =
+        showtimeResult.rows[0];
 
-        const endTime =
-            showtime[10];
 
-        const fallbackTicketPrice =
-            Number(showtime[11]);
+    const movieId =
+        showtime.movie_id;
 
-        const showtimeStatus =
-            showtime[12];
+    const movieTitle =
+        showtime.title;
 
-        const isActive =
-            showtime[13];
+    const cinemaId =
+        showtime.cinema_id;
 
+    const cinemaName =
+        showtime.cinema_name;
+
+    const screenId =
+        showtime.screen_id;
 
-        // ----------------------------------------------------
-        // Check showtime
-        // ----------------------------------------------------
+    const screenName =
+        showtime.screen_name;
 
-        if (
-            isActive !== 'Y' ||
-            ![
-                'SCHEDULED',
-                'NOW_SHOWING'
-            ].includes(showtimeStatus)
-        ) {
+    const showDate =
+        showtime.show_date;
 
-            return res.status(400).json({
-                success: false,
-                message:
-                    'This showtime is not available for booking'
-            });
+    const startTime =
+        showtime.start_time;
 
-        }
+    const endTime =
+        showtime.end_time;
 
+    const fallbackTicketPrice =
+        Number(showtime.ticket_price || 0);
 
-        // ----------------------------------------------------
-        // Validate seats
-        // ----------------------------------------------------
+    const showtimeStatus =
+        showtime.status;
 
-        const seatsResult =
-            await connection.execute(
-                `
-                SELECT
-                    SEAT_ID,
-                    SEAT_LABEL,
-                    SEAT_TYPE
+    const isActive =
+        showtime.is_active;
 
-                FROM SEATS
 
-                WHERE SCREEN_ID =
-                      :screenId
+    // ====================================================
+    // CHECK SHOWTIME
+    // ====================================================
 
-                  AND IS_ACTIVE = 'Y'
+    if (
+        isActive !== 'Y' ||
+        ![
+            'SCHEDULED',
+            'NOW_SHOWING'
+        ].includes(showtimeStatus)
+    ) {
 
-                  AND SEAT_ID IN (
-                      ${placeholders}
-                  )
-                `,
-                {
-                    screenId,
-                    ...seatBinds
-                }
-            );
+        await client.query('ROLLBACK');
 
+        return res.status(400).json({
+            success: false,
+            message:
+                'This showtime is not available for booking'
+        });
 
-        if (
-            seatsResult.rows.length !==
-            parsedSeatIds.length
-        ) {
+    }
 
-            return res.status(400).json({
-                success: false,
-                message:
-                    'One or more selected seats are invalid for this screen'
-            });
 
-        }
+    // ====================================================
+    // VALIDATE SEATS
+    // ====================================================
 
+    const seatsResult =
+        await client.query(
+            `
+            SELECT
+                seat_id,
+                seat_label,
+                seat_type
+            FROM seats
+            WHERE screen_id = $1
+              AND is_active = 'Y'
+              AND seat_id = ANY($2::bigint[])
+            ORDER BY
+                row_label,
+                seat_number
+            `,
+            [
+                screenId,
+                parsedSeatIds
+            ]
+        );
 
-        // ----------------------------------------------------
-        // Check seats already booked
-        // ----------------------------------------------------
 
-        const bookedResult =
-            await connection.execute(
-                `
-                SELECT
-                    BS.SEAT_ID
+    if (
+        seatsResult.rows.length !==
+        parsedSeatIds.length
+    ) {
 
-                FROM BOOKING_SEATS BS
+        await client.query('ROLLBACK');
 
-                JOIN BOOKINGS B
-                    ON B.BOOKING_ID =
-                       BS.BOOKING_ID
+        return res.status(400).json({
+            success: false,
+            message:
+                'One or more selected seats are invalid for this screen'
+        });
 
-                WHERE BS.SHOWTIME_ID =
-                      :showtimeId
+    }
 
-                  AND BS.SEAT_ID IN (
-                      ${placeholders}
-                  )
 
-                  AND (
-                      B.STATUS = 'CONFIRMED'
+    // ====================================================
+    // CHECK SEATS ALREADY BOOKED
+    // ====================================================
 
-                      OR
+    const bookedResult =
+        await client.query(
+            `
+            SELECT
+                bs.seat_id
 
-                      (
-                          B.STATUS = 'PENDING'
+            FROM booking_seats bs
 
-                          AND (
-                              B.EXPIRES_AT IS NULL
-                              OR
-                              B.EXPIRES_AT >
-                                  CURRENT_TIMESTAMP
-                          )
-                      )
-                  )
-                `,
-                {
-                    showtimeId:
-                        parsedShowtimeId,
-                    ...seatBinds
-                }
-            );
+            JOIN bookings b
+                ON b.booking_id =
+                   bs.booking_id
 
+            WHERE bs.showtime_id =
+                  $1
 
-        if (
-            bookedResult.rows.length > 0
-        ) {
+              AND bs.seat_id =
+                  ANY($2::bigint[])
 
-            const bookedSeatIds =
-                bookedResult.rows.map(
-                    row => row[0]
-                );
+              AND (
+                    b.status = 'CONFIRMED'
 
+                    OR
 
-            return res.status(409).json({
-
-                success: false,
-
-                message:
-                    'One or more selected seats are already booked',
-
-                bookedSeatIds
-
-            });
-
-        }
-
-
-        // ====================================================
-        // PRICING
-        // ====================================================
-
-        /*
-            We use TICKET_PRICES as the pricing source.
-
-            If no matching ticket price exists,
-            we fall back to SHOWTIMES.TICKET_PRICE.
-
-            This keeps your existing bookings working
-            while we transition to the pricing engine.
-        */
-
-
-        const priceResult =
-            await connection.execute(
-                `
-                SELECT
-                    PRICE_ID,
-                    TICKET_TYPE,
-                    AMOUNT,
-                    CURRENCY,
-                    DAY_TYPE,
-                    SCREEN_ID
-
-                FROM TICKET_PRICES
-
-                WHERE CINEMA_ID =
-                      :cinemaId
-
-                  AND IS_ACTIVE = 'Y'
-
-                  AND (
-                      SCREEN_ID IS NULL
-                      OR SCREEN_ID = :screenId
-                  )
-
-                  AND (
-                      DAY_TYPE IS NULL
-
-                      OR
-
-                      DAY_TYPE =
-                      CASE
-
-                          WHEN TO_CHAR(
-                              :showDate,
-                              'DY',
-                              'NLS_DATE_LANGUAGE=ENGLISH'
-                          ) IN ('SAT', 'SUN')
-
-                          THEN 'WEEKEND'
-
-                          ELSE 'WEEKDAY'
-
-                      END
-                  )
-
-                ORDER BY
-                    TICKET_TYPE,
-
-                    CASE
-                        WHEN SCREEN_ID =
-                             :screenId
-                        THEN 1
-                        ELSE 2
-                    END
-                `,
-                {
-                    cinemaId,
-                    screenId,
-                    showDate
-                }
-            );
-
-
-        // ----------------------------------------------------
-        // Build price map
-        // ----------------------------------------------------
-
-        const priceMap =
-            new Map();
-
-
-        for (
-            const row
-            of priceResult.rows
-        ) {
-
-            const ticketType =
-                String(row[1])
-                    .toUpperCase();
-
-
-            /*
-                Prefer the first matching
-                price because the query
-                orders screen-specific prices first.
-            */
-
-            if (
-                !priceMap.has(ticketType)
-            ) {
-
-                priceMap.set(
-                    ticketType,
-                    {
-                        priceId: row[0],
-                        amount: Number(row[2]),
-                        currency: row[3]
-                    }
-                );
-
-            }
-
-        }
-
-
-        // ====================================================
-        // BUILD TICKET BREAKDOWN
-        // ====================================================
-
-        const bookingTickets = [];
-
-        let originalAmount = 0;
-
-        let ticketQuantity = 0;
-
-
-        /*
-            At the moment the booking API only receives
-            seatIds.
-
-            Therefore we use the SEAT_TYPE as the ticket
-            type when a matching price exists.
-
-            If the seat type does not have a corresponding
-            ticket price, we use ADULT.
-
-            This allows the current frontend to continue
-            working.
-        */
-
-
-        for (
-            const seat
-            of seatsResult.rows
-        ) {
-
-            const seatId =
-                seat[0];
-
-            const seatType =
-                seat[2]
-                    ? String(seat[2])
-                        .toUpperCase()
-                    : 'ADULT';
-
-
-            let ticketType =
-                seatType;
-
-
-            let price =
-                priceMap.get(
-                    ticketType
-                );
-
-
-            /*
-                If seat type isn't a ticket type,
-                use ADULT pricing.
-            */
-
-            if (!price) {
-
-                ticketType =
-                    'ADULT';
-
-                price =
-                    priceMap.get(
-                        'ADULT'
-                    );
-
-            }
-
-
-            /*
-                If there is still no price,
-                fall back to SHOWTIMES price.
-            */
-
-            const unitPrice =
-                price
-                    ? price.amount
-                    : fallbackTicketPrice;
-
-
-            const existingTicket =
-                bookingTickets.find(
-                    item =>
-                        item.ticketType ===
-                        ticketType
-                );
-
-
-            if (existingTicket) {
-
-                existingTicket.quantity += 1;
-
-                existingTicket.subtotal +=
-                    unitPrice;
-
-            } else {
-
-                bookingTickets.push({
-
-                    ticketType,
-
-                    quantity: 1,
-
-                    unitPrice,
-
-                    subtotal:
-                        unitPrice
-
-                });
-
-            }
-
-
-            ticketQuantity++;
-
-            originalAmount +=
-                unitPrice;
-
-        }
-
-
-        // ====================================================
-        // PROMOTION
-        // ====================================================
-
-        let promotionId = null;
-
-        let discountAmount = 0;
-
-        let promotion = null;
-
-
-        if (
-            promotionCode &&
-            String(promotionCode).trim()
-        ) {
-
-            const promotionResult =
-                await connection.execute(
-                    `
-                    SELECT
-                        PROMOTION_ID,
-                        PROMOTION_NAME,
-                        DISCOUNT_TYPE,
-                        DISCOUNT_VALUE,
-                        MIN_TICKETS,
-                        MAX_DISCOUNT
-
-                    FROM PROMOTIONS
-
-                    WHERE UPPER(PROMOTION_CODE) =
-                          UPPER(:promotionCode)
-
-                      AND CINEMA_ID =
-                          :cinemaId
-
-                      AND IS_ACTIVE = 'Y'
-
-                      AND START_DATE <=
-                          CURRENT_TIMESTAMP
-
-                      AND END_DATE >=
-                          CURRENT_TIMESTAMP
-
-                    FOR UPDATE
-                    `,
-                    {
-                        promotionCode:
-                            String(
-                                promotionCode
-                            ).trim(),
-
-                        cinemaId
-                    }
-                );
-
-
-            if (
-                promotionResult.rows.length === 0
-            ) {
-
-                return res.status(400).json({
-
-                    success: false,
-
-                    message:
-                        'Invalid or expired promotion code'
-
-                });
-
-            }
-
-
-            const promo =
-                promotionResult.rows[0];
-
-
-            promotionId =
-                promo[0];
-
-
-            promotion = {
-
-                promotionId:
-                    promo[0],
-
-                promotionName:
-                    promo[1],
-
-                discountType:
-                    promo[2],
-
-                discountValue:
-                    Number(promo[3])
-
-            };
-
-
-            const minTickets =
-                promo[4] === null
-                    ? 0
-                    : Number(promo[4]);
-
-
-            const maxDiscount =
-                promo[5] === null
-                    ? null
-                    : Number(promo[5]);
-
-
-            // ------------------------------------------------
-            // Minimum ticket requirement
-            // ------------------------------------------------
-
-            if (
-                ticketQuantity <
-                minTickets
-            ) {
-
-                return res.status(400).json({
-
-                    success: false,
-
-                    message:
-                        `This promotion requires at least ${minTickets} tickets`
-
-                });
-
-            }
-
-
-            // ------------------------------------------------
-            // Promotion targets
-            // ------------------------------------------------
-
-            const targetResult =
-                await connection.execute(
-                    `
-                    SELECT
-                        TARGET_TYPE,
-                        TARGET_VALUE
-
-                    FROM PROMOTION_TARGETS
-
-                    WHERE PROMOTION_ID =
-                          :promotionId
-                    `,
-                    {
-                        promotionId
-                    }
-                );
-
-
-            const targets =
-                targetResult.rows;
-
-
-            /*
-                Validate each target.
-
-                If your promotion system later supports
-                more target types, we can extend this.
-            */
-
-            for (
-                const target
-                of targets
-            ) {
-
-                const targetType =
-                    String(target[0])
-                        .toUpperCase();
-
-                const targetValue =
-                    String(target[1])
-                        .toUpperCase();
-
-
-                if (
-                    targetType ===
-                    'MOVIE' &&
-                    String(movieId) !==
-                    targetValue
-                ) {
-
-                    return res.status(400).json({
-
-                        success: false,
-
-                        message:
-                            'This promotion does not apply to this movie'
-
-                    });
-
-                }
-
-
-                if (
-                    targetType ===
-                    'CINEMA' &&
-                    String(cinemaId) !==
-                    targetValue
-                ) {
-
-                    return res.status(400).json({
-
-                        success: false,
-
-                        message:
-                            'This promotion does not apply to this cinema'
-
-                    });
-
-                }
-
-
-                if (
-                    targetType ===
-                    'SCREEN' &&
-                    String(screenId) !==
-                    targetValue
-                ) {
-
-                    return res.status(400).json({
-
-                        success: false,
-
-                        message:
-                            'This promotion does not apply to this screen'
-
-                    });
-
-                }
-
-
-                if (
-                    targetType ===
-                    'TICKET_TYPE'
-                ) {
-
-                    const matchingTicket =
-                        bookingTickets.some(
-                            ticket =>
-                                ticket.ticketType ===
-                                targetValue
-                        );
-
-
-                    if (
-                        !matchingTicket
-                    ) {
-
-                        return res.status(400).json({
-
-                            success: false,
-
-                            message:
-                                'This promotion does not apply to the selected ticket type'
-
-                        });
-
-                    }
-
-                }
-
-            }
-
-
-            // ------------------------------------------------
-            // Calculate discount
-            // ------------------------------------------------
-
-            const discountType =
-                String(promo[2])
-                    .toUpperCase();
-
-
-            const discountValue =
-                Number(promo[3]);
-
-
-            if (
-                discountType ===
-                'PERCENTAGE'
-            ) {
-
-                discountAmount =
-                    originalAmount *
                     (
-                        discountValue /
-                        100
-                    );
+                        b.status = 'PENDING'
 
-            }
+                        AND (
+                            b.expires_at IS NULL
+                            OR
+                            b.expires_at >
+                                CURRENT_TIMESTAMP
+                        )
+                    )
+              )
 
-
-            else if (
-                discountType ===
-                'FIXED'
-            ) {
-
-                discountAmount =
-                    discountValue;
-
-            }
-
-
-            // ------------------------------------------------
-            // Maximum discount
-            // ------------------------------------------------
-
-            if (
-                maxDiscount !== null &&
-                discountAmount >
-                maxDiscount
-            ) {
-
-                discountAmount =
-                    maxDiscount;
-
-            }
+            FOR UPDATE
+            `,
+            [
+                parsedShowtimeId,
+                parsedSeatIds
+            ]
+        );
 
 
-            // Never allow negative totals
+    if (bookedResult.rows.length > 0) {
 
-            if (
-                discountAmount >
-                originalAmount
-            ) {
-
-                discountAmount =
-                    originalAmount;
-
-            }
-
-        }
-
-
-        // ====================================================
-        // FINAL AMOUNT
-        // ====================================================
-
-        const totalAmount =
-            Number(
-                (
-                    originalAmount -
-                    discountAmount
-                ).toFixed(2)
+        const bookedSeatIds =
+            bookedResult.rows.map(
+                row => row.seat_id
             );
 
 
-        // ====================================================
-        // BOOKING REFERENCE
-        // ====================================================
+        await client.query('ROLLBACK');
 
-        const bookingRef =
-            'SC-' +
-            Date.now()
-                .toString()
-                .slice(-8) +
-            '-' +
-            Math.random()
-                .toString(36)
-                .substring(2, 6)
+        return res.status(409).json({
+
+            success: false,
+
+            message:
+                'One or more selected seats are already booked',
+
+            bookedSeatIds
+
+        });
+
+    }
+
+
+    // ====================================================
+    // PRICING
+    // ====================================================
+
+    /*
+        TICKET_PRICES is used as the primary
+        pricing source.
+
+        If no matching ticket price exists,
+        SHOWTIMES.TICKET_PRICE is used.
+    */
+
+    const priceResult =
+        await client.query(
+            `
+            SELECT
+                price_id,
+                ticket_type,
+                amount,
+                currency,
+                day_type,
+                screen_id
+
+            FROM ticket_prices
+
+            WHERE cinema_id = $1
+
+              AND is_active = 'Y'
+
+              AND (
+                    screen_id IS NULL
+                    OR screen_id = $2
+              )
+
+              AND (
+                    day_type IS NULL
+
+                    OR
+
+                    day_type =
+                    CASE
+                        WHEN EXTRACT(
+                            ISODOW
+                            FROM $3::date
+                        ) IN (6, 7)
+                        THEN 'WEEKEND'
+                        ELSE 'WEEKDAY'
+                    END
+              )
+
+            ORDER BY
+                ticket_type,
+
+                CASE
+                    WHEN screen_id = $2
+                    THEN 1
+                    ELSE 2
+                END
+            `,
+            [
+                cinemaId,
+                screenId,
+                showDate
+            ]
+        );
+
+
+    // ====================================================
+    // BUILD PRICE MAP
+    // ====================================================
+
+    const priceMap =
+        new Map();
+
+
+    for (
+        const row of priceResult.rows
+    ) {
+
+        const ticketType =
+            String(row.ticket_type)
                 .toUpperCase();
 
 
-        // ====================================================
-        // CREATE BOOKING
-        // ====================================================
+        /*
+            The query orders screen-specific
+            prices first.
+        */
 
-        const bookingResult =
-            await connection.execute(
-                `
-                INSERT INTO BOOKINGS (
-                    BOOKING_REF,
-                    USER_ID,
-                    SHOWTIME_ID,
-                    TICKET_QUANTITY,
-                    TICKET_PRICE,
-                    TOTAL_AMOUNT,
-                    STATUS,
-                    PROMOTION_ID,
-                    DISCOUNT_AMOUNT,
-                    BOOKING_DATE,
-                    CREATED_AT,
-                    EXPIRES_AT
-                )
+        if (
+            !priceMap.has(ticketType)
+        ) {
 
-                VALUES (
-                    :bookingRef,
-                    :userId,
-                    :showtimeId,
-                    :ticketQuantity,
-                    :ticketPrice,
-                    :totalAmount,
-                    'PENDING',
-                    :promotionId,
-                    :discountAmount,
-                    CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP +
-                        INTERVAL '15' MINUTE
-                )
-
-                RETURNING
-                    BOOKING_ID
-                INTO
-                    :bookingId
-                `,
+            priceMap.set(
+                ticketType,
                 {
+                    priceId:
+                        row.price_id,
 
-                    bookingRef,
+                    amount:
+                        Number(row.amount),
 
-                    userId,
-
-                    showtimeId:
-                        parsedShowtimeId,
-
-                    ticketQuantity,
-
-                    /*
-                        Keep the existing column populated.
-
-                        Since individual prices may differ,
-                        this is the average ticket price.
-                    */
-
-                    ticketPrice:
-                        ticketQuantity > 0
-                            ? Number(
-                                (
-                                    originalAmount /
-                                    ticketQuantity
-                                ).toFixed(2)
-                            )
-                            : 0,
-
-                    totalAmount,
-
-                    promotionId,
-
-                    discountAmount,
-
-                    bookingId: {
-
-                        dir:
-                            oracledb.BIND_OUT,
-
-                        type:
-                            oracledb.NUMBER
-
-                    }
-
+                    currency:
+                        row.currency
                 }
             );
 
+        }
 
-        const bookingId =
-            bookingResult
-                .outBinds
-                .bookingId[0];
+    }
 
 
-        // ====================================================
-        // INSERT BOOKING TICKETS
-        // ====================================================
+    // ====================================================
+    // BUILD TICKET BREAKDOWN
+    // ====================================================
 
-        for (
-            const ticket
-            of bookingTickets
+    const bookingTickets = [];
+
+    let originalAmount = 0;
+
+    let ticketQuantity = 0;
+
+
+    /*
+        The current frontend sends seat IDs only.
+
+        Therefore SEAT_TYPE is used as the
+        ticket type when a matching price exists.
+
+        If there is no matching price,
+        ADULT pricing is used.
+    */
+
+    for (
+        const seat
+        of seatsResult.rows
+    ) {
+
+        const seatId =
+            seat.seat_id;
+
+        const seatType =
+            seat.seat_type
+                ? String(
+                    seat.seat_type
+                ).toUpperCase()
+                : 'ADULT';
+
+
+        let ticketType =
+            seatType;
+
+
+        let price =
+            priceMap.get(
+                ticketType
+            );
+
+
+        // ------------------------------------------------
+        // Fall back to ADULT
+        // ------------------------------------------------
+
+        if (!price) {
+
+            ticketType =
+                'ADULT';
+
+            price =
+                priceMap.get(
+                    'ADULT'
+                );
+
+        }
+
+
+        // ------------------------------------------------
+        // Fall back to showtime price
+        // ------------------------------------------------
+
+        const unitPrice =
+            price
+                ? price.amount
+                : fallbackTicketPrice;
+
+
+        const existingTicket =
+            bookingTickets.find(
+                item =>
+                    item.ticketType ===
+                    ticketType
+            );
+
+
+        if (existingTicket) {
+
+            existingTicket.quantity += 1;
+
+            existingTicket.subtotal +=
+                unitPrice;
+
+        }
+        else {
+
+            bookingTickets.push({
+
+                ticketType,
+
+                quantity: 1,
+
+                unitPrice,
+
+                subtotal:
+                    unitPrice
+
+            });
+
+        }
+
+
+        ticketQuantity++;
+
+        originalAmount +=
+            unitPrice;
+
+    }
+
+
+    // ====================================================
+    // PROMOTION
+    // ====================================================
+
+    let promotionId = null;
+
+    let discountAmount = 0;
+
+    let promotion = null;
+
+
+    if (
+        promotionCode &&
+        String(promotionCode).trim()
+    ) {
+
+        const promotionResult =
+            await client.query(
+                `
+                SELECT
+                    promotion_id,
+                    promotion_name,
+                    discount_type,
+                    discount_value,
+                    min_tickets,
+                    max_discount
+
+                FROM promotions
+
+                WHERE UPPER(promotion_code) =
+                      UPPER($1)
+
+                  AND cinema_id =
+                      $2
+
+                  AND is_active = 'Y'
+
+                  AND start_date <=
+                      CURRENT_TIMESTAMP
+
+                  AND end_date >=
+                      CURRENT_TIMESTAMP
+
+                FOR UPDATE
+                `,
+                [
+                    String(
+                        promotionCode
+                    ).trim(),
+
+                    cinemaId
+                ]
+            );
+
+
+        if (
+            promotionResult.rows.length === 0
         ) {
 
-            await connection.execute(
+            await client.query('ROLLBACK');
+
+            return res.status(400).json({
+
+                success: false,
+
+                message:
+                    'Invalid or expired promotion code'
+
+            });
+
+        }
+
+
+        const promo =
+            promotionResult.rows[0];
+
+
+        promotionId =
+            promo.promotion_id;
+
+
+        promotion = {
+
+            promotionId:
+                promo.promotion_id,
+
+            promotionName:
+                promo.promotion_name,
+
+            discountType:
+                promo.discount_type,
+
+            discountValue:
+                Number(
+                    promo.discount_value
+                )
+
+        };
+
+
+        const minTickets =
+            promo.min_tickets === null
+                ? 0
+                : Number(
+                    promo.min_tickets
+                );
+
+
+        const maxDiscount =
+            promo.max_discount === null
+                ? null
+                : Number(
+                    promo.max_discount
+                );
+
+
+        // ------------------------------------------------
+        // Minimum ticket requirement
+        // ------------------------------------------------
+
+        if (
+            ticketQuantity <
+            minTickets
+        ) {
+
+            await client.query('ROLLBACK');
+
+            return res.status(400).json({
+
+                success: false,
+
+                message:
+                    `This promotion requires at least ${minTickets} tickets`
+
+            });
+
+        }
+
+
+        // =================================================
+        // PROMOTION TARGETS
+        // =================================================
+
+        const targetResult =
+            await client.query(
                 `
-                INSERT INTO BOOKING_TICKETS (
-                    BOOKING_TICKET_ID,
-                    BOOKING_ID,
-                    TICKET_TYPE,
-                    QUANTITY,
-                    UNIT_PRICE,
-                    SUBTOTAL,
-                    CREATED_AT
-                )
+                SELECT
+                    target_type,
+                    target_value
 
-                VALUES (
-                    SEQ_BOOKING_TICKETS.NEXTVAL,
-                    :bookingId,
-                    :ticketType,
-                    :quantity,
-                    :unitPrice,
-                    :subtotal,
-                    CURRENT_TIMESTAMP
-                )
+                FROM promotion_targets
+
+                WHERE promotion_id =
+                      $1
                 `,
-                {
+                [promotionId]
+            );
 
-                    bookingId,
+
+        const targets =
+            targetResult.rows;
+
+
+        for (
+            const target
+            of targets
+        ) {
+
+            const targetType =
+                String(
+                    target.target_type
+                ).toUpperCase();
+
+
+            const targetValue =
+                String(
+                    target.target_value
+                ).toUpperCase();
+
+
+            // --------------------------------------------
+            // MOVIE
+            // --------------------------------------------
+
+            if (
+                targetType === 'MOVIE' &&
+                String(movieId) !==
+                targetValue
+            ) {
+
+                await client.query(
+                    'ROLLBACK'
+                );
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        'This promotion does not apply to this movie'
+
+                });
+
+            }
+
+
+            // --------------------------------------------
+            // CINEMA
+            // --------------------------------------------
+
+            if (
+                targetType === 'CINEMA' &&
+                String(cinemaId) !==
+                targetValue
+            ) {
+
+                await client.query(
+                    'ROLLBACK'
+                );
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        'This promotion does not apply to this cinema'
+
+                });
+
+            }
+
+
+            // --------------------------------------------
+            // SCREEN
+            // --------------------------------------------
+
+            if (
+                targetType === 'SCREEN' &&
+                String(screenId) !==
+                targetValue
+            ) {
+
+                await client.query(
+                    'ROLLBACK'
+                );
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        'This promotion does not apply to this screen'
+
+                });
+
+            }
+
+
+            // --------------------------------------------
+            // TICKET TYPE
+            // --------------------------------------------
+
+            if (
+                targetType ===
+                'TICKET_TYPE'
+            ) {
+
+                const matchingTicket =
+                    bookingTickets.some(
+                        ticket =>
+                            ticket.ticketType ===
+                            targetValue
+                    );
+
+
+                if (
+                    !matchingTicket
+                ) {
+
+                    await client.query(
+                        'ROLLBACK'
+                    );
+
+                    return res.status(400).json({
+
+                        success: false,
+
+                        message:
+                            'This promotion does not apply to the selected ticket type'
+
+                    });
+
+                }
+
+            }
+
+        }
+
+
+        // =================================================
+        // CALCULATE DISCOUNT
+        // =================================================
+
+        const discountType =
+            String(
+                promo.discount_type
+            ).toUpperCase();
+
+
+        const discountValue =
+            Number(
+                promo.discount_value
+            );
+
+
+        if (
+            discountType ===
+            'PERCENTAGE'
+        ) {
+
+            discountAmount =
+                originalAmount *
+                (
+                    discountValue /
+                    100
+                );
+
+        }
+        else if (
+            discountType ===
+            'FIXED'
+        ) {
+
+            discountAmount =
+                discountValue;
+
+        }
+
+
+        // ------------------------------------------------
+        // Maximum discount
+        // ------------------------------------------------
+
+        if (
+            maxDiscount !== null &&
+            discountAmount >
+            maxDiscount
+        ) {
+
+            discountAmount =
+                maxDiscount;
+
+        }
+
+
+        // ------------------------------------------------
+        // Never allow negative totals
+        // ------------------------------------------------
+
+        if (
+            discountAmount >
+            originalAmount
+        ) {
+
+            discountAmount =
+                originalAmount;
+
+        }
+
+    }
+
+
+    // ====================================================
+    // FINAL AMOUNT
+    // ====================================================
+
+    const totalAmount =
+        Number(
+            (
+                originalAmount -
+                discountAmount
+            ).toFixed(2)
+        );
+
+
+    // ====================================================
+    // BOOKING REFERENCE
+    // ====================================================
+
+    const bookingRef =
+        'SC-' +
+        Date.now()
+            .toString()
+            .slice(-8) +
+        '-' +
+        Math.random()
+            .toString(36)
+            .substring(2, 6)
+            .toUpperCase();
+
+
+    // ====================================================
+    // CREATE BOOKING
+    // ====================================================
+
+    const averageTicketPrice =
+        ticketQuantity > 0
+            ? Number(
+                (
+                    originalAmount /
+                    ticketQuantity
+                ).toFixed(2)
+            )
+            : 0;
+
+
+    const bookingResult =
+        await client.query(
+            `
+            INSERT INTO bookings (
+                booking_ref,
+                user_id,
+                showtime_id,
+                ticket_quantity,
+                ticket_price,
+                total_amount,
+                status,
+                promotion_id,
+                discount_amount,
+                booking_date,
+                created_at,
+                expires_at
+            )
+
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                'PENDING',
+                $7,
+                $8,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP +
+                    INTERVAL '15 minutes'
+            )
+
+            RETURNING booking_id
+            `,
+            [
+                bookingRef,
+
+                userId,
+
+                parsedShowtimeId,
+
+                ticketQuantity,
+
+                averageTicketPrice,
+
+                totalAmount,
+
+                promotionId,
+
+                discountAmount
+            ]
+        );
+
+
+    const bookingId =
+        bookingResult.rows[0].booking_id;
+
+
+    // ====================================================
+    // INSERT BOOKING TICKETS
+    // ====================================================
+
+    for (
+        const ticket
+        of bookingTickets
+    ) {
+
+        await client.query(
+            `
+            INSERT INTO booking_tickets (
+                booking_id,
+                ticket_type,
+                quantity,
+                unit_price,
+                subtotal,
+                created_at
+            )
+
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                CURRENT_TIMESTAMP
+            )
+            `,
+            [
+                bookingId,
+
+                ticket.ticketType,
+
+                ticket.quantity,
+
+                ticket.unitPrice,
+
+                ticket.subtotal
+            ]
+        );
+
+    }
+
+
+    // ====================================================
+    // INSERT BOOKING SEATS
+    // ====================================================
+
+    for (
+        const seat
+        of seatsResult.rows
+    ) {
+
+        const seatId =
+            seat.seat_id;
+
+        const seatType =
+            seat.seat_type
+                ? String(
+                    seat.seat_type
+                ).toUpperCase()
+                : 'ADULT';
+
+
+        let price =
+            priceMap.get(
+                seatType
+            );
+
+
+        if (!price) {
+
+            price =
+                priceMap.get(
+                    'ADULT'
+                );
+
+        }
+
+
+        const seatTicketPrice =
+            price
+                ? price.amount
+                : fallbackTicketPrice;
+
+
+        await client.query(
+            `
+            INSERT INTO booking_seats (
+                booking_id,
+                showtime_id,
+                seat_id,
+                ticket_price
+            )
+
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4
+            )
+            `,
+            [
+                bookingId,
+
+                parsedShowtimeId,
+
+                seatId,
+
+                seatTicketPrice
+            ]
+        );
+
+    }
+
+
+    // ====================================================
+    // COMMIT
+    // ====================================================
+
+    await client.query(
+        'COMMIT'
+    );
+
+
+    console.log(
+        `✅ Booking created: ${bookingRef} | User: ${userId}`
+    );
+
+
+    // ====================================================
+    // RESPONSE
+    // ====================================================
+
+    const bookingResponse = {
+
+        bookingId,
+
+        bookingRef,
+
+        userId,
+
+        showtimeId:
+            parsedShowtimeId,
+
+
+        movie: {
+
+            movieId,
+
+            title:
+                movieTitle
+
+        },
+
+
+        cinema: {
+
+            cinemaId,
+
+            name:
+                cinemaName
+
+        },
+
+
+        screen: {
+
+            screenId,
+
+            name:
+                screenName
+
+        },
+
+
+        showDate,
+
+        startTime,
+
+        endTime,
+
+
+        ticketQuantity,
+
+
+        ticketPrice:
+            averageTicketPrice,
+
+
+        originalAmount:
+            Number(
+                originalAmount.toFixed(2)
+            ),
+
+
+        discountAmount:
+            Number(
+                discountAmount.toFixed(2)
+            ),
+
+
+        totalAmount,
+
+
+        promotion,
+
+
+        status:
+            'PENDING',
+
+
+        seatIds:
+            parsedSeatIds,
+
+
+        seats:
+            seatsResult.rows.map(
+                row => ({
+
+                    seatId:
+                        row.seat_id,
+
+                    seatLabel:
+                        row.seat_label,
+
+                    seatType:
+                        row.seat_type
+
+                })
+            ),
+
+
+        ticketBreakdown:
+            bookingTickets.map(
+                ticket => ({
 
                     ticketType:
                         ticket.ticketType,
@@ -1180,342 +1343,146 @@ async function createBooking(req, res) {
                         ticket.unitPrice,
 
                     subtotal:
-                        ticket.subtotal
+                        Number(
+                            ticket.subtotal
+                                .toFixed(2)
+                        )
 
-                }
-            );
+                })
+            )
 
-        }
+    };
 
 
-        // ====================================================
-        // INSERT BOOKING SEATS
-        // ====================================================
+    // ====================================================
+    // SEND BOOKING CONFIRMATION
+    // ====================================================
 
-        /*
-            Each physical seat still gets its own
-            BOOKING_SEATS record.
+    /*
+        Email is sent AFTER COMMIT so that an email is
+        never sent for a transaction that failed.
+    */
 
-            We use the calculated price for that
-            seat's ticket type.
-        */
-
-        for (
-            const seat
-            of seatsResult.rows
-        ) {
-
-            const seatId =
-                seat[0];
-
-            const seatType =
-                seat[2]
-                    ? String(seat[2])
-                        .toUpperCase()
-                    : 'ADULT';
-
-
-            let price =
-                priceMap.get(
-                    seatType
-                );
-
-
-            if (!price) {
-
-                price =
-                    priceMap.get(
-                        'ADULT'
-                    );
-
-            }
-
-
-            const seatTicketPrice =
-                price
-                    ? price.amount
-                    : fallbackTicketPrice;
-
-
-            await connection.execute(
-                `
-                INSERT INTO BOOKING_SEATS (
-                    BOOKING_ID,
-                    SHOWTIME_ID,
-                    SEAT_ID,
-                    TICKET_PRICE
-                )
-
-                VALUES (
-                    :bookingId,
-                    :showtimeId,
-                    :seatId,
-                    :ticketPrice
-                )
-                `,
-                {
-
-                    bookingId,
-
-                    showtimeId:
-                        parsedShowtimeId,
-
-                    seatId,
-
-                    ticketPrice:
-                        seatTicketPrice
-
-                }
-            );
-
-        }
-
-
-        // ====================================================
-        // COMMIT
-        // ====================================================
-
-        await connection.commit();
-
-
-        console.log(
-            `✅ Booking created: ${bookingRef} | User: ${userId}`
-        );
-
-
-        // ====================================================
-        // RESPONSE
-        // ====================================================
-
-        const bookingResponse = {
-
-            bookingId,
-
-            bookingRef,
-
-            userId,
-
-            showtimeId:
-                parsedShowtimeId,
-
-
-            movie: {
-
-                movieId,
-
-                title:
-                    movieTitle
-
-            },
-
-
-            cinema: {
-
-                cinemaId,
-
-                name:
-                    cinemaName
-
-            },
-
-
-            screen: {
-
-                screenId,
-
-                name:
-                    screenName
-
-            },
-
-
-            showDate,
-
-            startTime,
-
-            endTime,
-
-
-            ticketQuantity,
-
-
-            /*
-                Keep the old field for frontend
-                compatibility.
-            */
-
-            ticketPrice:
-                ticketQuantity > 0
-                    ? Number(
-                        (
-                            originalAmount /
-                            ticketQuantity
-                        ).toFixed(2)
-                    )
-                    : 0,
-
-
-            originalAmount:
-                Number(
-                    originalAmount.toFixed(2)
-                ),
-
-
-            discountAmount:
-                Number(
-                    discountAmount.toFixed(2)
-                ),
-
-
-            totalAmount,
-
-
-            promotion,
-
-
-            status:
-                'PENDING',
-
-
-            seatIds:
-                parsedSeatIds,
-
-
-            seats:
-                seatsResult.rows.map(
-                    row => ({
-
-                        seatId:
-                            row[0],
-
-                        seatLabel:
-                            row[1],
-
-                        seatType:
-                            row[2]
-
-                    })
-                ),
-
-
-            ticketBreakdown:
-                bookingTickets.map(
-                    ticket => ({
-
-                        ticketType:
-                            ticket.ticketType,
-
-                        quantity:
-                            ticket.quantity,
-
-                        unitPrice:
-                            ticket.unitPrice,
-
-                        subtotal:
-                            Number(
-                                ticket.subtotal
-                                    .toFixed(2)
-                            )
-
-                    })
-                )
-
-        };
-
-
-        return res.status(201).json({
-
-            success: true,
-
-            message:
-                'Booking created successfully. Payment is required to confirm your booking.',
-
-            booking:
-                bookingResponse
-
-        });
-
-
-    } catch (error) {
-
-        console.error(
-            '❌ Create booking error:',
-            error
-        );
-
-
-        if (connection) {
-
-            try {
-
-                await connection.rollback();
-
-            } catch (rollbackError) {
-
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-
-            }
-
-        }
-
-
-        // Oracle unique constraint
+    try {
 
         if (
-            error.errorNum === 1
+            typeof sendBookingConfirmation ===
+            'function'
         ) {
 
-            return res.status(409).json({
+            await sendBookingConfirmation({
 
-                success: false,
+                email:
+                    userEmail,
 
-                message:
-                    'One or more selected seats were just booked by another customer'
+                customerName,
+
+                booking:
+                    bookingResponse
 
             });
 
         }
 
+    }
+    catch (emailError) {
 
-        return res.status(500).json({
+        console.error(
+            '⚠️ Booking created but confirmation email failed:',
+            emailError.message
+        );
 
-            success: false,
-
-            message:
-                'Server error creating booking',
-
-            error:
-                error.message
-
-        });
+    }
 
 
-    } finally {
+    return res.status(201).json({
 
-        if (connection) {
+        success: true,
 
-            try {
+        message:
+            'Booking created successfully. Payment is required to confirm your booking.',
 
-                await connection.close();
+        booking:
+            bookingResponse
 
-            } catch (error) {
+    });
 
-                console.error(
-                    '❌ Error closing booking connection:',
-                    error.message
-                );
 
-            }
+}
+catch (error) {
+
+    console.error(
+        '❌ Create booking error:',
+        error
+    );
+
+
+    if (client) {
+
+        try {
+
+            await client.query(
+                'ROLLBACK'
+            );
+
+        }
+        catch (rollbackError) {
+
+            console.error(
+                '❌ Rollback error:',
+                rollbackError.message
+            );
 
         }
 
     }
 
+
+    // ----------------------------------------------------
+    // PostgreSQL unique constraint
+    // ----------------------------------------------------
+
+    if (
+        error.code === '23505'
+    ) {
+
+        return res.status(409).json({
+
+            success: false,
+
+            message:
+                'One or more selected seats were just booked by another customer'
+
+        });
+
+    }
+
+
+    return res.status(500).json({
+
+        success: false,
+
+        message:
+            'Server error creating booking',
+
+        error:
+            error.message
+
+    });
+
+}
+finally {
+
+    if (client) {
+
+        client.release();
+
+    }
+
 }
 
+
+}
 
 // ============================================================
 // GET MY BOOKINGS
@@ -1523,189 +1490,265 @@ async function createBooking(req, res) {
 
 async function getMyBookings(req, res) {
 
-    let connection;
 
-    try {
+try {
 
-        if (!req.user || !req.user.userId) {
+    if (!req.user || !req.user.userId) {
 
-            return res.status(401).json({
-                success: false,
-                message: 'Authentication required'
-            });
+        return res.status(401).json({
+            success: false,
+            message: 'Authentication required'
+        });
 
-        }
+    }
 
-        const userId = req.user.userId;
 
-        connection = await getConnection();
+    const userId =
+        req.user.userId;
 
-        const result = await connection.execute(
+
+    const result =
+        await pool.query(
             `
             SELECT
-                B.BOOKING_ID,
-                B.BOOKING_REF,
-                B.SHOWTIME_ID,
+                b.booking_id,
+                b.booking_ref,
+                b.showtime_id,
 
-                M.MOVIE_ID,
-                M.TITLE,
+                m.movie_id,
+                m.title,
+                m.poster_url,
 
-                C.CINEMA_ID,
-                C.CINEMA_NAME,
+                c.cinema_id,
+                c.cinema_name,
 
-                S.SCREEN_ID,
-                S.SCREEN_NAME,
+                s.screen_id,
+                s.screen_name,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                st.show_date,
+                st.start_time,
+                st.end_time,
 
-                B.TICKET_QUANTITY,
-                B.TICKET_PRICE,
-                B.TOTAL_AMOUNT,
+                b.ticket_quantity,
+                b.ticket_price,
+                b.total_amount,
 
-                B.STATUS,
-                B.BOOKING_DATE
+                b.status,
+                b.booking_date
 
-            FROM BOOKINGS B
+            FROM bookings b
 
-            JOIN SHOWTIMES ST
-                ON ST.SHOWTIME_ID = B.SHOWTIME_ID
+            JOIN showtimes st
+                ON st.showtime_id =
+                   b.showtime_id
 
-            JOIN MOVIES M
-                ON M.MOVIE_ID = ST.MOVIE_ID
+            JOIN movies m
+                ON m.movie_id =
+                   st.movie_id
 
-            JOIN CINEMAS C
-                ON C.CINEMA_ID = ST.CINEMA_ID
+            JOIN cinemas c
+                ON c.cinema_id =
+                   st.cinema_id
 
-            JOIN SCREENS S
-                ON S.SCREEN_ID = ST.SCREEN_ID
+            JOIN screens s
+                ON s.screen_id =
+                   st.screen_id
 
-            WHERE B.USER_ID = :userId
+            WHERE b.user_id =
+                  $1
 
-            ORDER BY B.BOOKING_DATE DESC
+            ORDER BY
+                b.booking_date DESC
             `,
-            {
-                userId
-            }
+            [userId]
         );
 
-        const bookings = [];
 
-        for (const row of result.rows) {
+    const bookings = [];
 
-            const bookingId = row[0];
 
-            const seatsResult = await connection.execute(
+    for (
+        const row
+        of result.rows
+    ) {
+
+        const bookingId =
+            row.booking_id;
+
+
+        const seatsResult =
+            await pool.query(
                 `
                 SELECT
-                    BS.SEAT_ID,
-                    SE.ROW_LABEL,
-                    SE.SEAT_NUMBER,
-                    SE.SEAT_LABEL,
-                    SE.SEAT_TYPE,
-                    BS.TICKET_PRICE
+                    bs.seat_id,
+                    se.row_label,
+                    se.seat_number,
+                    se.seat_label,
+                    se.seat_type,
+                    bs.ticket_price
 
-                FROM BOOKING_SEATS BS
+                FROM booking_seats bs
 
-                JOIN SEATS SE
-                    ON SE.SEAT_ID = BS.SEAT_ID
+                JOIN seats se
+                    ON se.seat_id =
+                       bs.seat_id
 
-                WHERE BS.BOOKING_ID = :bookingId
+                WHERE bs.booking_id =
+                      $1
 
                 ORDER BY
-                    SE.ROW_LABEL,
-                    SE.SEAT_NUMBER
+                    se.row_label,
+                    se.seat_number
                 `,
-                {
-                    bookingId
-                }
+                [bookingId]
             );
 
-            const seats = seatsResult.rows.map(seat => ({
-                seatId: seat[0],
-                rowLabel: seat[1],
-                seatNumber: seat[2],
-                seatLabel: seat[3],
-                seatType: seat[4],
-                ticketPrice: seat[5]
-            }));
 
-            bookings.push({
+        const seats =
+            seatsResult.rows.map(
+                seat => ({
 
-                bookingId: row[0],
-                bookingRef: row[1],
+                    seatId:
+                        seat.seat_id,
 
-                showtimeId: row[2],
+                    rowLabel:
+                        seat.row_label,
 
-                movie: {
-                    movieId: row[3],
-                    title: row[4]
-                },
+                    seatNumber:
+                        seat.seat_number,
 
-                cinema: {
-                    cinemaId: row[5],
-                    name: row[6]
-                },
+                    seatLabel:
+                        seat.seat_label,
 
-                screen: {
-                    screenId: row[7],
-                    name: row[8]
-                },
+                    seatType:
+                        seat.seat_type,
 
-                showDate: row[9],
-                startTime: row[10],
-                endTime: row[11],
+                    ticketPrice:
+                        seat.ticket_price
 
-                ticketQuantity: row[12],
-                ticketPrice: row[13],
-                totalAmount: row[14],
+                })
+            );
 
-                status: row[15],
 
-                bookingDate: row[16],
+        bookings.push({
 
-                seats
-            });
-        }
+            bookingId:
+                row.booking_id,
 
-        res.json({
-            success: true,
-            count: bookings.length,
-            bookings
+            bookingRef:
+                row.booking_ref,
+
+            showtimeId:
+                row.showtime_id,
+
+
+            movie: {
+
+                movieId:
+                    row.movie_id,
+
+                title:
+                    row.title,
+
+                posterUrl:
+                    row.poster_url
+
+            },
+
+
+            cinema: {
+
+                cinemaId:
+                    row.cinema_id,
+
+                name:
+                    row.cinema_name
+
+            },
+
+
+            screen: {
+
+                screenId:
+                    row.screen_id,
+
+                name:
+                    row.screen_name
+
+            },
+
+
+            showDate:
+                row.show_date,
+
+            startTime:
+                row.start_time,
+
+            endTime:
+                row.end_time,
+
+
+            ticketQuantity:
+                row.ticket_quantity,
+
+            ticketPrice:
+                row.ticket_price,
+
+            totalAmount:
+                row.total_amount,
+
+
+            status:
+                row.status,
+
+            bookingDate:
+                row.booking_date,
+
+
+            seats
+
         });
 
-    } catch (error) {
-
-        console.error(
-            '❌ Get my bookings error:',
-            error
-        );
-
-        res.status(500).json({
-            success: false,
-            message: 'Server error fetching bookings',
-            error: error.message
-        });
-
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing booking connection:',
-                    error.message
-                );
-
-            }
-        }
     }
+
+
+    return res.json({
+
+        success: true,
+
+        count:
+            bookings.length,
+
+        bookings
+
+    });
+
+
+}
+catch (error) {
+
+    console.error(
+        '❌ Get my bookings error:',
+        error
+    );
+
+
+    return res.status(500).json({
+
+        success: false,
+
+        message:
+            'Server error fetching bookings',
+
+        error:
+            error.message
+
+    });
+
 }
 
+
+}
 
 // ============================================================
 // GET BOOKING BY ID
@@ -1713,215 +1756,307 @@ async function getMyBookings(req, res) {
 
 async function getBookingById(req, res) {
 
-    let connection;
 
-    try {
+try {
 
-        if (!req.user || !req.user.userId) {
+    if (!req.user || !req.user.userId) {
 
-            return res.status(401).json({
-                success: false,
-                message: 'Authentication required'
-            });
+        return res.status(401).json({
+            success: false,
+            message: 'Authentication required'
+        });
 
-        }
+    }
 
-        const userId = req.user.userId;
-        const bookingId = Number(req.params.bookingId);
 
-        if (!Number.isInteger(bookingId)) {
+    const userId =
+        req.user.userId;
 
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid booking ID'
-            });
 
-        }
+    const bookingId =
+        Number(
+            req.params.bookingId
+        );
 
-        connection = await getConnection();
 
-        const result = await connection.execute(
+    if (
+        !Number.isInteger(bookingId) ||
+        bookingId <= 0
+    ) {
+
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid booking ID'
+        });
+
+    }
+
+
+    const result =
+        await pool.query(
             `
             SELECT
-                B.BOOKING_ID,
-                B.BOOKING_REF,
-                B.USER_ID,
-                B.SHOWTIME_ID,
+                b.booking_id,
+                b.booking_ref,
+                b.user_id,
+                b.showtime_id,
 
-                M.MOVIE_ID,
-                M.TITLE,
-                M.POSTER_URL,
+                m.movie_id,
+                m.title,
+                m.poster_url,
 
-                C.CINEMA_ID,
-                C.CINEMA_NAME,
-                C.ADDRESS,
-                C.CITY,
+                c.cinema_id,
+                c.cinema_name,
+                c.address,
+                c.city,
 
-                S.SCREEN_ID,
-                S.SCREEN_NAME,
+                s.screen_id,
+                s.screen_name,
 
-                ST.SHOW_DATE,
-                ST.START_TIME,
-                ST.END_TIME,
+                st.show_date,
+                st.start_time,
+                st.end_time,
 
-                B.TICKET_QUANTITY,
-                B.TICKET_PRICE,
-                B.TOTAL_AMOUNT,
+                b.ticket_quantity,
+                b.ticket_price,
+                b.total_amount,
 
-                B.STATUS,
-                B.BOOKING_DATE,
-                B.CREATED_AT,
-                B.UPDATED_AT
+                b.status,
+                b.booking_date,
+                b.created_at,
+                b.updated_at
 
-            FROM BOOKINGS B
+            FROM bookings b
 
-            JOIN SHOWTIMES ST
-                ON ST.SHOWTIME_ID = B.SHOWTIME_ID
+            JOIN showtimes st
+                ON st.showtime_id =
+                   b.showtime_id
 
-            JOIN MOVIES M
-                ON M.MOVIE_ID = ST.MOVIE_ID
+            JOIN movies m
+                ON m.movie_id =
+                   st.movie_id
 
-            JOIN CINEMAS C
-                ON C.CINEMA_ID = ST.CINEMA_ID
+            JOIN cinemas c
+                ON c.cinema_id =
+                   st.cinema_id
 
-            JOIN SCREENS S
-                ON S.SCREEN_ID = ST.SCREEN_ID
+            JOIN screens s
+                ON s.screen_id =
+                   st.screen_id
 
-            WHERE B.BOOKING_ID = :bookingId
-              AND B.USER_ID = :userId
+            WHERE b.booking_id =
+                  $1
+
+              AND b.user_id =
+                  $2
             `,
-            {
+            [
                 bookingId,
                 userId
-            }
+            ]
         );
 
-        if (result.rows.length === 0) {
 
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found'
-            });
+    if (
+        result.rows.length === 0
+    ) {
 
-        }
+        return res.status(404).json({
 
-        const row = result.rows[0];
+            success: false,
 
-        const seatsResult = await connection.execute(
+            message:
+                'Booking not found'
+
+        });
+
+    }
+
+
+    const row =
+        result.rows[0];
+
+
+    const seatsResult =
+        await pool.query(
             `
             SELECT
-                BS.SEAT_ID,
-                SE.ROW_LABEL,
-                SE.SEAT_NUMBER,
-                SE.SEAT_LABEL,
-                SE.SEAT_TYPE,
-                BS.TICKET_PRICE
+                bs.seat_id,
+                se.row_label,
+                se.seat_number,
+                se.seat_label,
+                se.seat_type,
+                bs.ticket_price
 
-            FROM BOOKING_SEATS BS
+            FROM booking_seats bs
 
-            JOIN SEATS SE
-                ON SE.SEAT_ID = BS.SEAT_ID
+            JOIN seats se
+                ON se.seat_id =
+                   bs.seat_id
 
-            WHERE BS.BOOKING_ID = :bookingId
+            WHERE bs.booking_id =
+                  $1
 
             ORDER BY
-                SE.ROW_LABEL,
-                SE.SEAT_NUMBER
+                se.row_label,
+                se.seat_number
             `,
-            {
-                bookingId
-            }
+            [bookingId]
         );
 
-        const seats = seatsResult.rows.map(seat => ({
-            seatId: seat[0],
-            rowLabel: seat[1],
-            seatNumber: seat[2],
-            seatLabel: seat[3],
-            seatType: seat[4],
-            ticketPrice: seat[5]
-        }));
 
-        res.json({
+    const seats =
+        seatsResult.rows.map(
+            seat => ({
 
-            success: true,
+                seatId:
+                    seat.seat_id,
 
-            booking: {
+                rowLabel:
+                    seat.row_label,
 
-                bookingId: row[0],
-                bookingRef: row[1],
+                seatNumber:
+                    seat.seat_number,
 
-                userId: row[2],
+                seatLabel:
+                    seat.seat_label,
 
-                showtimeId: row[3],
+                seatType:
+                    seat.seat_type,
 
-                movie: {
-                    movieId: row[4],
-                    title: row[5],
-                    posterUrl: row[6]
-                },
+                ticketPrice:
+                    seat.ticket_price
 
-                cinema: {
-                    cinemaId: row[7],
-                    name: row[8],
-                    address: row[9],
-                    city: row[10]
-                },
-
-                screen: {
-                    screenId: row[11],
-                    name: row[12]
-                },
-
-                showDate: row[13],
-                startTime: row[14],
-                endTime: row[15],
-
-                ticketQuantity: row[16],
-                ticketPrice: row[17],
-                totalAmount: row[18],
-
-                status: row[19],
-
-                bookingDate: row[20],
-                createdAt: row[21],
-                updatedAt: row[22],
-
-                seats
-            }
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            '❌ Get booking by ID error:',
-            error
+            })
         );
 
-        res.status(500).json({
-            success: false,
-            message: 'Server error fetching booking',
-            error: error.message
-        });
 
-    } finally {
+    return res.json({
 
-        if (connection) {
+        success: true,
 
-            try {
-                await connection.close();
-            } catch (error) {
+        booking: {
 
-                console.error(
-                    '❌ Error closing booking connection:',
-                    error.message
-                );
-            }
+            bookingId:
+                row.booking_id,
+
+            bookingRef:
+                row.booking_ref,
+
+            userId:
+                row.user_id,
+
+            showtimeId:
+                row.showtime_id,
+
+
+            movie: {
+
+                movieId:
+                    row.movie_id,
+
+                title:
+                    row.title,
+
+                posterUrl:
+                    row.poster_url
+
+            },
+
+
+            cinema: {
+
+                cinemaId:
+                    row.cinema_id,
+
+                name:
+                    row.cinema_name,
+
+                address:
+                    row.address,
+
+                city:
+                    row.city
+
+            },
+
+
+            screen: {
+
+                screenId:
+                    row.screen_id,
+
+                name:
+                    row.screen_name
+
+            },
+
+
+            showDate:
+                row.show_date,
+
+            startTime:
+                row.start_time,
+
+            endTime:
+                row.end_time,
+
+
+            ticketQuantity:
+                row.ticket_quantity,
+
+            ticketPrice:
+                row.ticket_price,
+
+            totalAmount:
+                row.total_amount,
+
+
+            status:
+                row.status,
+
+
+            bookingDate:
+                row.booking_date,
+
+            createdAt:
+                row.created_at,
+
+            updatedAt:
+                row.updated_at,
+
+
+            seats
+
         }
-    }
+
+    });
+
+}
+catch (error) {
+
+    console.error(
+        '❌ Get booking by ID error:',
+        error
+    );
+
+
+    return res.status(500).json({
+
+        success: false,
+
+        message:
+            'Server error fetching booking',
+
+        error:
+            error.message
+
+    });
+
 }
 
+
+}
 
 // ============================================================
 // CANCEL BOOKING
@@ -1929,169 +2064,285 @@ async function getBookingById(req, res) {
 
 async function cancelBooking(req, res) {
 
-    let connection;
 
-    try {
+let client;
 
-        if (!req.user || !req.user.userId) {
+try {
 
-            return res.status(401).json({
-                success: false,
-                message: 'Authentication required'
-            });
+    if (!req.user || !req.user.userId) {
 
-        }
+        return res.status(401).json({
+            success: false,
+            message: 'Authentication required'
+        });
 
-        const userId = req.user.userId;
-        const bookingId = Number(req.params.bookingId);
+    }
 
-        if (!Number.isInteger(bookingId)) {
 
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid booking ID'
-            });
+    const userId =
+        req.user.userId;
 
-        }
 
-        connection = await getConnection();
+    const bookingId =
+        Number(
+            req.params.bookingId
+        );
 
-        const bookingResult = await connection.execute(
+
+    if (
+        !Number.isInteger(bookingId) ||
+        bookingId <= 0
+    ) {
+
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid booking ID'
+        });
+
+    }
+
+
+    client =
+        await pool.connect();
+
+
+    await client.query(
+        'BEGIN'
+    );
+
+
+    // ====================================================
+    // GET BOOKING
+    // ====================================================
+
+    const bookingResult =
+        await client.query(
             `
             SELECT
-                BOOKING_ID,
-                BOOKING_REF,
-                SHOWTIME_ID,
-                STATUS
-            FROM BOOKINGS
-            WHERE BOOKING_ID = :bookingId
-              AND USER_ID = :userId
+                booking_id,
+                booking_ref,
+                showtime_id,
+                status
+
+            FROM bookings
+
+            WHERE booking_id =
+                  $1
+
+              AND user_id =
+                  $2
+
+            FOR UPDATE
             `,
-            {
+            [
                 bookingId,
                 userId
-            }
+            ]
         );
 
-        if (bookingResult.rows.length === 0) {
 
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found'
-            });
+    if (
+        bookingResult.rows.length === 0
+    ) {
 
-        }
-
-        const booking = bookingResult.rows[0];
-
-        const bookingStatus = booking[3];
-
-        if (bookingStatus === 'CANCELLED') {
-
-            return res.status(400).json({
-                success: false,
-                message: 'Booking has already been cancelled'
-            });
-
-        }
-
-        if (bookingStatus === 'COMPLETED') {
-
-            return res.status(400).json({
-                success: false,
-                message: 'Completed bookings cannot be cancelled'
-            });
-
-        }
-
-        await connection.execute(
-            `
-            UPDATE BOOKINGS
-            SET
-                STATUS = 'CANCELLED',
-                UPDATED_AT = CURRENT_TIMESTAMP
-            WHERE BOOKING_ID = :bookingId
-              AND USER_ID = :userId
-            `,
-            {
-                bookingId,
-                userId
-            }
+        await client.query(
+            'ROLLBACK'
         );
 
-        await connection.commit();
+        return res.status(404).json({
 
-        console.log(
-            `✅ Booking cancelled: ${booking[1]} | User: ${userId}`
-        );
-
-        res.json({
-
-            success: true,
-
-            message: 'Booking cancelled successfully',
-
-            booking: {
-                bookingId: booking[0],
-                bookingRef: booking[1],
-                showtimeId: booking[2],
-                status: 'CANCELLED'
-            }
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            '❌ Cancel booking error:',
-            error
-        );
-
-        if (connection) {
-
-            try {
-                await connection.rollback();
-            } catch (rollbackError) {
-
-                console.error(
-                    '❌ Rollback error:',
-                    rollbackError
-                );
-
-            }
-        }
-
-        res.status(500).json({
             success: false,
-            message: 'Server error cancelling booking',
-            error: error.message
+
+            message:
+                'Booking not found'
+
         });
 
-    } finally {
-
-        if (connection) {
-
-            try {
-                await connection.close();
-            } catch (error) {
-
-                console.error(
-                    '❌ Error closing connection:',
-                    error.message
-                );
-            }
-        }
     }
+
+
+    const booking =
+        bookingResult.rows[0];
+
+
+    const bookingStatus =
+        booking.status;
+
+
+    if (
+        bookingStatus ===
+        'CANCELLED'
+    ) {
+
+        await client.query(
+            'ROLLBACK'
+        );
+
+        return res.status(400).json({
+
+            success: false,
+
+            message:
+                'Booking has already been cancelled'
+
+        });
+
+    }
+
+
+    if (
+        bookingStatus ===
+        'COMPLETED'
+    ) {
+
+        await client.query(
+            'ROLLBACK'
+        );
+
+        return res.status(400).json({
+
+            success: false,
+
+            message:
+                'Completed bookings cannot be cancelled'
+
+        });
+
+    }
+
+
+    // ====================================================
+    // CANCEL BOOKING
+    // ====================================================
+
+    await client.query(
+        `
+        UPDATE bookings
+
+        SET
+            status = 'CANCELLED',
+
+            updated_at =
+                CURRENT_TIMESTAMP
+
+        WHERE booking_id =
+              $1
+
+          AND user_id =
+              $2
+        `,
+        [
+            bookingId,
+            userId
+        ]
+    );
+
+
+    await client.query(
+        'COMMIT'
+    );
+
+
+    console.log(
+        `✅ Booking cancelled: ${booking.booking_ref} | User: ${userId}`
+    );
+
+
+    return res.json({
+
+        success: true,
+
+        message:
+            'Booking cancelled successfully',
+
+        booking: {
+
+            bookingId:
+                booking.booking_id,
+
+            bookingRef:
+                booking.booking_ref,
+
+            showtimeId:
+                booking.showtime_id,
+
+            status:
+                'CANCELLED'
+
+        }
+
+    });
+
+
+}
+catch (error) {
+
+    console.error(
+        '❌ Cancel booking error:',
+        error
+    );
+
+
+    if (client) {
+
+        try {
+
+            await client.query(
+                'ROLLBACK'
+            );
+
+        }
+        catch (rollbackError) {
+
+            console.error(
+                '❌ Rollback error:',
+                rollbackError.message
+            );
+
+        }
+
+    }
+
+
+    return res.status(500).json({
+
+        success: false,
+
+        message:
+            'Server error cancelling booking',
+
+        error:
+            error.message
+
+    });
+
+}
+finally {
+
+    if (client) {
+
+        client.release();
+
+    }
+
 }
 
+
+}
 
 // ============================================================
 // EXPORT
 // ============================================================
 
 module.exports = {
-    createBooking,
-    getMyBookings,
-    getBookingById,
-    cancelBooking
+
+createBooking,
+
+getMyBookings,
+
+getBookingById,
+
+cancelBooking
+
+
 };
