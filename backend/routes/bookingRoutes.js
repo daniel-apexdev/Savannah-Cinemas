@@ -4,7 +4,8 @@ const {
     createBooking,
     getMyBookings,
     getBookingById,
-    cancelBooking
+    cancelBooking,
+    emailBookingConfirmation
 } = require('../controllers/bookingController');
 
 const {
@@ -38,6 +39,16 @@ router.patch(
     cancelBooking
 );
 
+// ============================================================
+// EMAIL CONFIRMATION (AGAIN)   { to? }
+// ============================================================
+
+router.post(
+    '/:bookingId/email',
+    authenticateToken,
+    emailBookingConfirmation
+);
+
 // CREATE BOOKING
 router.post(
     '/',
@@ -45,4 +56,4 @@ router.post(
     createBooking
 );
 
-module.exports = router;
+module.exports = router;

@@ -64,10 +64,11 @@ async function getPopularMovies(page = 1) {
 // NOW PLAYING
 // ============================================================
 
-async function getNowPlayingMovies(page = 1) {
+async function getNowPlayingMovies(page = 1, region) {
 
     return await tmdbRequest('/movie/now_playing', {
-        page
+        page,
+        ...(region ? { region } : {})
     });
 }
 
@@ -75,10 +76,11 @@ async function getNowPlayingMovies(page = 1) {
 // UPCOMING MOVIES
 // ============================================================
 
-async function getUpcomingMovies(page = 1) {
+async function getUpcomingMovies(page = 1, region) {
 
     return await tmdbRequest('/movie/upcoming', {
-        page
+        page,
+        ...(region ? { region } : {})
     });
 }
 
@@ -101,6 +103,53 @@ async function getMovieDetails(tmdbId) {
 async function getMovieReleaseDates(tmdbId) {
 
     return await tmdbRequest(`/movie/${tmdbId}/release_dates`);
+}
+
+// ============================================================
+// DETAILS + TRAILERS + CERTIFICATIONS IN ONE CALL
+// ============================================================
+
+async function getMovieForSync(tmdbId) {
+
+    return await tmdbRequest(`/movie/${tmdbId}`, {
+        append_to_response: 'videos,release_dates'
+    });
+}
+
+// ============================================================
+// AGE RATING
+// Ghana first (if TMDB has one), then US, then UK. Theatrical
+// releases preferred.
+// ============================================================
+
+function getAgeRating(releaseDates, countries = ['GH', 'US', 'GB']) {
+
+    const results =
+        (releaseDates && releaseDates.results) || [];
+
+    for (const country of countries) {
+
+        const entry =
+            results.find(r => r.iso_3166_1 === country);
+
+        if (!entry || !Array.isArray(entry.release_dates)) {
+            continue;
+        }
+
+        const withCert =
+            entry.release_dates.filter(d => d.certification && d.certification.trim());
+
+        const theatrical =
+            withCert.find(d => d.type === 3) ||
+            withCert.find(d => d.type === 2) ||
+            withCert[0];
+
+        if (theatrical) {
+            return theatrical.certification.trim();
+        }
+    }
+
+    return null;
 }
 
 // ============================================================
@@ -155,7 +204,9 @@ module.exports = {
     getUpcomingMovies,
     getMovieDetails,
     getMovieReleaseDates,
+    getMovieForSync,
+    getAgeRating,
     getImageUrl,
     getTrailerUrl
 
-};
+};

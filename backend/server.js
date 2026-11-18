@@ -28,6 +28,17 @@ const cinemaFavoriteRoutes = require('./routes/cinemaFavoriteRoutes');
 const movieViewRoutes = require('./routes/movieViewRoutes');
 const pricingRoutes = require('./routes/pricingRoutes');
 const promotionRoutes = require('./routes/promotionRoutes');
+const concessionRoutes = require('./routes/concessionRoutes');
+const eventRoutes = require('./routes/eventRoutes');
+const rewardRoutes = require('./routes/rewardRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const profileRoutes = require('./routes/profileRoutes');
+const specialRoutes = require('./routes/specialRoutes');
+const { startNotificationJob } = require('./services/notifications');
+const { startAutoGeneration } = require('./services/showtimeScheduler');
+const { startMovieStatusRefresh } = require('./services/movieStatus');
+const { startCatalogAutoSync } = require('./services/catalogSync');
+const { checkOnStartup: checkMigrations } = require('./services/migrations');
 
 // ============================================================
 // MIDDLEWARE
@@ -93,6 +104,14 @@ app.use(express.json());
 app.use(
     express.static(
         path.join(__dirname, '../public')
+    )
+);
+
+// Website images (used by the app's concessions menu)
+app.use(
+    '/images',
+    express.static(
+        path.join(__dirname, '../images')
     )
 );
 
@@ -224,6 +243,37 @@ app.use(
 app.use(
     '/api/promotions',
     promotionRoutes
+);
+
+// Concessions (snacks & drinks)
+app.use(
+    '/api/concessions',
+    concessionRoutes
+);
+
+app.use(
+    '/api/events',
+    eventRoutes
+);
+
+app.use(
+    '/api/rewards',
+    rewardRoutes
+);
+
+app.use(
+    '/api/notifications',
+    notificationRoutes
+);
+
+app.use(
+    '/api/profile',
+    profileRoutes
+);
+
+app.use(
+    '/api/specials',
+    specialRoutes
 );
 
 
@@ -768,6 +818,13 @@ async function startServer() {
 
 
         // ----------------------------------------------------
+        // Database up to date? (Development/migrations)
+        // ----------------------------------------------------
+
+        await checkMigrations();
+
+
+        // ----------------------------------------------------
         // Start Express
         // ----------------------------------------------------
 
@@ -821,6 +878,36 @@ async function startServer() {
                 );
 
                 console.log('');
+
+
+                // Films move UPCOMING -> NOW_SHOWING -> ENDED as
+                // their dates arrive (checked at start and hourly)
+                startMovieStatusRefresh();
+
+                // Booking reminders and film alerts for the in-app inbox
+                startNotificationJob();
+
+                // New releases from TMDB once a day (opt-in:
+                // TMDB_AUTOSYNC=true in .env)
+                if (startCatalogAutoSync()) {
+
+                    console.log(
+                        '🎞️ TMDB catalogue sync: on (daily)'
+                    );
+
+                }
+
+                // Keep the next two weeks programmed (opt-in:
+                // SHOWTIME_AUTOGEN=true in .env)
+                if (startAutoGeneration()) {
+
+                    console.log(
+                        '🎬 Showtime auto-generation: on (every 6 hours)'
+                    );
+
+                    console.log('');
+
+                }
 
             }
         );

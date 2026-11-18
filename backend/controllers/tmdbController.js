@@ -805,5 +805,8 @@ async function importMovies(req, res) {
 // ============================================================
 
 module.exports = {
-    importMovies
+    importMovies,
+    // Shared with services/catalogSync.js
+    importGenres,
+    linkMovieGenres
 };

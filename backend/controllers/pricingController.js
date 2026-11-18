@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const specialScreenings = require('../services/specialScreenings');
 
 
 // ============================================================
@@ -487,14 +488,14 @@ async function getShowtimePricing(req, res) {
                         start_time IS NULL
 
                         OR
-                        $4::time >= start_time
+                        ($4::timestamp)::time >= start_time::time
                   )
 
                   AND (
                         end_time IS NULL
 
                         OR
-                        $4::time <= end_time
+                        ($4::timestamp)::time <= end_time::time
                   )
 
                 ORDER BY
@@ -576,6 +577,17 @@ async function getShowtimePricing(req, res) {
 
         }
 
+        // Special nights: discount every seat type
+        const special =
+            await specialScreenings.discountFor(pool, showtimeId);
+
+        if (special && special.discountPercent > 0) {
+            for (const p of priceMap.values()) {
+                p.fullAmount = p.amount;
+                p.amount = specialScreenings.discounted(p.amount, special.discountPercent);
+            }
+        }
+
         const prices =
             Array.from(
                 priceMap.values()
@@ -611,7 +623,10 @@ async function getShowtimePricing(req, res) {
                     ? prices[0].currency
                     : 'GHS',
 
-            prices
+            prices,
+
+            // { code, name, discountPercent } on special nights, else null
+            special
 
         });
 
@@ -649,4 +664,4 @@ module.exports = {
     getPriceById,
     getShowtimePricing
 
-};
+};

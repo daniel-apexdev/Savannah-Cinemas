@@ -5,7 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "showtimes:generate": "node scripts/generate-showtimes.js",
+    "showtimes:preview": "node scripts/generate-showtimes.js --dry-run",
+    "showtimes:rebuild": "node scripts/generate-showtimes.js --rebuild",
+    "movies:sync": "node scripts/sync-movies.js",
+    "movies:preview": "node scripts/sync-movies.js --dry-run",
+    "db:migrate": "node scripts/migrate.js",
+    "db:status": "node scripts/migrate.js --status"
   },
   "dependencies": {
     "22": "^0.0.0",

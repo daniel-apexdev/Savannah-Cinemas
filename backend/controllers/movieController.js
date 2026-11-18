@@ -618,6 +618,48 @@ async function getMovieShowtimes(req, res) {
 // GET /api/movies/details/:movieId
 // ============================================================
 
+// ============================================================
+// CREDITS ON DEMAND
+// The first time someone opens a film that has a TMDB id but no cast,
+// fetch its credits (via the existing enrichment). Tried at most once
+// every 6 hours per film, so a TMDB outage doesn't slow every request.
+// ============================================================
+
+const creditAttempts = new Map();
+
+async function ensureCredits(movie) {
+
+    if (!movie.tmdb_id || !process.env.TMDB_API_KEY) return;
+
+    const last = creditAttempts.get(movie.movie_id);
+    if (last && Date.now() - last < 6 * 60 * 60 * 1000) return;
+
+    const has = await pool.query(
+        `SELECT 1 FROM movie_cast WHERE movie_id = $1 LIMIT 1`,
+        [movie.movie_id]
+    );
+    if (has.rows.length) return;
+
+    creditAttempts.set(movie.movie_id, Date.now());
+
+    // Required here, not at the top, to avoid a require cycle
+    const { enrichMovie } = require('./movieEnrichmentController');
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+        await enrichMovie(client, movie.movie_id);
+        await client.query('COMMIT');
+        console.log(`🎭 Credits fetched for "${movie.title}"`);
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        console.warn(`Credits not fetched for "${movie.title}": ${error.message}`);
+    } finally {
+        client.release();
+    }
+}
+
+
 async function getMovieDetails(req, res) {
     try {
         const movieId = Number(req.params.movieId);
@@ -660,6 +702,10 @@ async function getMovieDetails(req, res) {
         }
 
         const movie = movieResult.rows[0];
+
+        // No cast stored yet (e.g. films imported before enrichment)?
+        // Fetch cast, crew and studio from TMDB once, then carry on.
+        await ensureCredits(movie);
 
         // ----------------------------------------------------
         // GENRES
@@ -1018,4 +1064,4 @@ module.exports = {
     getMovieDetails,
     getTopRatedMovies,
     getPopularMovies
-};
+};

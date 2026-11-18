@@ -1272,6 +1272,9 @@ module.exports = {
 
     enrichMovieController,
 
-    enrichAllMovies
+    enrichAllMovies,
 
-};
+    // Used by services/catalogSync.js for newly synced films
+    enrichMovie
+
+};

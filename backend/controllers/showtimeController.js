@@ -267,9 +267,17 @@ async function getShowtimeSeats(req, res) {
 
                 WHERE bs.showtime_id = $1
 
-                  AND b.status IN (
-                      'PENDING',
-                      'CONFIRMED'
+                  -- An unpaid booking only holds its seats until
+                  -- it expires (same rule createBooking uses).
+                  AND (
+                        b.status = 'CONFIRMED'
+                        OR (
+                            b.status = 'PENDING'
+                            AND (
+                                b.expires_at IS NULL
+                                OR b.expires_at > CURRENT_TIMESTAMP
+                            )
+                        )
                   )
                 `,
                 [showtimeId]
@@ -1742,4 +1750,4 @@ module.exports = {
     getShowtimeSeats,
     createShowtime
 
-};
+};

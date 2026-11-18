@@ -162,7 +162,8 @@ async function updateMyProfile(req, res) {
         const {
             forenames,
             surname,
-            phoneNumber
+            phoneNumber,
+            dateOfBirth
         } = req.body;
 
 
@@ -173,7 +174,8 @@ async function updateMyProfile(req, res) {
         if (
             forenames === undefined &&
             surname === undefined &&
-            phoneNumber === undefined
+            phoneNumber === undefined &&
+            dateOfBirth === undefined
         ) {
 
             return res.status(400).json({
@@ -246,6 +248,33 @@ async function updateMyProfile(req, res) {
                     'Phone number must be a valid value'
 
             });
+
+        }
+
+
+        // Date of birth: 'YYYY-MM-DD' (a real, past date) or null to clear
+        if (dateOfBirth !== undefined && dateOfBirth !== null) {
+
+            const valid =
+                typeof dateOfBirth === 'string' &&
+                /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) &&
+                !Number.isNaN(Date.parse(`${dateOfBirth}T00:00:00Z`)) &&
+                new Date(`${dateOfBirth}T00:00:00Z`).toISOString().slice(0, 10) === dateOfBirth;
+
+            const year = valid ? Number(dateOfBirth.slice(0, 4)) : 0;
+
+            if (!valid || dateOfBirth > new Date().toISOString().slice(0, 10) || year < 1900) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        'Date of birth must be a valid past date (YYYY-MM-DD)'
+
+                });
+
+            }
 
         }
 
@@ -403,24 +432,59 @@ async function updateMyProfile(req, res) {
 
 
         // ----------------------------------------------------
+        // Date of birth lives on the customer profile
+        // ----------------------------------------------------
+
+        if (dateOfBirth !== undefined) {
+
+            const profileResult = await client.query(
+                `
+                UPDATE customer_profiles
+                SET date_of_birth = $1::date,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = $2
+                `,
+                [dateOfBirth, userId]
+            );
+
+            if (profileResult.rowCount === 0) {
+
+                await client.query(
+                    `
+                    INSERT INTO customer_profiles (user_id, date_of_birth)
+                    VALUES ($1, $2::date)
+                    `,
+                    [userId, dateOfBirth]
+                );
+
+            }
+
+        }
+
+
+        // ----------------------------------------------------
         // Get updated profile
         // ----------------------------------------------------
 
         const updatedResult = await client.query(
             `
             SELECT
-                user_id,
-                email,
-                forenames,
-                surname,
-                phone_number,
-                is_active,
-                created_at,
-                updated_at
+                u.user_id,
+                u.email,
+                u.forenames,
+                u.surname,
+                u.phone_number,
+                u.is_active,
+                u.created_at,
+                u.updated_at,
+                cp.date_of_birth::text AS date_of_birth
 
-            FROM users
+            FROM users u
 
-            WHERE user_id = $1
+            LEFT JOIN customer_profiles cp
+                ON cp.user_id = u.user_id
+
+            WHERE u.user_id = $1
             `,
             [userId]
         );
@@ -464,6 +528,9 @@ async function updateMyProfile(req, res) {
 
                 phoneNumber:
                     row.phone_number,
+
+                dateOfBirth:
+                    row.date_of_birth,
 
                 isActive:
                     row.is_active,
@@ -844,11 +911,255 @@ async function changeMyPassword(req, res) {
 
 
 // ============================================================
+// DELETE MY ACCOUNT
+//
+// DELETE /api/users/me   { password }
+//
+// App stores require in-app account deletion. Bookings, payments and
+// tickets are financial records, so the user row is kept but
+// anonymised and deactivated (login and tokens stop working at once);
+// personal data that isn't a record of a sale is deleted.
+//
+// Refused while the user holds paid tickets for shows that haven't
+// happened yet, so nobody deletes their way out of a ticket they'll
+// need at the door. Unpaid holds are released.
+// ============================================================
+
+async function deleteMyAccount(req, res) {
+
+    let client;
+
+    try {
+
+        if (!req.user || !req.user.userId) {
+
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+
+        }
+
+        const userId = req.user.userId;
+        const { password } = req.body || {};
+
+        if (!password || typeof password !== 'string') {
+
+            return res.status(400).json({
+                success: false,
+                message: 'Enter your password to delete your account'
+            });
+
+        }
+
+        client = await pool.connect();
+
+        await client.query('BEGIN');
+
+        const userResult = await client.query(
+            `
+            SELECT password_hash, is_active
+            FROM users
+            WHERE user_id = $1
+            FOR UPDATE
+            `,
+            [userId]
+        );
+
+        if (userResult.rows.length === 0 || userResult.rows[0].is_active !== 'Y') {
+
+            await client.query('ROLLBACK');
+
+            return res.status(404).json({
+                success: false,
+                message: 'User account not found'
+            });
+
+        }
+
+        const passwordMatch = await bcrypt.compare(
+            password,
+            userResult.rows[0].password_hash
+        );
+
+        if (!passwordMatch) {
+
+            await client.query('ROLLBACK');
+
+            return res.status(401).json({
+                success: false,
+                message: 'Password is incorrect'
+            });
+
+        }
+
+        // Paid tickets for shows still to come
+        const upcoming = await client.query(
+            `
+            SELECT COUNT(*)::int AS n
+            FROM bookings b
+            JOIN showtimes s ON s.showtime_id = b.showtime_id
+            WHERE b.user_id = $1
+              AND b.status = 'CONFIRMED'
+              AND s.start_time > CURRENT_TIMESTAMP
+            `,
+            [userId]
+        );
+
+        if (upcoming.rows[0].n > 0) {
+
+            await client.query('ROLLBACK');
+
+            return res.status(409).json({
+                success: false,
+                code: 'UPCOMING_TICKETS',
+                message:
+                    'You have tickets for upcoming shows. Cancel them from your tickets first, or delete your account after they have played.'
+            });
+
+        }
+
+        // Release unpaid holds (their snack orders follow the booking)
+        await client.query(
+            `
+            UPDATE bookings
+            SET status = 'CANCELLED'
+            WHERE user_id = $1
+              AND status = 'PENDING'
+            `,
+            [userId]
+        );
+
+        await client.query('SAVEPOINT snacks');
+
+        try {
+
+            await client.query(
+                `
+                UPDATE concession_orders
+                SET status = 'CANCELLED'
+                WHERE user_id = $1
+                  AND status = 'PENDING'
+                `,
+                [userId]
+            );
+            await client.query('RELEASE SAVEPOINT snacks');
+
+        } catch (error) {
+
+            // Concessions migration not installed
+            if (error.code !== '42P01') throw error;
+            await client.query('ROLLBACK TO SAVEPOINT snacks');
+
+        }
+
+        // Personal data that isn't a sales record
+        for (const table of [
+            'watchlist',
+            'user_favourites',
+            'user_cinema_favorites',
+            'user_movie_views',
+            'user_preferences',
+            'user_notification_preferences',
+            'movie_reviews'
+        ]) {
+
+            await client.query('SAVEPOINT del');
+
+            try {
+
+                await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
+                await client.query('RELEASE SAVEPOINT del');
+
+            } catch (error) {
+
+                // Table missing on this install: nothing to delete
+                if (error.code !== '42P01') throw error;
+                await client.query('ROLLBACK TO SAVEPOINT del');
+
+            }
+
+        }
+
+        await client.query(
+            `
+            UPDATE customer_profiles
+            SET date_of_birth = NULL,
+                gender = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1
+            `,
+            [userId]
+        );
+
+        // Anonymise and lock the account. The random hash means the
+        // old password can never sign in again.
+        const lockedHash = await bcrypt.hash(
+            require('crypto').randomBytes(32).toString('hex'),
+            10
+        );
+
+        await client.query(
+            `
+            UPDATE users
+            SET email = 'deleted-' || user_id || '@deleted.invalid',
+                forenames = 'Deleted',
+                surname = 'User',
+                phone_number = NULL,
+                password_hash = $2,
+                is_active = 'N',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1
+            `,
+            [userId, lockedHash]
+        );
+
+        await client.query('COMMIT');
+
+        console.log(`🗑️ Account deleted (anonymised) | User: ${userId}`);
+
+        return res.json({
+            success: true,
+            message: 'Your account has been deleted'
+        });
+
+    } catch (error) {
+
+        console.error('❌ Delete account error:', error);
+
+        if (client) {
+
+            try {
+                await client.query('ROLLBACK');
+            } catch (rollbackError) {
+                console.error('❌ Rollback error:', rollbackError);
+            }
+
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'Server error deleting account'
+        });
+
+    } finally {
+
+        if (client) {
+            client.release();
+        }
+
+    }
+
+}
+
+
+// ============================================================
 // EXPORT
 // ============================================================
 
 module.exports = {
     getMyProfile,
     updateMyProfile,
-    changeMyPassword
-};
+    changeMyPassword,
+    deleteMyAccount
+};

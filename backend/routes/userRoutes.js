@@ -5,7 +5,8 @@ const router = express.Router();
 const {
     getMyProfile,
     updateMyProfile,
-    changeMyPassword
+    changeMyPassword,
+    deleteMyAccount
 } = require('../controllers/userController');
 
 const {
@@ -45,4 +46,15 @@ router.patch(
 );
 
 
-module.exports = router;
+// ============================================================
+// DELETE MY ACCOUNT   { password }
+// ============================================================
+
+router.delete(
+    '/me',
+    authenticateToken,
+    deleteMyAccount
+);
+
+
+module.exports = router;

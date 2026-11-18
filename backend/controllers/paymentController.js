@@ -1,8 +1,11 @@
 const pool = require('../config/database');
 
 const {
-    sendBookingConfirmation
-} = require('../utils/emailService');
+    isValidEmail,
+    sendBookingEmail
+} = require('../services/bookingEmail');
+
+const rewards = require('../services/rewards');
 
 
 // ============================================================
@@ -36,8 +39,27 @@ async function createPayment(req, res) {
 
         const {
             bookingId,
-            paymentMethod
+            paymentMethod,
+            // Where to send the confirmation (defaults to the account email)
+            receiptEmail,
+            // Savannah Rewards: true = use as many points as allowed,
+            // or a number of points (rounded down to 100s)
+            redeemPoints
         } = req.body;
+
+        if (
+            receiptEmail !== undefined &&
+            receiptEmail !== null &&
+            receiptEmail !== '' &&
+            !isValidEmail(receiptEmail)
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message: 'Enter a valid email address for your confirmation'
+            });
+
+        }
 
         const parsedBookingId =
             Number(bookingId);
@@ -284,8 +306,70 @@ async function createPayment(req, res) {
         // Get amount
         // ----------------------------------------------------
 
-        const amount =
+        let amount =
             Number(booking.total_amount);
+
+        // ----------------------------------------------------
+        // Spend reward points (same transaction as the payment;
+        // the per-member lock stops two payments spending the
+        // same points)
+        // ----------------------------------------------------
+
+        let pointsRedeemed = 0;
+        let pointsDiscount = 0;
+
+        if (redeemPoints === true || Number(redeemPoints) > 0) {
+
+            await client.query(
+                `SELECT pg_advisory_xact_lock(hashtext('rewards:' || $1::text))`,
+                [userId]
+            );
+
+            const balance = await rewards.balanceOf(client, userId);
+            const best = rewards.quote(balance, amount);
+            const step = rewards.VALUE.pointsPerStep;
+            const wanted = redeemPoints === true
+                ? best.points
+                : Math.min(best.points, Math.floor(Number(redeemPoints) / step) * step);
+
+            if (wanted > 0) {
+
+                pointsRedeemed = wanted;
+                pointsDiscount = (wanted / step) * rewards.VALUE.ghsPerStep;
+
+                await client.query('SAVEPOINT redeem');
+
+                try {
+
+                    await client.query(
+                        `
+                        UPDATE bookings
+                        SET total_amount = total_amount - $2,
+                            points_redeemed = $3,
+                            points_discount = $2,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE booking_id = $1
+                        `,
+                        [parsedBookingId, pointsDiscount, pointsRedeemed]
+                    );
+
+                    await client.query('RELEASE SAVEPOINT redeem');
+
+                } catch (redeemError) {
+
+                    await client.query('ROLLBACK TO SAVEPOINT redeem');
+
+                    if (redeemError.code !== '42703') throw redeemError;
+
+                    // Rewards migration not run: pay full price
+                    pointsRedeemed = 0;
+                    pointsDiscount = 0;
+
+                }
+
+                amount = Number((amount - pointsDiscount).toFixed(2));
+            }
+        }
 
         if (
             !Number.isFinite(amount) ||
@@ -542,115 +626,44 @@ async function createPayment(req, res) {
         // If email fails, payment remains successful.
         // ----------------------------------------------------
 
-        let emailSent = false;
+        // ----------------------------------------------------
+        // Savannah Rewards: points from this booking and any
+        // trophies it unlocked (never blocks the payment)
+        // ----------------------------------------------------
+
+        let rewardResult = null;
 
         try {
 
-            const emailResult =
-                await sendBookingConfirmation({
+            const r = await rewards.summary(userId, { bookingId: parsedBookingId });
 
-                    to:
-                        userEmail,
+            rewardResult = {
+                pointsEarned: await rewards.earnedForBooking(userId, parsedBookingId),
+                pointsRedeemed,
+                pointsDiscount,
+                balance: r ? r.points.balance : null,
+                newTrophies: r ? r.newTrophies : []
+            };
 
-                    customerName,
+        } catch (rewardError) {
 
-                    booking: {
+            console.error('⚠️ Rewards update failed:', rewardError.message);
 
-                        bookingId:
-                            booking.booking_id,
+        }
 
-                        bookingRef:
-                            booking.booking_ref,
+        let email = { to: receiptEmail || userEmail, sent: false };
 
-                        showtimeId:
-                            booking.showtime_id,
+        try {
 
-                        movie: {
-
-                            movieId:
-                                booking.movie_id,
-
-                            title:
-                                booking.title,
-
-                            posterUrl:
-                                booking.poster_url
-
-                        },
-
-                        cinema: {
-
-                            cinemaId:
-                                booking.cinema_id,
-
-                            name:
-                                booking.cinema_name,
-
-                            address:
-                                booking.address,
-
-                            city:
-                                booking.city
-
-                        },
-
-                        screen: {
-
-                            screenId:
-                                booking.screen_id,
-
-                            name:
-                                booking.screen_name
-
-                        },
-
-                        showDate:
-                            booking.show_date,
-
-                        startTime:
-                            booking.start_time,
-
-                        endTime:
-                            booking.end_time,
-
-                        ticketQuantity:
-                            booking.ticket_quantity,
-
-                        ticketPrice:
-                            booking.ticket_price,
-
-                        totalAmount:
-                            amount,
-
-                        status:
-                            'CONFIRMED',
-
-                        seats,
-
-                        ticket: {
-
-                            ticketId,
-
-                            ticketCode,
-
-                            qrCodeData,
-
-                            status:
-                                'VALID'
-
-                        }
-
-                    }
-
-                });
-
-            emailSent =
-                emailResult?.sent === true;
+            email = await sendBookingEmail({
+                bookingId: parsedBookingId,
+                to: receiptEmail || userEmail
+            });
 
             console.log(
-                emailSent
-                    ? `📧 Booking confirmation email sent to ${userEmail}`
-                    : `⚠️ Booking email was not confirmed as sent to ${userEmail}`
+                email.sent
+                    ? `📧 Booking confirmation sent to ${email.to}`
+                    : `⚠️ Booking confirmation not sent to ${email.to}: ${email.reason}`
             );
 
         } catch (emailError) {
@@ -783,12 +796,11 @@ async function createPayment(req, res) {
 
             },
 
-            email: {
+            // { to, sent, reason?, pending? }
+            email,
 
-                sent:
-                    emailSent
-
-            }
+            // { pointsEarned, pointsRedeemed, pointsDiscount, balance, newTrophies }
+            rewards: rewardResult
 
         });
 
@@ -872,4 +884,4 @@ async function createPayment(req, res) {
 
 module.exports = {
     createPayment
-};
+};

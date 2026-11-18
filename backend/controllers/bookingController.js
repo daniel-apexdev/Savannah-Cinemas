@@ -1,8 +1,10 @@
 const pool = require('../config/database');
+const specialScreenings = require('../services/specialScreenings');
 
 const {
-sendBookingConfirmation
-} = require('../utils/emailService');
+    isValidEmail,
+    sendBookingEmail
+} = require('../services/bookingEmail');
 
 // ============================================================
 // CREATE BOOKING
@@ -320,6 +322,22 @@ try {
 
 
     // ====================================================
+    // ONE BOOKING AT A TIME PER SHOWTIME
+    //
+    // Released seats keep their booking_seats rows for history,
+    // so there is no unique (showtime, seat) constraint any more
+    // (see migrations/2026-11-17_concessions.sql). This lock,
+    // held until COMMIT/ROLLBACK, stops two customers booking
+    // the same seat at the same moment.
+    // ====================================================
+
+    await client.query(
+        'SELECT pg_advisory_xact_lock($1)',
+        [parsedShowtimeId]
+    );
+
+
+    // ====================================================
     // CHECK SEATS ALREADY BOOKED
     // ====================================================
 
@@ -500,6 +518,18 @@ try {
 
         }
 
+    }
+
+
+    // Special nights (Throwback Thursday, Bargain Tuesday...): the
+    // programme's discount applies to every seat type
+    const special =
+        await specialScreenings.discountFor(client, showtimeId);
+
+    if (special && special.discountPercent > 0) {
+        for (const p of priceMap.values()) {
+            p.amount = specialScreenings.discounted(p.amount, special.discountPercent);
+        }
     }
 
 
@@ -1354,45 +1384,9 @@ try {
     };
 
 
-    // ====================================================
-    // SEND BOOKING CONFIRMATION
-    // ====================================================
-
-    /*
-        Email is sent AFTER COMMIT so that an email is
-        never sent for a transaction that failed.
-    */
-
-    try {
-
-        if (
-            typeof sendBookingConfirmation ===
-            'function'
-        ) {
-
-            await sendBookingConfirmation({
-
-                email:
-                    userEmail,
-
-                customerName,
-
-                booking:
-                    bookingResponse
-
-            });
-
-        }
-
-    }
-    catch (emailError) {
-
-        console.error(
-            '⚠️ Booking created but confirmation email failed:',
-            emailError.message
-        );
-
-    }
+    // (The confirmation email is sent once the booking is PAID, by
+    // paymentController via services/bookingEmail.js. It used to be
+    // sent here, before payment, to an undefined address.)
 
 
     return res.status(201).json({
@@ -1534,9 +1528,26 @@ try {
                 b.total_amount,
 
                 b.status,
-                b.booking_date
+                b.booking_date,
+
+                COALESCE(b.discount_amount, 0) AS discount_amount,
+                to_jsonb(b) ->> 'receipt_email' AS receipt_email,
+                to_jsonb(b) ->> 'confirmation_sent_at' AS confirmation_sent_at,
+                pay.payment_reference,
+                pay.payment_method,
+                pay.payment_date,
+                pay.amount AS paid_amount
 
             FROM bookings b
+
+            LEFT JOIN LATERAL (
+                SELECT payment_reference, payment_method, payment_date, amount
+                FROM payments p
+                WHERE p.booking_id = b.booking_id
+                  AND p.status = 'SUCCESS'
+                ORDER BY p.payment_date DESC NULLS LAST
+                LIMIT 1
+            ) pay ON TRUE
 
             JOIN showtimes st
                 ON st.showtime_id =
@@ -1704,6 +1715,24 @@ try {
             bookingDate:
                 row.booking_date,
 
+            discountAmount:
+                row.discount_amount,
+
+            payment:
+                row.payment_reference
+                    ? {
+                        reference: row.payment_reference,
+                        method: row.payment_method,
+                        paidAt: row.payment_date,
+                        amount: row.paid_amount
+                    }
+                    : null,
+
+            receiptEmail:
+                row.receipt_email,
+
+            confirmationSentAt:
+                row.confirmation_sent_at,
 
             seats
 
@@ -1824,9 +1853,31 @@ try {
                 b.status,
                 b.booking_date,
                 b.created_at,
-                b.updated_at
+                b.updated_at,
+                to_jsonb(b) ->> 'receipt_email' AS receipt_email,
+                to_jsonb(b) ->> 'confirmation_sent_at' AS confirmation_sent_at,
+                COALESCE((to_jsonb(b) ->> 'points_redeemed')::int, 0) AS points_redeemed,
+                COALESCE((to_jsonb(b) ->> 'points_discount')::numeric, 0) AS points_discount,
+
+                tk.ticket_id,
+                tk.ticket_code,
+                tk.qr_code_data,
+                tk.status AS ticket_status
 
             FROM bookings b
+
+            -- Latest digital ticket for this booking, if paid.
+            LEFT JOIN LATERAL (
+                SELECT
+                    t.ticket_id,
+                    t.ticket_code,
+                    t.qr_code_data,
+                    t.status
+                FROM tickets t
+                WHERE t.booking_id = b.booking_id
+                ORDER BY t.ticket_id DESC
+                LIMIT 1
+            ) tk ON TRUE
 
             JOIN showtimes st
                 ON st.showtime_id =
@@ -2025,8 +2076,32 @@ try {
             updatedAt:
                 row.updated_at,
 
+            receiptEmail:
+                row.receipt_email,
 
-            seats
+            confirmationSentAt:
+                row.confirmation_sent_at,
+
+            pointsRedeemed:
+                row.points_redeemed,
+
+            pointsDiscount:
+                row.points_discount,
+
+
+            seats,
+
+
+            // Digital ticket (null until the booking is paid)
+            ticket:
+                row.ticket_id
+                    ? {
+                        ticketId: row.ticket_id,
+                        ticketCode: row.ticket_code,
+                        qrCodeData: row.qr_code_data,
+                        status: row.ticket_status
+                    }
+                    : null
 
         }
 
@@ -2334,7 +2409,79 @@ finally {
 // EXPORT
 // ============================================================
 
+// ============================================================
+// EMAIL THE CONFIRMATION (AGAIN)
+// POST /api/bookings/:bookingId/email   { to?: 'someone@example.com' }
+// Paid bookings only, owner only, at most once a minute.
+// ============================================================
+
+async function emailBookingConfirmation(req, res) {
+
+    try {
+
+        if (!req.user || !req.user.userId) {
+            return res.status(401).json({ success: false, message: 'Authentication required' });
+        }
+
+        const bookingId = Number(req.params.bookingId);
+        const to = req.body && req.body.to ? String(req.body.to).trim() : undefined;
+
+        if (!Number.isInteger(bookingId)) {
+            return res.status(400).json({ success: false, message: 'Invalid booking ID' });
+        }
+
+        if (to !== undefined && !isValidEmail(to)) {
+            return res.status(400).json({ success: false, message: 'Enter a valid email address' });
+        }
+
+        const owned = await pool.query(
+            `
+            SELECT status,
+                   (to_jsonb(b) ->> 'confirmation_sent_at')::timestamp AS sent_at
+            FROM bookings b
+            WHERE booking_id = $1 AND user_id = $2
+            `,
+            [bookingId, req.user.userId]
+        );
+
+        if (owned.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const row = owned.rows[0];
+
+        if (row.status !== 'CONFIRMED' && row.status !== 'COMPLETED') {
+            return res.status(400).json({ success: false, message: 'Only paid bookings have a confirmation to send' });
+        }
+
+        if (row.sent_at && Date.now() - new Date(row.sent_at).getTime() < 60 * 1000) {
+            return res.status(429).json({ success: false, message: 'Just sent. Give it a minute before sending again.' });
+        }
+
+        const email = await sendBookingEmail({ bookingId, to });
+
+        if (!email.sent && !email.pending) {
+            return res.status(502).json({
+                success: false,
+                message: `Couldn't send the email${email.reason ? `: ${email.reason}` : ''}`,
+                email
+            });
+        }
+
+        return res.json({ success: true, email });
+
+    } catch (error) {
+
+        console.error('Email booking confirmation error:', error);
+        return res.status(500).json({ success: false, message: 'Server error sending the confirmation' });
+
+    }
+}
+
+
 module.exports = {
+
+emailBookingConfirmation,
 
 createBooking,
 

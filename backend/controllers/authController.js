@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const profileLook = require('../services/profileLook');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -101,6 +102,9 @@ const register = async (req, res) => {
         );
 
         const userId = userResult.rows[0].user_id;
+
+        // A generated username they can change in the app
+        await profileLook.assignUsername(client, userId, forenames.trim());
 
         // ----------------------------------------------------
         // Create notification preferences
@@ -211,7 +215,8 @@ const register = async (req, res) => {
                 forenames: forenames.trim(),
                 surname: surname.trim(),
                 phoneNumber: phoneNumber || null,
-                role: 'CUSTOMER'
+                role: 'CUSTOMER',
+                ...(await profileLook.getLook(userId))
             }
         });
 
@@ -351,7 +356,8 @@ const login = async (req, res) => {
                 forenames: user.forenames,
                 surname: user.surname,
                 phoneNumber: user.phone_number,
-                role
+                role,
+                ...(await profileLook.getLook(user.user_id))
             }
         });
 
@@ -450,7 +456,8 @@ const getCurrentUser = async (req, res) => {
                     dateOfBirth: user.date_of_birth,
                     gender: user.gender,
                     currentLoyaltyPoints: user.current_loyalty_points
-                }
+                },
+                ...(await profileLook.getLook(user.user_id))
             }
         });
 
@@ -470,4 +477,4 @@ module.exports = {
     register,
     login,
     getCurrentUser
-};
+};
