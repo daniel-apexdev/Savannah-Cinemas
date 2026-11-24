@@ -56,7 +56,7 @@ select cron.schedule('savannah-notifications', '*/10 * * * *', $$ select public.
 select cron.schedule('savannah-showtimes', '23 */6 * * *', $$ select public.savannah_run_job('showtimes') $$);
 
 -- New films from TMDB, early morning Accra time (UTC)
-select cron.schedule('savannah-catalog', '41 4 * * *', $$ select public.savannah_run_job('catalog?pages=2') $$);
+select cron.schedule('savannah-catalog', '41 4 * * *', $$ select public.savannah_run_job('catalog?pages=1') $$);
 
 -- Check runs:      select * from cron.job_run_details order by start_time desc limit 20;
 -- Check replies:   select id, status_code, left(content, 200) from net._http_response order by created desc limit 20;

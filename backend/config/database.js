@@ -23,7 +23,7 @@ const pool = url
         connectionString: url,
         ssl: sslFor(url),
         // An Edge Function instance only needs a few connections
-        max: Number(process.env.DB_POOL_MAX) || (process.env.RUNTIME === 'edge' ? 3 : 10),
+        max: Number(process.env.DB_POOL_MAX) || ((globalThis.SAVANNAH_RUNTIME || process.env.RUNTIME) === 'edge' ? 3 : 10),
         idleTimeoutMillis: 20000
     })
     : new Pool({
@@ -36,7 +36,7 @@ const pool = url
     });
 
 pool.on('connect', () => {
-    if (process.env.RUNTIME !== 'edge') console.log('PostgreSQL client connected');
+    if ((globalThis.SAVANNAH_RUNTIME || process.env.RUNTIME) !== 'edge') console.log('PostgreSQL client connected');
 });
 
 pool.on('error', (err) => {

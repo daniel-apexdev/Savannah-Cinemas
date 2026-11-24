@@ -82,7 +82,7 @@ Replace `<project-ref>` in `supabase/cron.sql` and run it in the SQL editor.
 ### 7. First film sync
 Run the jobs once from the SQL editor, one line at a time, waiting for each to finish:
 ```sql
-select public.savannah_run_job('catalog?pages=3');
+select public.savannah_run_job('catalog?pages=1');   -- run it a few times for more films; bigger batches exceed the free plan's limits
 select public.savannah_run_job('movie-status');
 select public.savannah_run_job('showtimes');
 -- replies: select status_code, left(content, 300) from net._http_response order by created desc;

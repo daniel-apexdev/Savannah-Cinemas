@@ -45,6 +45,22 @@ esbuild.build({
             // Node globals Express, pg and nodemailer expect
             'globalThis.Buffer ??= __Buffer; globalThis.process ??= __process; globalThis.global ??= globalThis;',
             'globalThis.setImmediate ??= __si; globalThis.clearImmediate ??= __ci;',
+            // Supabase's hosted runtime refuses to change environment variables
+            // (process.env.X = ... throws "NotSupported"). Libraries like debug
+            // do that, so writes that fail are kept in memory instead.
+            '(() => { const p = globalThis.process; const real = p.env; const over = new Map(); const DEL = Symbol("deleted");',
+            '  const has = (k) => (over.has(k) ? over.get(k) !== DEL : k in real);',
+            '  const val = (k) => (over.has(k) ? (over.get(k) === DEL ? undefined : over.get(k)) : real[k]);',
+            '  const env = new Proxy({}, {',
+            '    get: (_, k) => (typeof k === "string" ? val(k) : undefined),',
+            '    set: (_, k, v) => { try { real[k] = String(v); over.delete(k); } catch { over.set(k, String(v)); } return true; },',
+            '    deleteProperty: (_, k) => { try { delete real[k]; over.delete(k); } catch { over.set(k, DEL); } return true; },',
+            '    has: (_, k) => typeof k === "string" && has(k),',
+            '    ownKeys: () => { const keys = new Set([...Object.keys(real), ...over.keys()]); for (const [k, v] of over) if (v === DEL) keys.delete(k); return [...keys]; },',
+            '    getOwnPropertyDescriptor: (_, k) => (typeof k === "string" && has(k) ? { value: val(k), writable: true, enumerable: true, configurable: true } : undefined)',
+            '  });',
+            '  try { Object.defineProperty(p, "env", { value: env, writable: true, configurable: true }); } catch { try { p.env = env; } catch {} }',
+            '})();',
             'const require = __cr(import.meta.url);',
             'const __filename = __fu(import.meta.url);',
             'const __dirname = __dn(__filename);'

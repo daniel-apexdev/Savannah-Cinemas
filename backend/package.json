@@ -14,7 +14,7 @@
     "db:migrate": "node scripts/migrate.js",
     "db:status": "node scripts/migrate.js --status",
     "build:edge": "node scripts/build-edge.js",
-    "deploy:api": "npm run build:edge && cd .. && npx supabase functions deploy api --use-api --no-verify-jwt"
+    "deploy:api": "npm run build:edge && cd .. && npx supabase functions deploy api --project-ref uxnoyokslqtvmwqaxhux --use-api --no-verify-jwt"
   },
   "dependencies": {
     "22": "^0.0.0",

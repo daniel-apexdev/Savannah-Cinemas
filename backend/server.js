@@ -1,4 +1,5 @@
-require('dotenv').config();
+// No .env file on Supabase (settings come from Edge Function secrets)
+if (globalThis.SAVANNAH_RUNTIME !== 'edge') require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -79,7 +80,7 @@ const JWT_SECRET =
 // ============================================================
 
 // Running inside a Supabase Edge Function (see supabase/functions/api)
-const EDGE = process.env.RUNTIME === 'edge';
+const EDGE = (globalThis.SAVANNAH_RUNTIME || process.env.RUNTIME) === 'edge';
 const supabaseAuth = require('./services/supabaseAuth');
 
 if (!JWT_SECRET && !supabaseAuth.enabled()) {
@@ -174,19 +175,26 @@ app.post('/api/jobs/:job', async (req, res) => {
 // SERVE FRONTEND
 // ============================================================
 
-app.use(
-    express.static(
-        path.join(__dirname, '../public')
-    )
-);
+// Not on Supabase: the function has no files to serve (and the hosted
+// runtime refuses to look outside its own folder). The website and its
+// images are on GitHub Pages there.
+if (!EDGE) {
 
-// Website images (used by the app's concessions menu)
-app.use(
-    '/images',
-    express.static(
-        path.join(__dirname, '../images')
-    )
-);
+    app.use(
+        express.static(
+            path.join(__dirname, '../public')
+        )
+    );
+
+    // Website images (used by the app's concessions menu)
+    app.use(
+        '/images',
+        express.static(
+            path.join(__dirname, '../images')
+        )
+    );
+
+}
 
 
 // ============================================================

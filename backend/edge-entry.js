@@ -4,7 +4,9 @@
 // ../supabase/functions/api/server.bundle.js
 // ============================================================
 
-process.env.RUNTIME = 'edge';
+// Supabase's hosted runtime doesn't allow changing environment variables,
+// so the edge flag is a global instead of process.env.RUNTIME
+globalThis.SAVANNAH_RUNTIME = 'edge';
 
 const app = require('./server');
 
