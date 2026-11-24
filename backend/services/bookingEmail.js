@@ -32,7 +32,8 @@ async function loadBookingForEmail(bookingId, db = pool) {
             COALESCE((to_jsonb(b) ->> 'points_discount')::numeric, 0) AS points_discount,
             COALESCE((to_jsonb(b) ->> 'points_redeemed')::int, 0) AS points_redeemed,
             u.email, u.forenames, u.surname,
-            m.title, m.age_rating, m.runtime_minutes,
+            m.title, m.age_rating, m.runtime_minutes, m.poster_url, m.backdrop_url,
+            st.showtime_id,
             c.cinema_name, c.address, c.city, c.phone_number, c.email AS cinema_email,
             s.screen_name,
             st.start_time, st.end_time
@@ -102,6 +103,21 @@ async function loadBookingForEmail(bookingId, db = pool) {
         if (e.code !== '42P01') throw e;
     }
 
+    // Special night (Throwback Thursday...), if the special screenings migration is installed
+    let special = null;
+    try {
+        const sp = await db.query(
+            `SELECT sp.name, ss.discount_percent
+             FROM special_screenings ss
+             JOIN special_programmes sp ON sp.code = ss.programme_code
+             WHERE ss.showtime_id = $1`,
+            [row.showtime_id]
+        );
+        if (sp.rows[0]) special = { name: sp.rows[0].name, discountPercent: Number(sp.rows[0].discount_percent) || 0 };
+    } catch (e) {
+        if (e.code !== '42P01') throw e;
+    }
+
     return {
         userId: row.user_id,
         status: row.status,
@@ -113,7 +129,14 @@ async function loadBookingForEmail(bookingId, db = pool) {
             bookingRef: row.booking_ref,
             startTime: row.start_time,
             endTime: row.end_time,
-            movie: { title: row.title, ageRating: row.age_rating, runtimeMinutes: row.runtime_minutes },
+            movie: {
+                title: row.title,
+                ageRating: row.age_rating,
+                runtimeMinutes: row.runtime_minutes,
+                posterUrl: row.poster_url,
+                backdropUrl: row.backdrop_url
+            },
+            special,
             cinema: {
                 name: row.cinema_name,
                 address: row.address,

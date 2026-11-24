@@ -34,7 +34,11 @@ function imageUrl(req, imagePath) {
 
     if (/^https?:\/\//i.test(imagePath)) return imagePath;
 
-    return `${req.protocol}://${req.get('host')}/${imagePath.replace(/^\/+/, '')}`;
+    // Images live with the website (images/...). On Supabase the API has
+    // no files of its own, so PUBLIC_SITE_URL points at the website.
+    const base = (process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+
+    return `${base}/${imagePath.replace(/^\/+/, '')}`;
 
 }
 

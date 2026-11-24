@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useEffectEvent } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/controls';
 import { StackHeader } from '@/components/header';
@@ -12,6 +12,7 @@ import { clock, dayFromKey, dayKey, shortDate } from '@/lib/format';
 import { openNotification, useNotifications } from '@/lib/notify';
 import type { AppNotification } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
+import { usePageWidth } from '@/lib/layout';
 import { colors, space } from '@/theme';
 
 const MAX_W = 560;
@@ -35,8 +36,8 @@ function when(v: string) {
 
 /** The inbox: everything we've told you, newest first. Opening it marks all read. */
 export default function Inbox() {
-  const { width: winW } = useWindowDimensions();
-  const width = Math.min(winW, MAX_W);
+  // Wider on desktop web (lib/layout)
+  const width = usePageWidth(MAX_W, 680);
   const { user } = useAuth();
   const { items, unread, refresh, markAllRead } = useNotifications();
   const now = useNow();

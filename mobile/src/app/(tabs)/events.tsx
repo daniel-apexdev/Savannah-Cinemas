@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Poster } from '@/components/artwork';
@@ -16,6 +16,7 @@ import { setPendingPromo } from '@/lib/promo';
 import { loadSpecials, useSpecials } from '@/lib/specials';
 import type { CinemaEvent, Movie, Promotion } from '@/lib/types';
 import { useRequest } from '@/lib/use-request';
+import { usePageWidth } from '@/lib/layout';
 import { colors, radius, space } from '@/theme';
 
 const MAX_W = 560;
@@ -34,8 +35,8 @@ function localDate(v: string) {
 /** Events & offers: what's on at the cinema beyond the regular programme. */
 export default function Events() {
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
-  const width = Math.min(winW, MAX_W);
+  // Wider on desktop web (lib/layout)
+  const width = usePageWidth(MAX_W, 820);
 
   const events = useRequest(() => api.events(), []);
   const offers = useRequest(() => api.promotions(), []);

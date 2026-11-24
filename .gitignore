@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Builds
+dist/
+mobile/dist/
+
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/
+# Rebuilt by "npm run deploy:api" (backend) before every deploy
+supabase/functions/api/server.bundle.js
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/

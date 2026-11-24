@@ -1,5 +1,67 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const supabaseAuth = require('../services/supabaseAuth');
+
+
+// ============================================================
+// SUPABASE TOKENS
+// The token is a Supabase Auth access token. Check it with Supabase,
+// then use our own users row (created on first sign-in).
+// ============================================================
+
+const ROLE_PRIORITY = { ADMIN: 4, MANAGER: 3, STAFF: 2, CUSTOMER: 1 };
+
+async function authenticateSupabase(req, res, next) {
+
+    const parts = String(req.headers.authorization || '').trim().split(/\s+/);
+
+    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer' || !parts[1]) {
+        return res.status(401).json({ success: false, message: 'Please sign in' });
+    }
+
+    try {
+
+        const authUser = await supabaseAuth.userForToken(parts[1]);
+
+        if (!authUser) {
+            return res.status(401).json({ success: false, message: 'Your session has expired. Please sign in again' });
+        }
+
+        const local = await supabaseAuth.ensureLocalUser(authUser);
+
+        const roles = await pool.query(
+            `SELECT r.role_id, r.role_name
+             FROM user_role_assignments ura
+             JOIN user_roles r ON r.role_id = ura.role_id
+             JOIN users u ON u.user_id = ura.user_id
+             WHERE ura.user_id = $1 AND r.is_active = 'Y' AND u.is_active = 'Y'`,
+            [local.userId]
+        );
+
+        if (!roles.rows.length) {
+            return res.status(403).json({ success: false, message: 'This account is not active' });
+        }
+
+        const best = roles.rows.reduce((a, r) => ((ROLE_PRIORITY[r.role_name] || 0) > (ROLE_PRIORITY[a.role_name] || 0) ? r : a));
+
+        req.user = {
+            userId: local.userId,
+            email: local.email,
+            role: best.role_name,
+            roleId: best.role_id,
+            authUserId: authUser.id
+        };
+
+        return next();
+
+    } catch (error) {
+
+        console.error('Supabase authentication error:', error.message);
+        return res.status(503).json({ success: false, message: 'Sign-in is unavailable right now. Try again in a moment' });
+
+    }
+}
+
 
 
 // ============================================================
@@ -7,6 +69,11 @@ const pool = require('../config/database');
 // ============================================================
 
 async function authenticateToken(req, res, next) {
+
+    // Supabase sign-in (website and app on Supabase)
+    if (supabaseAuth.enabled()) {
+        return authenticateSupabase(req, res, next);
+    }
 
     try {
 

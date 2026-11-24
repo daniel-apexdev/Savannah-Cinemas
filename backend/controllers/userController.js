@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
+const supabaseAuth = require('../services/supabaseAuth');
 
 
 // ============================================================
@@ -943,7 +944,11 @@ async function deleteMyAccount(req, res) {
         const userId = req.user.userId;
         const { password } = req.body || {};
 
-        if (!password || typeof password !== 'string') {
+        // With Supabase sign-in the app confirms the password with
+        // Supabase before calling this, so there's no hash to check here.
+        const viaSupabase = supabaseAuth.enabled();
+
+        if (!viaSupabase && (!password || typeof password !== 'string')) {
 
             return res.status(400).json({
                 success: false,
@@ -977,9 +982,9 @@ async function deleteMyAccount(req, res) {
 
         }
 
-        const passwordMatch = await bcrypt.compare(
+        const passwordMatch = viaSupabase || await bcrypt.compare(
             password,
-            userResult.rows[0].password_hash
+            userResult.rows[0].password_hash || ''
         );
 
         if (!passwordMatch) {
@@ -1114,7 +1119,18 @@ async function deleteMyAccount(req, res) {
             [userId, lockedHash]
         );
 
+        if (viaSupabase) {
+            await client.query(`UPDATE users SET auth_user_id = NULL WHERE user_id = $1`, [userId]);
+        }
+
         await client.query('COMMIT');
+
+        // Remove the Supabase sign-in too, so the email can sign up again
+        if (viaSupabase && req.user.authUserId) {
+            await supabaseAuth.deleteAuthUser(req.user.authUserId).catch((e) => {
+                console.error('❌ Could not delete the Supabase sign-in:', e.message);
+            });
+        }
 
         console.log(`🗑️ Account deleted (anonymised) | User: ${userId}`);
 
@@ -1162,4 +1178,4 @@ module.exports = {
     updateMyProfile,
     changeMyPassword,
     deleteMyAccount
-};
+};

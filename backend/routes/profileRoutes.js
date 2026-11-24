@@ -12,6 +12,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const supabaseAuth = require('../services/supabaseAuth');
 const look = require('../services/profileLook');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
@@ -37,9 +38,17 @@ router.get('/username/check', async (req, res) => {
         // Signed-in callers may "check" their own current name
         let me = null;
         const header = req.headers.authorization || '';
-        if (header.startsWith('Bearer ') && process.env.JWT_SECRET) {
+        if (header.startsWith('Bearer ')) {
             try {
-                me = jwt.verify(header.slice(7), process.env.JWT_SECRET).userId ?? null;
+                if (supabaseAuth.enabled()) {
+                    const authUser = await supabaseAuth.userForToken(header.slice(7));
+                    if (authUser) {
+                        const r = await pool.query('SELECT user_id FROM users WHERE auth_user_id = $1', [authUser.id]);
+                        me = r.rows[0] ? Number(r.rows[0].user_id) : null;
+                    }
+                } else if (process.env.JWT_SECRET) {
+                    me = jwt.verify(header.slice(7), process.env.JWT_SECRET).userId ?? null;
+                }
             } catch (_) {
                 me = null;
             }

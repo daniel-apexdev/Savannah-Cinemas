@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Poster } from '@/components/artwork';
@@ -16,6 +16,7 @@ import { setSetting, useSetting, type FilmsLayout } from '@/lib/settings';
 import type { Movie, ShowtimeListItem } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
+import { usePageWidth } from '@/lib/layout';
 import { colors, fonts, isWeb, space } from '@/theme';
 
 type Shelf = 'now' | 'coming';
@@ -24,8 +25,8 @@ const GAP = 10;
 
 export default function Films() {
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
-  const width = Math.min(winW, MAX_W);
+  // Wider on desktop web (lib/layout)
+  const width = usePageWidth(MAX_W, 1120);
   const { user } = useAuth();
   const [shelf, setShelf] = useState<Shelf>('now');
   // Count for the Watchlist link (the list itself has its own screen)
@@ -199,7 +200,9 @@ export default function Films() {
 }
 
 /** Poster wall: a large poster with two stacked beside it, then a row of three; repeat. */
-function Wall({ movies, width, onOpen, remind }: { movies: Movie[]; width: number; onOpen: (m: Movie) => void; remind?: boolean }) {
+function Wall({ movies, width: full, onOpen, remind }: { movies: Movie[]; width: number; onOpen: (m: Movie) => void; remind?: boolean }) {
+  // The wall reads best up to tablet width; on desktop it sits centred
+  const width = Math.min(full, 820);
   const inner = width - space.gutter * 2;
   const small = Math.floor((inner - GAP - GAP / 1.5) / 3);
   const big = inner - GAP - small;
@@ -237,7 +240,7 @@ function Wall({ movies, width, onOpen, remind }: { movies: Movie[]; width: numbe
   );
 
   return (
-    <View style={{ paddingHorizontal: space.gutter, gap: 14 }}>
+    <View style={{ paddingHorizontal: space.gutter, gap: 14, width, alignSelf: 'center' }}>
       {groups.map((g, gi) =>
         g.kind === 'feature' ? (
           <View key={gi} style={{ gap: 8 }}>
@@ -307,7 +310,7 @@ function LayoutSwitch({ value, onChange }: { value: FilmsLayout; onChange: (v: F
 /** Three across, title underneath: about nine films per screen. */
 function Grid({ movies, width, onOpen, remind }: { movies: Movie[]; width: number; onOpen: (m: Movie) => void; remind?: boolean }) {
   const inner = width - space.gutter * 2;
-  const cols = width >= 520 ? 4 : 3;
+  const cols = width >= 1000 ? 6 : width >= 760 ? 5 : width >= 520 ? 4 : 3;
   const w = Math.floor((inner - GAP * (cols - 1)) / cols);
   return (
     <View style={{ paddingHorizontal: space.gutter, flexDirection: 'row', flexWrap: 'wrap', columnGap: GAP, rowGap: 18 }}>
@@ -405,12 +408,13 @@ function Index({
   );
 }
 
-function WallSkeleton({ width }: { width: number }) {
+function WallSkeleton({ width: full }: { width: number }) {
+  const width = Math.min(full, 820);
   const inner = width - space.gutter * 2;
   const small = Math.floor((inner - GAP - GAP / 1.5) / 3);
   const big = inner - GAP - small;
   return (
-    <View style={{ paddingHorizontal: space.gutter, flexDirection: 'row', gap: GAP }}>
+    <View style={{ paddingHorizontal: space.gutter, flexDirection: 'row', gap: GAP, width, alignSelf: 'center' }}>
       <Shimmer style={{ width: big, height: big * 1.5 }} />
       <View style={{ gap: GAP }}>
         <Shimmer style={{ width: small, height: small * 1.5 }} />

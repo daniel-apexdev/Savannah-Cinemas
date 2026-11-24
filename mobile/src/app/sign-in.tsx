@@ -8,10 +8,21 @@ import { goBack } from '@/components/header';
 import { CloseIcon } from '@/components/icons';
 import { Body, Display, Label, Mono } from '@/components/type';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { ConfirmEmailError, SIGN_IN_WITH_SUPABASE, useAuth } from '@/lib/auth';
+import { storage } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import { colors, space } from '@/theme';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PENDING_REFERRAL = 'savannah.pendingReferral';
+
+/** Where the "choose a new password" email link opens: the website's /reset-password page. */
+function resetRedirect() {
+  const site = process.env.EXPO_PUBLIC_SITE_URL;
+  if (site) return `${site.replace(/\/+$/, '')}/reset-password`;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return `${window.location.origin}${process.env.EXPO_BASE_URL ?? ''}/reset-password`;
+  return undefined;
+}
 const MAX_W = 480;
 
 export default function SignIn() {
@@ -31,6 +42,8 @@ export default function SignIn() {
   const [joined, setJoined] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Good news that isn't an error: "check your email", "reset link sent"
+  const [notice, setNotice] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const pwRef = useRef<ComponentRef<typeof TextInput>>(null);
 
@@ -45,11 +58,19 @@ export default function SignIn() {
     }
     setTouched(true);
     setError(null);
+    setNotice(null);
     if (!EMAIL.test(email.trim()) || !password || (mode === 'up' && (password.length < 8 || !forenames.trim() || !surname.trim()))) return;
     setBusy(true);
     try {
-      if (mode === 'in') await signIn(email, password);
-      else {
+      if (mode === 'in') {
+        await signIn(email, password);
+        // A referral code from a sign-up that had to confirm its email first
+        const pending = await storage.get(PENDING_REFERRAL);
+        if (pending) {
+          storage.remove(PENDING_REFERRAL);
+          await api.claimReferral(pending).catch(() => {});
+        }
+      } else {
         await register({ forenames: forenames.trim(), surname: surname.trim(), email, password, phoneNumber: phone.trim() || undefined });
         if (referral.trim()) {
           try {
@@ -66,6 +87,15 @@ export default function SignIn() {
       }
       goBack('/');
     } catch (e: any) {
+      if (e instanceof ConfirmEmailError) {
+        // Supabase sends a confirmation link first; they sign in after
+        if (referral.trim()) await storage.set(PENDING_REFERRAL, referral.trim());
+        setMode('in');
+        setPassword('');
+        setTouched(false);
+        setNotice(e.message);
+        return;
+      }
       setError(e?.message ?? 'Something went wrong.');
     } finally {
       setBusy(false);
@@ -144,6 +174,35 @@ export default function SignIn() {
           </>
         ) : null}
 
+        {mode === 'in' && SIGN_IN_WITH_SUPABASE ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={async () => {
+              setError(null);
+              if (!EMAIL.test(email.trim())) {
+                setTouched(true);
+                setError('Enter your email above, then tap “Forgot password?” again.');
+                return;
+              }
+              const { error: e } = (await supabase?.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+                redirectTo: resetRedirect(),
+              })) ?? { error: null };
+              if (e) setError(e.message);
+              else setNotice(`If ${email.trim()} has an account, we’ve emailed a link to choose a new password.`);
+            }}
+            style={{ alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center', marginTop: -8 }}>
+            <Label color={colors.dust}>FORGOT PASSWORD?</Label>
+          </Pressable>
+        ) : null}
+
+        {notice ? (
+          <View style={{ borderLeftWidth: 4, borderLeftColor: colors.vip, paddingLeft: 12 }} accessibilityLiveRegion="polite">
+            <Body size={14} color={colors.bone}>
+              {notice}
+            </Body>
+          </View>
+        ) : null}
+
         {error ? (
           <View style={{ borderLeftWidth: 4, borderLeftColor: colors.laterite, paddingLeft: 12 }} accessibilityLiveRegion="assertive">
             <Mono size={13} color={colors.lateriteSoft}>
@@ -159,6 +218,7 @@ export default function SignIn() {
           onPress={() => {
             setMode(mode === 'in' ? 'up' : 'in');
             setError(null);
+            setNotice(null);
             setTouched(false);
           }}
           style={{ height: 44, justifyContent: 'center', alignItems: 'center' }}>

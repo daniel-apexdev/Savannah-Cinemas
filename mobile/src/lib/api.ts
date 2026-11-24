@@ -1,4 +1,5 @@
 import { API_BASE } from './config';
+import { supabase } from './supabase';
 import type {
   Basket,
   Booking,
@@ -130,6 +131,16 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
   return data as T;
 }
 
+/** Supabase: check a password by signing in again with it (401 if wrong). */
+async function confirmPassword(password: string) {
+  if (!supabase) return;
+  const { data } = await supabase.auth.getUser();
+  const email = data.user?.email;
+  if (!email) throw new ApiError('Please sign in again.', 401);
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new ApiError('That password is incorrect.', 401);
+}
+
 const basketToItems = (b: Basket) =>
   Object.values(b)
     .filter((l) => l.quantity > 0)
@@ -214,9 +225,25 @@ export const api = {
   updateProfile: (p: { forenames?: string; surname?: string; phoneNumber?: string | null; dateOfBirth?: string | null }) =>
     request<{ user: User }>('/users/me', { method: 'PATCH', auth: true, body: p }).then((r) => r.user),
   // A wrong password answers 401; these don't count as "signed out" (auth: false).
-  changePassword: (currentPassword: string, newPassword: string) =>
-    request('/users/me/password', { method: 'PATCH', body: { currentPassword, newPassword } }),
-  deleteAccount: (password: string) => request('/users/me', { method: 'DELETE', body: { password } }),
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    if (supabase) {
+      // Passwords live in Supabase: confirm the current one, then change it there
+      await confirmPassword(currentPassword);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw new ApiError(error.message || 'Could not change the password', error.status ?? 400);
+      return {};
+    }
+    return request('/users/me/password', { method: 'PATCH', body: { currentPassword, newPassword } });
+  },
+  deleteAccount: async (password: string) => {
+    if (supabase) {
+      await confirmPassword(password);
+      const r = await request('/users/me', { method: 'DELETE', body: {} });
+      await supabase.auth.signOut().catch(() => {});
+      return r;
+    }
+    return request('/users/me', { method: 'DELETE', body: { password } });
+  },
   cinemas: () => request<{ cinemas: Cinema[] }>('/cinemas').then((r) => r.cinemas),
   // Special nights (Throwback Thursday, Bargain Tuesday...)
   specials: () =>

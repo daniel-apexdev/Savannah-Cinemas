@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 /**
  * Where the Savannah Cinemas backend lives.
  *
+ * 0. On Supabase: the api Edge Function (EXPO_PUBLIC_SUPABASE_URL).
  * 1. EXPO_PUBLIC_API_URL wins if set (e.g. http://192.168.1.10:5000/api
  *    or your hosted server). Put it in mobile/.env.
  * 2. In development, the phone already talks to your computer's Expo
@@ -23,9 +24,20 @@ function devHostAddress(): string | null {
   return host || null;
 }
 
+/**
+ * Supabase (the hosted setup): sign-in through Supabase Auth, and the
+ * API is the "api" Edge Function at <project>/functions/v1/api.
+ * Set both in mobile/.env (and as GitHub secrets for the website).
+ */
+export const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/+$/, '');
+export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+export const USE_SUPABASE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+
 function resolveApiBase(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
+
+  if (SUPABASE_URL) return `${SUPABASE_URL}/functions/v1/api`;
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.hostname}:${API_PORT}/api`;

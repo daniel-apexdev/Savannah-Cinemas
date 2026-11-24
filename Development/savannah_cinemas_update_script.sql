@@ -1,6 +1,17 @@
 -- ============================================================
 -- SAVANNAH CINEMAS - PostgreSQL 18 MASTER SCHEMA
 -- Converted from the Oracle schema
+--
+-- WARNING: this script DELETES EVERYTHING and rebuilds the base
+-- tables with sample data. Afterwards, bring the database up to date
+-- with the migrations:
+--
+--     cd backend
+--     npm run db:migrate
+--
+-- It also drops the tables the migrations created, including
+-- schema_migrations (the record of which migrations have run), so
+-- db:migrate applies all of them again from the start.
 -- ============================================================
 
 BEGIN;
@@ -17,7 +28,12 @@ DROP TABLE IF EXISTS
     production_companies, movie_images, movie_videos, movie_crew,
     movie_cast, movie_genres, movies, people, genres, studios, seats,
     screens, staff_profiles, customer_profiles, cinemas,
-    user_role_assignments, user_roles, users
+    user_role_assignments, user_roles, users,
+    -- tables created by Development/migrations (rebuilt by npm run db:migrate)
+    schema_migrations, special_screenings, special_programmes,
+    concession_options, concession_order_items, concession_orders,
+    concession_items, cinema_events, film_reminders, user_notifications,
+    user_trophies, referrals, app_settings
 CASCADE;
 
 -- ============================================================
@@ -126,7 +142,7 @@ CREATE TABLE screens (
 );
 
 INSERT INTO screens(cinema_id,screen_name,screen_number,capacity,screen_type,sound_system) VALUES
-(1,'Screen 1',1,10,'STANDARD','Dolby Digital'),
+(1,'Screen 1',1,52,'STANDARD','Dolby Digital'),
 (1,'Screen 2',2,10,'VIP','Dolby Atmos');
 
 -- ============================================================

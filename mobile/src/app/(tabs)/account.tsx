@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Poster } from '@/components/artwork';
@@ -23,6 +23,7 @@ import { setSetting, useSetting } from '@/lib/settings';
 import type { Booking } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
+import { usePageWidth } from '@/lib/layout';
 import { colors, radius, space, touch } from '@/theme';
 
 const MAX_W = 560;
@@ -47,8 +48,8 @@ function statusOf(b: Booking, now: number) {
 /** Account: who you are, your tickets, snack orders, and settings. */
 export default function Account() {
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
-  const width = Math.min(winW, MAX_W);
+  // Wider on desktop web (lib/layout)
+  const width = usePageWidth(MAX_W, 820);
   const { user, signOut } = useAuth();
   const now = useNow();
   // Page tab. A link can open a tab (/account?tab=trophies&at=…); a tap wins until the next link.

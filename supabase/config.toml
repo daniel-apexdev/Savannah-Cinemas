@@ -1,0 +1,9 @@
+# Supabase CLI settings for Savannah Cinemas.
+# Link this folder to your project once with:  npx supabase link --project-ref <your-ref>
+project_id = "savannah-cinemas"
+
+[functions.api]
+# The api function checks Supabase sign-in tokens itself (see
+# backend/services/supabaseAuth.js), so public routes such as the film
+# list work without a token.
+verify_jwt = false

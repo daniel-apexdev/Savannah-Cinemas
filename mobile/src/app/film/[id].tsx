@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Backdrop, Poster } from '@/components/artwork';
@@ -22,6 +22,7 @@ import { clock, dayFromKey, dayKey, dot, isToday, opens, rating, releaseDay, run
 import type { MovieShowtime } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
+import { usePageWidth } from '@/lib/layout';
 import { colors, radius, space } from '@/theme';
 
 const MAX_W = 560;
@@ -30,8 +31,8 @@ export default function FilmDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const movieId = Number(id);
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
-  const width = Math.min(winW, MAX_W);
+  // Wider on desktop web (lib/layout)
+  const width = usePageWidth(MAX_W, 820);
   const { user } = useAuth();
   const now = useNow();
   const [reminded, toggleReminder] = useFilmReminder(movieId);

@@ -1,378 +1,116 @@
-# 🎬 Savannah Cinemas
+# Savannah Cinemas
 
-A full-featured cinema booking and movie discovery web application with user authentication, watchlist management, and ticket booking capabilities.
+Cinema booking for **Savannah Cinemas, Accra Mall and West Hills Mall**: films, showtimes, seat booking with snacks, tickets, points, watchlist and reminders.
 
-![Savannah Cinemas](https://img.shields.io/badge/Savannah-Cinemas-gold?style=for-the-badge&logo=cinema)
-![Node.js](https://img.shields.io/badge/Node.js-18.x-green?style=flat-square&logo=node.js)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Running the Application](#running-the-application)
-- [API Endpoints](#api-endpoints)
-- [Screenshots](#screenshots)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-## 📖 Overview
-
-**Savannah Cinemas** is a modern cinema management system that allows users to:
-
-- Browse popular and upcoming movies
-- Search for films using the TMDB API
-- Create accounts and manage profiles
-- Add movies to a personal watchlist
-- Mark films as watched or favorite
-- Book tickets for showtimes
-- View booking history
-- Track viewing statistics
-
-The application features a dark-themed, responsive UI built with vanilla JavaScript, HTML, and CSS, with a Node.js backend using file-based storage.
-
----
-
-## ✨ Features
-
-### 🎯 User Authentication
-- Register with email and password
-- Secure login with JWT tokens
-- Password reset via email
-- Profile management
-- Session persistence
-
-### 🎬 Movie Discovery
-- Browse popular movies from TMDB
-- Search for any film
-- View detailed movie information
-- See cast and crew
-- Watch trailers
-- Infinite scroll on discovery page
-
-### ⏰ Coming Soon
-- View upcoming films
-- Filter by year and sort by various criteria
-- Get notifications for upcoming releases
-- Add upcoming films to watchlist
-
-### ❤️ Watchlist
-- Add/remove films from watchlist
-- Mark films as watched/unwatched
-- Mark films as favorites
-- Filter by watched, unwatched, or favorites
-- Sort by newest, oldest, rating, or title
-- Track viewing statistics
-
-### 🎟️ Ticket Booking
-- Select showtime and screen
-- Choose number of tickets
-- Interactive seat selection
-- Add snacks and drinks
-- View booking summary
-- Checkout and confirmation
-
-### 📊 User Profile
-- View watchlist
-- See booking history
-- Track movie statistics
-- Genre preference analysis
-- Account settings
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **HTML5** - Semantic markup
-- **CSS3** - Custom properties, flexbox, grid, responsive design
-- **Vanilla JavaScript** - No frameworks, pure JS
-- **Font Awesome** - Icons
-- **Google Fonts** - Inter, Oswald, Playfair Display
-
-### Backend
-- **Node.js** - Runtime environment
-- **Express** - Web framework
-- **JWT** - Authentication tokens
-- **bcryptjs** - Password hashing
-- **Nodemailer** - Email service
-- **dotenv** - Environment variables
-
-### APIs
-- **TMDB API** - Movie data (popular, upcoming, search, details)
-- **Gmail SMTP** - Email notifications
-
-### Storage
-- **File-based JSON** - No database required for this version
-
----
-
-## 📁 Project Structure
+| Part | Where | What it is |
+| --- | --- | --- |
+| App (phone + web) | `mobile/` | Expo SDK 58, Expo Router, TypeScript. The same code builds the Android/iOS app and the website. |
+| API | `backend/` | Express + Postgres. Runs on Supabase as one Edge Function (`api`), or locally with Node. |
+| Database | `supabase/migrations/` | One consolidated Postgres migration (built from `Development/migrations/`). |
+| Website | GitHub Pages | The web build of the app: https://daniel-apexdev.github.io/Savannah-Cinemas/ |
+| Old website | `archive/website-v1/` | The original HTML pages, kept for reference. |
 
 ```
-savannah-cinemas/
-├── server.js                 # Main backend server
-├── package.json              # Node.js dependencies
-├── .env                      # Environment variables
-├── data.json                 # User and watchlist storage
-├── password.txt              # App password storage
-├── index.html                # Homepage
-├── auth.html                 # Login/Register page
-├── coming-soon.html          # Upcoming films page
-├── discovery.html            # Movie discovery page
-├── movie-details.html        # Movie details page
-├── booking.html              # Seat selection page
-├── checkout.html             # Checkout page
-├── profile.html              # User profile page
-├── seats.html                # Alternative seat selection
-├── events.html               # Events page
-├── extras.html               # Extras page
-├── images/                   # Image assets
-│   ├── popcorn-image.jpg
-│   ├── coke-image.jpg
-│   ├── malta-guinness.jpg
-│   ├── fanta-image.jpg
-│   └── sprite-image.jpg
-└── README.md                 # This file
+backend/          Express API (controllers, routes, services, jobs)
+mobile/           Expo app: src/app = screens, src/lib = api/auth/supabase
+supabase/
+  config.toml     CLI settings (api function: verify_jwt = false)
+  migrations/     database schema for Supabase
+  functions/api/  Edge Function entry; server.bundle.js is built from backend/
+  cron.sql        pg_cron schedules for the jobs
+  build-migration.py   rebuilds the migration from Development/
+Development/      Postgres scripts and dated migrations (source of truth)
+images/           shared pictures (snacks/...), published with the website
 ```
 
 ---
 
-## 🚀 Installation
+## How it fits together on Supabase
 
-### Prerequisites
+- **Sign-in**: Supabase Auth (email + password). The app uses `@supabase/supabase-js`; the API checks the token with Supabase and links it to a row in `users` (`users.auth_user_id`).
+- **API**: the whole Express server is bundled into the `api` Edge Function. Routes are unchanged: `/api/movies` is served at `https://<project-ref>.supabase.co/functions/v1/api/movies`.
+- **Database**: Supabase Postgres. Row Level Security is on for every table with no policies, so the public anon key can't read tables directly; everything goes through the API.
+- **Jobs**: pg_cron calls `POST /api/jobs/{movie-status|notifications|showtimes|catalog}` with an `x-cron-secret` header (see `supabase/cron.sql`).
+- **Email**: Gmail SMTP on port 465 (Supabase blocks 25 and 587).
 
-- **Node.js** (v18 or higher)
-- **npm** (v9 or higher)
-- **TMDB API Key** ([Get one here](https://www.themoviedb.org/signup))
-- **Gmail Account** (for email features)
+---
 
-### Setup Steps
+## First-time setup
 
-1. **Clone the repository**
+### 1. Create the Supabase project
+1. On https://supabase.com create a project (region: closest to Ghana, e.g. `eu-west`).
+2. From **Project Settings > API** note the **Project URL**, the **anon** key, and the **project ref** (the part before `.supabase.co`).
 
+### 2. Create the database
+Either, from the repo root:
 ```bash
-git clone https://github.com/yourusername/savannah-cinemas.git
-cd savannah-cinemas
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase db push
 ```
+or open `supabase/migrations/20261124120000_savannah_cinemas.sql` and run it in the dashboard's **SQL editor**.
 
-2. **Install dependencies**
+### 3. Auth settings (Authentication in the dashboard)
+- **URL Configuration > Site URL**: `https://daniel-apexdev.github.io/Savannah-Cinemas`
+- **Redirect URLs**: add `https://daniel-apexdev.github.io/Savannah-Cinemas/**` and, for testing, `http://localhost:8081/**`
+- **Sign In / Providers > Email**: turn *Confirm email* on or off. With it on, new accounts get a confirmation email before they can sign in (the app tells them so).
+- Optional: **SMTP Settings** so auth emails come from your Gmail instead of Supabase's limited sender.
 
+### 4. Function secrets
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL` are provided automatically. Set the rest:
 ```bash
+npx supabase secrets set CRON_SECRET=<long random string> ^
+  PUBLIC_SITE_URL=https://daniel-apexdev.github.io/Savannah-Cinemas ^
+  TMDB_API_KEY=<tmdb key> ^
+  GMAIL_USER=<address> GMAIL_APP_PASSWORD=<app password>
+```
+(`^` continues a line in Windows cmd; use a backtick in PowerShell or put it on one line.)
+
+### 5. Deploy the API
+```bash
+cd backend
 npm install
+npm run deploy:api
 ```
+This bundles the server into `supabase/functions/api/server.bundle.js` and deploys it. Check it: `https://<project-ref>.supabase.co/functions/v1/api/movies`.
 
-3. **Create a `.env` file** in the root directory
+### 6. Schedule the jobs
+In the SQL editor, save the two Vault values described at the top of `supabase/cron.sql`, then run the file.
 
-```env
-# Server Configuration
-PORT=5000
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# Gmail SMTP Configuration
-GMAIL_USER=your-email@gmail.com
-GMAIL_APP_PASSWORD=your-16-digit-app-password
-
-# Optional: TMDB API Key (already in frontend)
-TMDB_API_KEY=your-tmdb-api-key
-```
-
-4. **Get a Gmail App Password**
-
-   - Go to [Google App Passwords](https://myaccount.google.com/apppasswords)
-   - Select "Mail" as the app
-   - Select "Other" as the device
-   - Copy the 16-character password
-   - Add it to your `.env` file
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `PORT` | Server port (default: 5000) | No |
-| `JWT_SECRET` | Secret for JWT tokens | Yes |
-| `GMAIL_USER` | Gmail address for sending emails | No |
-| `GMAIL_APP_PASSWORD` | Gmail app password | No |
-
-### TMDB API Key
-
-The TMDB API key is embedded in the frontend JavaScript files. You can replace it with your own:
-
-```javascript
-const API_KEY = 'your-tmdb-api-key';
-```
-
-Files containing the API key:
-- `index.html`
-- `coming-soon.html`
-- `discovery.html`
-- `movie-details.html`
-- `booking.html`
-- `seats.html`
-
----
-
-## ▶️ Running the Application
-
-### Development Mode
-
+### 7. First film sync
+Run the jobs once (any terminal):
 ```bash
-node server.js
+curl -X POST -H "x-cron-secret: <CRON_SECRET>" "https://<project-ref>.supabase.co/functions/v1/api/jobs/catalog?pages=3"
+curl -X POST -H "x-cron-secret: <CRON_SECRET>" https://<project-ref>.supabase.co/functions/v1/api/jobs/movie-status
+curl -X POST -H "x-cron-secret: <CRON_SECRET>" https://<project-ref>.supabase.co/functions/v1/api/jobs/showtimes
 ```
+Or locally: put the Supabase connection string in `backend/.env` as `DATABASE_URL` and run `npm run movies:sync` then `npm run showtimes:generate`.
 
-The server will start at: `http://localhost:5000`
-
-### Access on Other Devices
-
-To access from your phone or other devices on the same network:
-
-1. **Find your IP address**
-
-   - Windows: `ipconfig` → IPv4 Address
-   - Mac/Linux: `ifconfig` or `ip addr` → inet
-
-2. **Update the API URLs** in all HTML files to use your IP:
-
-```javascript
-// Replace localhost with your IP
-const API_URL = 'http://192.168.1.100:5000/api';
-```
-
-3. **Update server.js** to listen on all interfaces:
-
-```javascript
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-});
-```
-
-4. **Access from any device** using: `http://YOUR_IP:5000`
-
----
-
-## 📡 API Endpoints
-
-### Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register a new user |
-| POST | `/api/auth/login` | Login user |
-| GET | `/api/auth/me` | Get current user |
-| POST | `/api/auth/request-reset` | Request password reset |
-| POST | `/api/auth/reset-password` | Reset password |
-
-### Watchlist
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/watchlist` | Get user's watchlist |
-| POST | `/api/watchlist` | Add film to watchlist |
-| DELETE | `/api/watchlist/:filmId` | Remove film from watchlist |
-| POST | `/api/watchlist/toggle-watched` | Toggle watched status |
-| POST | `/api/watchlist/toggle-favorite` | Toggle favorite status |
-
-### Bookings
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/bookings` | Get user's bookings |
-| POST | `/api/bookings` | Create a booking |
-
-### Email
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/send-booking-email` | Send booking confirmation email |
-
----
-
-## 📸 Screenshots
-
-### Homepage
-![Homepage](https://via.placeholder.com/800x400?text=Homepage)
-
-### Movie Details
-![Movie Details](https://via.placeholder.com/800x400?text=Movie+Details)
-
-### Seat Selection
-![Seat Selection](https://via.placeholder.com/800x400?text=Seat+Selection)
-
-### User Profile
-![User Profile](https://via.placeholder.com/800x400?text=User+Profile)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. **Fork the repository**
-2. **Create a feature branch**
+### 8. The app
+Copy `mobile/.env.example` to `mobile/.env` and fill in the Supabase URL and anon key, then:
 ```bash
-git checkout -b feature/amazing-feature
+cd mobile
+npm install
+npx expo start          # phone (Expo Go / dev build) and web on http://localhost:8081
 ```
-3. **Commit your changes**
-```bash
-git commit -m 'Add amazing feature'
-```
-4. **Push to the branch**
-```bash
-git push origin feature/amazing-feature
-```
-5. **Open a Pull Request**
 
-### Coding Standards
-
-- Use consistent indentation (2 spaces)
-- Write meaningful commit messages
-- Test your changes before submitting
-- Update the README if needed
+### 9. The website (GitHub Pages)
+1. **Settings > Pages > Source**: *GitHub Actions*.
+2. **Settings > Secrets and variables > Actions**: add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+3. Push to `main` (or run *Deploy web app* from the Actions tab). The workflow in `.github/workflows/deploy-web.yml` builds the web version, adds `images/`, and publishes it.
 
 ---
 
-## 📄 License
+## Everyday work
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+| Task | Command |
+| --- | --- |
+| Run the app | `cd mobile && npx expo start` |
+| Android dev build | `cd mobile && npx expo run:android` (iOS builds go through EAS: `eas build -p ios`) |
+| Redeploy the API after backend changes | `cd backend && npm run deploy:api` |
+| New database change | add a dated file to `Development/migrations/`, then `npx supabase migration new <name>` with the same SQL and `npx supabase db push` |
+| Run the API locally (Node) | `cd backend && npm start` (uses `backend/.env`) |
+| Publish the website | push to `main` |
 
----
-
-## 🙏 Acknowledgments
-
-- [TMDB](https://www.themoviedb.org/) for the movie database API
-- [Font Awesome](https://fontawesome.com/) for icons
-- [Google Fonts](https://fonts.google.com/) for typography
-- [Unsplash](https://unsplash.com/) for placeholder images
-
----
-
-## 📞 Support
-
-For support, email support@savannahcinemas.com or open an issue on GitHub.
-
----
-
-## 🚧 Roadmap
-
-- [ ] Mobile app using React Native
-- [ ] Social sharing features
-- [ ] Reviews and ratings
-- [ ] Loyalty program
-- [ ] Real-time seat availability
-- [ ] Payment integration
-- [ ] Admin dashboard
-- [ ] Email newsletter integration
-
----
-
-**Built with ❤️ by the Savannah Cinemas Team**
+## Licence
+MIT.

@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Field } from '@/components/controls';
@@ -16,6 +16,7 @@ import { peekPendingPromo, takePendingPromo } from '@/lib/promo';
 import { clock, dot, money, shortDate, toNumber } from '@/lib/format';
 import type { Seat } from '@/lib/types';
 import { useRequest } from '@/lib/use-request';
+import { usePageWidth } from '@/lib/layout';
 import { colors, radius, space } from '@/theme';
 
 const MAX_SEATS = 10;
@@ -60,8 +61,8 @@ export default function Seats() {
   const { showtimeId } = useLocalSearchParams<{ showtimeId: string }>();
   const id = Number(showtimeId);
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
-  const width = Math.min(winW, MAX_W);
+  // Wider on desktop web (lib/layout)
+  const width = usePageWidth(MAX_W, 760);
   const { user } = useAuth();
 
   const req = useRequest(async () => {

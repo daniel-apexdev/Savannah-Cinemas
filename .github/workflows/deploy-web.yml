@@ -1,0 +1,75 @@
+# Builds the Savannah Cinemas app for the web and publishes it to
+# GitHub Pages: https://daniel-apexdev.github.io/Savannah-Cinemas/
+#
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   EXPO_PUBLIC_SUPABASE_URL       https://<project-ref>.supabase.co
+#   EXPO_PUBLIC_SUPABASE_ANON_KEY  the project's anon (public) key
+# and Settings > Pages > Source set to "GitHub Actions".
+
+name: Deploy web app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'images/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+
+      - name: Build for the web
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: npx expo export -p web
+
+      - name: Add site images and page fallback
+        run: |
+          # Snack photos and other shared pictures (served at /images/...)
+          cp -r ../images dist/images
+          # Pages has no rewrites: unknown paths load the app, which then
+          # routes them (film links, /reset-password, ...)
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: mobile/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useRef, useState, type ComponentRef } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Backdrop, Poster } from '@/components/artwork';
@@ -18,6 +18,7 @@ import { useLocation } from '@/lib/location';
 import { specialLabel, useSpecials } from '@/lib/specials';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
+import { usePageWidth, useWide } from '@/lib/layout';
 import { colors, space, touch } from '@/theme';
 
 // Matches the showtime generator's fortnight
@@ -28,8 +29,9 @@ type FilmRow = { movie: Movie | undefined; movieId: number; title: string; poste
 
 export default function Tonight() {
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
-  const width = Math.min(winW, MAX_W);
+  // Wider on desktop web (lib/layout)
+  const width = usePageWidth(MAX_W, 760);
+  const wide = useWide();
   const { user } = useAuth();
 
   const req = useRequest(async () => {
@@ -76,11 +78,7 @@ export default function Tonight() {
 
   // How full is the next show? One small request, only for the hero.
   const heroId = hero?.showtimeId;
-  const heroSeats = useRequest(
-    () => (heroId ? api.showtimeSeats(heroId) : Promise.reject(new Error('no show'))),
-    [heroId],
-    { enabled: !!heroId },
-  );
+  const heroSeats = useRequest(() => (heroId ? api.showtimeSeats(heroId) : Promise.reject(new Error('no show'))), [heroId], { enabled: !!heroId });
   const seatsLeft = heroSeats.data?.summary.availableSeats;
 
   const rows: FilmRow[] = useMemo(() => {
@@ -137,19 +135,21 @@ export default function Tonight() {
           <View style={styles.mast}>
             <View style={{ gap: 2, flexShrink: 1 }}>
               <Display size={30} black accessibilityRole="header">
-                Savannah Cinemas
+                {wide ? 'Tonight' : 'Savannah Cinemas'}
               </Display>
               <LocationButton onChange={() => setPicked(null)} />
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={user ? 'Your account' : 'Sign in'}
-              onPress={() => (user ? router.navigate('/account') : router.push('/sign-in'))}
-              style={({ pressed }) => [user ? null : [styles.avatar, styles.signIn], pressed && { opacity: 0.7 }]}>
-              {user ? <Avatar user={user} size={touch} /> : <Mono size={13}>SIGN IN</Mono>}
-            </Pressable>
+            {/* On desktop the site header already carries Account / Sign in */}
+            {!wide && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={user ? 'Your account' : 'Sign in'}
+                onPress={() => (user ? router.navigate('/account') : router.push('/sign-in'))}
+                style={({ pressed }) => [user ? null : [styles.avatar, styles.signIn], pressed && { opacity: 0.7 }]}>
+                {user ? <Avatar user={user} size={touch} /> : <Mono size={13}>SIGN IN</Mono>}
+              </Pressable>
+            )}
           </View>
-
         </View>
 
         <View style={styles.dateBar}>
@@ -230,7 +230,10 @@ export default function Tonight() {
               <Mono size={12.5} color={colors.inkSoft}>
                 {dot(
                   specials.byShowtime.get(hero.showtimeId)
-                    ? specialLabel(specials.programme(specials.byShowtime.get(hero.showtimeId)!.programme)?.name, specials.byShowtime.get(hero.showtimeId)!.discountPercent)
+                    ? specialLabel(
+                        specials.programme(specials.byShowtime.get(hero.showtimeId)!.programme)?.name,
+                        specials.byShowtime.get(hero.showtimeId)!.discountPercent,
+                      )
                     : null,
                   clock(hero.startTime),
                   hero.screenName.toUpperCase(),
@@ -247,12 +250,7 @@ export default function Tonight() {
                   onPress={() => openSeats(hero.showtimeId)}
                 />
                 {heroMovie?.trailerUrl ? (
-                  <Button
-                    style={{ width: 116 }}
-                    variant="outlineInk"
-                    label="Trailer"
-                    onPress={() => setTrailerOpen(true)}
-                  />
+                  <Button style={{ width: 116 }} variant="outlineInk" label="Trailer" onPress={() => setTrailerOpen(true)} />
                 ) : (
                   <Button style={{ width: 116 }} variant="outlineInk" label="Details" onPress={() => openFilm(hero.movieId)} />
                 )}
@@ -263,7 +261,9 @@ export default function Tonight() {
               <>
                 <View style={styles.secHead}>
                   <Display size={24}>{isToday(selectedDate) ? 'Later tonight' : 'Also showing'}</Display>
-                  <Label>{rows.length} {rows.length === 1 ? 'FILM' : 'FILMS'}</Label>
+                  <Label>
+                    {rows.length} {rows.length === 1 ? 'FILM' : 'FILMS'}
+                  </Label>
                 </View>
                 {rows.map((r, i) => (
                   <View key={r.movieId} style={[styles.row, i < rows.length - 1 && styles.rowRule]}>
@@ -281,9 +281,7 @@ export default function Tonight() {
                       </Body>
                       {(() => {
                         const sp = r.times.map((t) => specials.byShowtime.get(t.showtimeId)).find(Boolean);
-                        return sp ? (
-                          <Label color={colors.vip}>{specialLabel(specials.programme(sp.programme)?.name, sp.discountPercent)}</Label>
-                        ) : null;
+                        return sp ? <Label color={colors.vip}>{specialLabel(specials.programme(sp.programme)?.name, sp.discountPercent)}</Label> : null;
                       })()}
                       <View style={styles.tokens}>
                         {r.times.map((s) => (
@@ -354,4 +352,3 @@ const styles = StyleSheet.create({
   rowRule: { borderBottomWidth: 1, borderBottomColor: colors.rule },
   tokens: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
 });
-

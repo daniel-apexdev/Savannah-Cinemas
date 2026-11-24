@@ -78,6 +78,7 @@ function Root() {
         <Stack.Screen name="watchlist" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="welcome" options={{ animation: "fade" }} />
+        <Stack.Screen name="reset-password" />
         <Stack.Screen name="profile-setup" />
         <Stack.Screen name="settings/profile" />
         <Stack.Screen name="settings/password" />

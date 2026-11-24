@@ -78,7 +78,11 @@ const JWT_SECRET =
 // ENVIRONMENT VALIDATION
 // ============================================================
 
-if (!JWT_SECRET) {
+// Running inside a Supabase Edge Function (see supabase/functions/api)
+const EDGE = process.env.RUNTIME === 'edge';
+const supabaseAuth = require('./services/supabaseAuth');
+
+if (!JWT_SECRET && !supabaseAuth.enabled()) {
 
     console.error(
         '❌ JWT_SECRET is not configured in .env'
@@ -95,6 +99,59 @@ if (!JWT_SECRET) {
 app.use(cors());
 
 app.use(express.json());
+
+
+// ============================================================
+// SCHEDULED JOBS (Supabase)
+// On Supabase there's no always-on server to run timers, so the
+// database's scheduler (pg_cron, see supabase/cron.sql) calls these.
+// Protected by CRON_SECRET.
+//   POST /api/jobs/movie-status   films move upcoming -> showing -> ended
+//   POST /api/jobs/notifications  booking reminders, film alerts
+//   POST /api/jobs/showtimes      keep the next two weeks programmed
+//   POST /api/jobs/catalog        new films from TMDB (?pages=1)
+// ============================================================
+
+app.post('/api/jobs/:job', async (req, res) => {
+
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers['x-cron-secret'] !== secret) {
+        return res.status(401).json({ success: false, message: 'Not allowed' });
+    }
+
+    const started = Date.now();
+
+    try {
+        let result;
+        switch (req.params.job) {
+            case 'movie-status':
+                result = { changed: await require('./services/movieStatus').refreshMovieStatuses() };
+                break;
+            case 'notifications':
+                result = await require('./services/notifications').generateDue();
+                break;
+            case 'showtimes': {
+                const r = await require('./services/showtimeScheduler').generateShowtimes(
+                    process.env.SHOWTIME_AUTOGEN_DAYS ? { days: Number(process.env.SHOWTIME_AUTOGEN_DAYS) } : {}
+                );
+                result = { from: r.from, to: r.to, created: r.created, removed: r.removed, specials: (r.specials || []).length };
+                break;
+            }
+            case 'catalog': {
+                const pages = Math.max(1, Math.min(3, Number(req.query.pages) || 1));
+                const r = await require('./services/catalogSync').syncCatalog({ nowPages: pages, upcomingPages: pages });
+                result = { inserted: r.inserted, updated: r.updated, skipped: r.skipped, failed: r.failed };
+                break;
+            }
+            default:
+                return res.status(404).json({ success: false, message: 'Unknown job' });
+        }
+        return res.json({ success: true, job: req.params.job, ms: Date.now() - started, result });
+    } catch (error) {
+        console.error(`❌ Job ${req.params.job} failed:`, error);
+        return res.status(500).json({ success: false, job: req.params.job, message: error.message });
+    }
+});
 
 
 // ============================================================
@@ -977,19 +1034,21 @@ async function shutdown() {
 }
 
 
-process.on(
-    'SIGINT',
-    shutdown
-);
-
-process.on(
-    'SIGTERM',
-    shutdown
-);
-
-
 // ============================================================
 // START APPLICATION
+// On Supabase (RUNTIME=edge) the Edge Function wrapper starts the
+// app; there are no timers there (see the jobs routes above).
 // ============================================================
 
-startServer();
+if (EDGE) {
+
+    module.exports = app;
+
+} else {
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+
+    startServer();
+
+}
