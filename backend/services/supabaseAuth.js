@@ -10,8 +10,13 @@
 // Everything else in the API keeps using users.user_id as before.
 //
 //   SUPABASE_URL               https://<project>.supabase.co
-//   SUPABASE_ANON_KEY          the public key (Edge Functions get it automatically)
-//   SUPABASE_SERVICE_ROLE_KEY  only for deleting an account's sign-in
+//   Public key:  SUPABASE_PUBLISHABLE_KEYS (new sb_publishable_ keys, JSON)
+//                or the legacy SUPABASE_ANON_KEY
+//   Secret key:  SUPABASE_SECRET_KEYS (new sb_secret_ keys, JSON) or the
+//                legacy SUPABASE_SERVICE_ROLE_KEY; only for deleting an
+//                account's sign-in
+// Edge Functions get all of these automatically. Legacy keys retire in
+// 2027, so the new ones are preferred when both exist.
 // ============================================================
 
 const pool = require('../config/database');
@@ -19,8 +24,32 @@ const pool = require('../config/database');
 const CACHE_MS = 60 * 1000;
 const cache = new Map(); // token -> { user, until }
 
+function fromKeySet(name) {
+    const raw = process.env[name];
+    if (!raw) return null;
+    try {
+        const keys = JSON.parse(raw);
+        return keys.default || Object.values(keys)[0] || null;
+    } catch {
+        return raw.startsWith('sb_') ? raw : null;
+    }
+}
+
+function publicKey() {
+    return fromKeySet('SUPABASE_PUBLISHABLE_KEYS') || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || secretKey();
+}
+
+function secretKey() {
+    return fromKeySet('SUPABASE_SECRET_KEYS') || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || null;
+}
+
+/** Headers for a call made with a project key. New sb_ keys aren't JWTs, so they only go in apikey. */
+function keyHeaders(key) {
+    return key.startsWith('eyJ') ? { apikey: key, Authorization: `Bearer ${key}` } : { apikey: key };
+}
+
 function enabled() {
-    return !!(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY));
+    return !!(process.env.SUPABASE_URL && publicKey());
 }
 
 function baseUrl() {
@@ -35,7 +64,7 @@ async function userForToken(token) {
 
     const res = await fetch(`${baseUrl()}/auth/v1/user`, {
         headers: {
-            apikey: process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+            apikey: publicKey(),
             Authorization: `Bearer ${token}`
         }
     });
@@ -166,13 +195,13 @@ async function ensureLocalUser(authUser) {
 /** Delete the Supabase sign-in for a user (account deletion). */
 async function deleteAuthUser(authUserId) {
 
-    if (!authUserId || !process.env.SUPABASE_SERVICE_ROLE_KEY) return false;
+    const key = secretKey();
+    if (!authUserId || !key) return false;
 
     const res = await fetch(`${baseUrl()}/auth/v1/admin/users/${authUserId}`, {
         method: 'DELETE',
         headers: {
-            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+            ...keyHeaders(key)
         }
     });
 

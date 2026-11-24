@@ -112,10 +112,26 @@ app.use(express.json());
 //   POST /api/jobs/catalog        new films from TMDB (?pages=1)
 // ============================================================
 
+// The jobs secret: the CRON_SECRET setting, or on Supabase the Vault
+// secret 'savannah_cron_secret' that supabase/cron.sql also reads.
+let vaultCronSecret = null;
+async function cronSecret() {
+    if (process.env.CRON_SECRET) return process.env.CRON_SECRET;
+    if (vaultCronSecret) return vaultCronSecret;
+    try {
+        const r = await pool.query("SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'savannah_cron_secret'");
+        vaultCronSecret = r.rows[0]?.decrypted_secret || null;
+    } catch {
+        vaultCronSecret = null; // no Vault (plain Postgres)
+    }
+    return vaultCronSecret;
+}
+
 app.post('/api/jobs/:job', async (req, res) => {
 
-    const secret = process.env.CRON_SECRET;
-    if (!secret || req.headers['x-cron-secret'] !== secret) {
+    const secret = await cronSecret();
+    const given = String(req.headers['x-cron-secret'] || '');
+    if (!secret || given.length !== secret.length || !require('crypto').timingSafeEqual(Buffer.from(given), Buffer.from(secret))) {
         return res.status(401).json({ success: false, message: 'Not allowed' });
     }
 

@@ -4,17 +4,27 @@
 -- The Node server used to run these on timers. On Supabase the api
 -- Edge Function has no timers, so pg_cron calls its job routes instead.
 --
--- 1. Save two values in Vault (SQL editor, once; not committed):
---
---    select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/api', 'savannah_api_url');
---    select vault.create_secret('<same value as the CRON_SECRET function secret>', 'savannah_cron_secret');
---
--- 2. Run this whole file in the SQL editor. Running it again just
---    updates the schedules.
+-- Run this whole file in the SQL editor after changing <project-ref>
+-- below. Running it again is safe: it keeps the existing secret and just
+-- updates the schedules.
 -- ============================================================
 
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
+
+-- Where the api function lives (Vault, so the jobs and the function
+-- agree on one place). Change <project-ref> before running.
+do $$
+begin
+  if not exists (select 1 from vault.secrets where name = 'savannah_api_url') then
+    perform vault.create_secret('https://<project-ref>.supabase.co/functions/v1/api', 'savannah_api_url', 'Savannah api Edge Function URL');
+  end if;
+  -- The shared jobs secret: random, kept in Vault. The api function reads
+  -- the same value from Vault, so nobody needs to copy it anywhere.
+  if not exists (select 1 from vault.secrets where name = 'savannah_cron_secret') then
+    perform vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'savannah_cron_secret', 'Secret for POST /api/jobs/*');
+  end if;
+end $$;
 
 create or replace function public.savannah_run_job(job text)
 returns bigint

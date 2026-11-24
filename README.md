@@ -39,7 +39,7 @@ images/           shared pictures (snacks/...), published with the website
 
 ### 1. Create the Supabase project
 1. On https://supabase.com create a project (region: closest to Ghana, e.g. `eu-west`).
-2. From **Project Settings > API** note the **Project URL**, the **anon** key, and the **project ref** (the part before `.supabase.co`).
+2. From **Project Settings > API Keys** note the **Project URL**, the **publishable** key (`sb_publishable_...`), and the **project ref** (the part before `.supabase.co`).
 
 ### 2. Create the database
 Either, from the repo root:
@@ -57,14 +57,16 @@ or open `supabase/migrations/20261124120000_savannah_cinemas.sql` and run it in 
 - Optional: **SMTP Settings** so auth emails come from your Gmail instead of Supabase's limited sender.
 
 ### 4. Function secrets
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL` are provided automatically. Set the rest:
-```bash
-npx supabase secrets set CRON_SECRET=<long random string> ^
-  PUBLIC_SITE_URL=https://daniel-apexdev.github.io/Savannah-Cinemas ^
-  TMDB_API_KEY=<tmdb key> ^
-  GMAIL_USER=<address> GMAIL_APP_PASSWORD=<app password>
-```
-(`^` continues a line in Windows cmd; use a backtick in PowerShell or put it on one line.)
+`SUPABASE_URL`, `SUPABASE_DB_URL` and the project keys (`SUPABASE_PUBLISHABLE_KEYS` / `SUPABASE_SECRET_KEYS`) are provided automatically. Add these under **Edge Functions > Secrets**:
+
+| Name | Value |
+| --- | --- |
+| `PUBLIC_SITE_URL` | `https://daniel-apexdev.github.io/Savannah-Cinemas` |
+| `TMDB_API_KEY` | your TMDB key |
+| `GMAIL_USER` | the Gmail address tickets are sent from |
+| `GMAIL_APP_PASSWORD` | a Gmail app password for that address |
+
+The jobs secret isn't set here: `supabase/cron.sql` creates a random one in Vault and the function reads it from there.
 
 ### 5. Deploy the API
 ```bash
@@ -75,19 +77,20 @@ npm run deploy:api
 This bundles the server into `supabase/functions/api/server.bundle.js` and deploys it. Check it: `https://<project-ref>.supabase.co/functions/v1/api/movies`.
 
 ### 6. Schedule the jobs
-In the SQL editor, save the two Vault values described at the top of `supabase/cron.sql`, then run the file.
+Replace `<project-ref>` in `supabase/cron.sql` and run it in the SQL editor.
 
 ### 7. First film sync
-Run the jobs once (any terminal):
-```bash
-curl -X POST -H "x-cron-secret: <CRON_SECRET>" "https://<project-ref>.supabase.co/functions/v1/api/jobs/catalog?pages=3"
-curl -X POST -H "x-cron-secret: <CRON_SECRET>" https://<project-ref>.supabase.co/functions/v1/api/jobs/movie-status
-curl -X POST -H "x-cron-secret: <CRON_SECRET>" https://<project-ref>.supabase.co/functions/v1/api/jobs/showtimes
+Run the jobs once from the SQL editor, one line at a time, waiting for each to finish:
+```sql
+select public.savannah_run_job('catalog?pages=3');
+select public.savannah_run_job('movie-status');
+select public.savannah_run_job('showtimes');
+-- replies: select status_code, left(content, 300) from net._http_response order by created desc;
 ```
 Or locally: put the Supabase connection string in `backend/.env` as `DATABASE_URL` and run `npm run movies:sync` then `npm run showtimes:generate`.
 
 ### 8. The app
-Copy `mobile/.env.example` to `mobile/.env` and fill in the Supabase URL and anon key, then:
+Copy `mobile/.env.example` to `mobile/.env` and fill in the Supabase URL and publishable key, then:
 ```bash
 cd mobile
 npm install
@@ -96,7 +99,7 @@ npx expo start          # phone (Expo Go / dev build) and web on http://localhos
 
 ### 9. The website (GitHub Pages)
 1. **Settings > Pages > Source**: *GitHub Actions*.
-2. **Settings > Secrets and variables > Actions**: add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+2. **Settings > Secrets and variables > Actions**: add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (the publishable key).
 3. Push to `main` (or run *Deploy web app* from the Actions tab). The workflow in `.github/workflows/deploy-web.yml` builds the web version, adds `images/`, and publishes it.
 
 ---
