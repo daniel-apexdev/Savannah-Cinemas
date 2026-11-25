@@ -12,6 +12,7 @@ import { colors, radius, touch } from '@/theme';
 
 import { Button } from './controls';
 import { Body, Display, Label, Mono } from './type';
+import { useScreen } from '@/lib/layout';
 
 export const MAX_EACH = 20;
 
@@ -159,12 +160,19 @@ export function Menu({
   basket,
   onChange,
   only,
+  columns = 1,
+  width = 0,
 }: {
   items: ConcessionItem[];
   basket: Basket;
   onChange: (b: Basket) => void;
   only?: string | null;
+  /** Website: items side by side within each category (`width` is the menu's width). */
+  columns?: number;
+  width?: number;
 }) {
+  const colGap = 28;
+  const itemW = columns > 1 ? Math.floor((width - colGap * (columns - 1)) / columns) : undefined;
   const [custom, setCustom] = useState<ConcessionItem | null>(null);
   const cats = categoriesOf(items).filter((c) => !only || c === only);
   return (
@@ -174,80 +182,86 @@ export function Menu({
           <View style={styles.catHead}>
             <Display size={22}>{titleCase(cat)}</Display>
           </View>
-          {items
-            .filter((i) => i.category.toUpperCase() === cat)
-            .map((it) => {
-              const hasOptions = (it.options ?? []).length > 0;
-              const lines = Object.entries(basket).filter(([, l]) => l.itemId === it.itemId);
-              const plainKey = lineKey(it.itemId, []);
-              const q = hasOptions ? lines.reduce((a, [, l]) => a + l.quantity, 0) : (basket[plainKey]?.quantity ?? 0);
-              const upgrades = (it.options ?? []).filter((o) => o.priceDelta > 0).length;
-              return (
-                <View key={it.itemId} style={styles.row}>
-                  <View style={styles.rowTop}>
-                    <Pressable
-                      disabled={!hasOptions}
-                      onPress={() => setCustom(it)}
-                      accessibilityRole={hasOptions ? 'button' : undefined}
-                      accessibilityLabel={hasOptions ? `Choose options for ${it.name}` : undefined}>
-                      <ItemImage uri={it.imageUrl} name={it.name} size={64} category={it.category} />
-                    </Pressable>
-                    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                      <Body weight="semi" color={colors.bone} numberOfLines={1}>
-                        {it.name}
-                      </Body>
-                      {it.description ? (
-                        <Body size={12.5} color={colors.dust} numberOfLines={2}>
-                          {it.description}
-                        </Body>
-                      ) : null}
-                      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                        <Mono size={13} color={q > 0 ? colors.lateriteSoft : colors.bone}>
-                          {hasOptions && upgrades ? 'from ' : ''}
-                          {money(it.price, it.currency)}
-                        </Mono>
-                        {upgrades ? (
-                          <Label color={colors.vip} size={9.5}>
-                            {upgrades} UPGRADE{upgrades === 1 ? '' : 'S'}
-                          </Label>
-                        ) : null}
-                      </View>
-                    </View>
-                    {hasOptions ? (
+          <View style={columns > 1 ? { flexDirection: 'row', flexWrap: 'wrap', columnGap: colGap } : null}>
+            {items
+              .filter((i) => i.category.toUpperCase() === cat)
+              .map((it) => {
+                const hasOptions = (it.options ?? []).length > 0;
+                const lines = Object.entries(basket).filter(([, l]) => l.itemId === it.itemId);
+                const plainKey = lineKey(it.itemId, []);
+                const q = hasOptions ? lines.reduce((a, [, l]) => a + l.quantity, 0) : (basket[plainKey]?.quantity ?? 0);
+                const upgrades = (it.options ?? []).filter((o) => o.priceDelta > 0).length;
+                return (
+                  <View key={it.itemId} style={[styles.row, itemW ? { width: itemW } : null]}>
+                    <View style={styles.rowTop}>
                       <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Choose ${it.name}`}
-                        onPress={() => {
-                          tick();
-                          setCustom(it);
-                        }}
-                        style={({ pressed }) => [styles.add, pressed && { opacity: 0.7 }]}>
-                        <Mono size={13} color={colors.bone}>
-                          {q > 0 ? '+ ANOTHER' : 'CHOOSE'}
-                        </Mono>
+                        disabled={!hasOptions}
+                        onPress={() => setCustom(it)}
+                        accessibilityRole={hasOptions ? 'button' : undefined}
+                        accessibilityLabel={hasOptions ? `Choose options for ${it.name}` : undefined}>
+                        <ItemImage uri={it.imageUrl} name={it.name} size={64} category={it.category} />
                       </Pressable>
-                    ) : (
-                      <Stepper name={it.name} value={q} onChange={(v) => onChange(setLine(basket, it.itemId, [], v))} />
-                    )}
-                  </View>
-                  {hasOptions && lines.length
-                    ? lines.map(([key, l]) => (
-                        <View key={key} style={styles.line}>
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Body size={13} color={colors.boneSoft} numberOfLines={2}>
-                              {optionsText(it, l.options) || it.name}
-                            </Body>
-                            <Mono size={11.5} color={colors.dust}>
-                              {money(unitPrice(it, l.options), it.currency)} each
-                            </Mono>
-                          </View>
-                          <Stepper name={`${it.name}, ${optionsText(it, l.options)}`} value={l.quantity} onChange={(v) => onChange(setLine(basket, l.itemId, l.options, v))} />
+                      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                        <Body weight="semi" color={colors.bone} numberOfLines={1}>
+                          {it.name}
+                        </Body>
+                        {it.description ? (
+                          <Body size={12.5} color={colors.dust} numberOfLines={2}>
+                            {it.description}
+                          </Body>
+                        ) : null}
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                          <Mono size={13} color={q > 0 ? colors.lateriteSoft : colors.bone}>
+                            {hasOptions && upgrades ? 'from ' : ''}
+                            {money(it.price, it.currency)}
+                          </Mono>
+                          {upgrades ? (
+                            <Label color={colors.vip} size={9.5}>
+                              {upgrades} UPGRADE{upgrades === 1 ? '' : 'S'}
+                            </Label>
+                          ) : null}
                         </View>
-                      ))
-                    : null}
-                </View>
-              );
-            })}
+                      </View>
+                      {hasOptions ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Choose ${it.name}`}
+                          onPress={() => {
+                            tick();
+                            setCustom(it);
+                          }}
+                          style={({ pressed }) => [styles.add, pressed && { opacity: 0.7 }]}>
+                          <Mono size={13} color={colors.bone}>
+                            {q > 0 ? '+ ANOTHER' : 'CHOOSE'}
+                          </Mono>
+                        </Pressable>
+                      ) : (
+                        <Stepper name={it.name} value={q} onChange={(v) => onChange(setLine(basket, it.itemId, [], v))} />
+                      )}
+                    </View>
+                    {hasOptions && lines.length
+                      ? lines.map(([key, l]) => (
+                          <View key={key} style={styles.line}>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Body size={13} color={colors.boneSoft} numberOfLines={2}>
+                                {optionsText(it, l.options) || it.name}
+                              </Body>
+                              <Mono size={11.5} color={colors.dust}>
+                                {money(unitPrice(it, l.options), it.currency)} each
+                              </Mono>
+                            </View>
+                            <Stepper
+                              name={`${it.name}, ${optionsText(it, l.options)}`}
+                              value={l.quantity}
+                              onChange={(v) => onChange(setLine(basket, l.itemId, l.options, v))}
+                            />
+                          </View>
+                        ))
+                      : null}
+                  </View>
+                );
+              })}
+          </View>
         </View>
       ))}
 
@@ -272,6 +286,8 @@ export function Menu({
 function Customise({ item, onClose, onAdd }: { item: ConcessionItem; onClose: () => void; onAdd: (options: number[], quantity: number) => void }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  // Website, tablet and up: a centred dialog rather than a bottom sheet
+  const { wide } = useScreen();
   const options = item.options ?? [];
   const [picked, setPicked] = useState<number[]>(() =>
     GROUPS.filter((g) => SINGLE.has(g.key))
@@ -293,9 +309,15 @@ function Customise({ item, onClose, onAdd }: { item: ConcessionItem; onClose: ()
   };
 
   return (
-    <View style={styles.scrim}>
-      <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
-      <View style={[styles.sheet, { maxHeight: height * 0.88, paddingBottom: Math.max(insets.bottom, 14) + 8 }]} accessibilityViewIsModal>
+    <View style={[styles.scrim, wide && { justifyContent: 'center' }]}>
+      <Pressable style={wide ? StyleSheet.absoluteFill : { flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
+      <View
+        style={[
+          styles.sheet,
+          { maxHeight: height * 0.88, paddingBottom: Math.max(insets.bottom, 14) + 8 },
+          wide && { width: 560, alignSelf: 'center', borderWidth: 1.5, borderColor: colors.bone, borderRadius: 4 },
+        ]}
+        accessibilityViewIsModal>
         <View style={styles.sheetHead}>
           <ItemImage uri={item.imageUrl} name={item.name} size={72} category={item.category} />
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -332,8 +354,20 @@ function Customise({ item, onClose, onAdd }: { item: ConcessionItem; onClose: ()
                       accessibilityLabel={`${o.name}${o.priceDelta > 0 ? `, plus ${money(o.priceDelta, item.currency)}` : ''}`}
                       onPress={() => choose(o)}
                       style={({ pressed }) => [styles.choice, on && styles.choiceOn, pressed && { opacity: 0.85 }]}>
-                      <View style={[single ? styles.radio : styles.check, on && { borderColor: colors.laterite, backgroundColor: single ? 'transparent' : colors.laterite }]}>
-                        {on ? single ? <View style={styles.radioDot} /> : <Mono size={12} color={colors.ink}>✓</Mono> : null}
+                      <View
+                        style={[
+                          single ? styles.radio : styles.check,
+                          on && { borderColor: colors.laterite, backgroundColor: single ? 'transparent' : colors.laterite },
+                        ]}>
+                        {on ? (
+                          single ? (
+                            <View style={styles.radioDot} />
+                          ) : (
+                            <Mono size={12} color={colors.ink}>
+                              ✓
+                            </Mono>
+                          )
+                        ) : null}
                       </View>
                       <Body weight={on ? 'semi' : undefined} color={on ? colors.bone : colors.boneSoft} style={{ flex: 1 }}>
                         {o.name}
@@ -450,4 +484,3 @@ const styles = StyleSheet.create({
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.dust, alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.laterite },
 });
-

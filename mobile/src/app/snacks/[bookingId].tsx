@@ -15,6 +15,8 @@ import type { Basket as BasketType } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
 import { colors, space } from '@/theme';
+import { useScreen } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 
@@ -28,6 +30,8 @@ export default function SnacksStep() {
   const insets = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
   const width = Math.min(winW, MAX_W);
+  // Website on tablet/desktop: menu and basket side by side (below)
+  const screen = useScreen();
   const now = useNow(1000);
 
   const req = useRequest(async () => {
@@ -46,9 +50,7 @@ export default function SnacksStep() {
   const deadline = holdUntil ? Number(holdUntil) : null;
   const left = deadline ? deadline - now : null;
   const mmss =
-    left != null && left > 0
-      ? `${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`
-      : null;
+    left != null && left > 0 ? `${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}` : null;
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -92,6 +94,91 @@ export default function SnacksStep() {
     else router.replace('/');
   };
 
+  const trayBody = (
+    <>
+      {error ? (
+        <Mono size={12} color={colors.laterite}>
+          {error}
+        </Mono>
+      ) : null}
+      {count > 0 ? (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <Label color={colors.inkSoft}>
+            {count} {count === 1 ? 'ITEM' : 'ITEMS'}
+          </Label>
+          <Mono size={20} color={colors.ink}>
+            + {money(total)}
+          </Mono>
+        </View>
+      ) : null}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {count === 0 ? (
+          <Button style={{ flex: 1 }} label="No snacks, continue" onPress={() => next({})} busy={saving} />
+        ) : (
+          <>
+            <Button style={{ width: 112 }} variant="outlineInk" label="Clear" onPress={() => setEdited({})} />
+            <Button style={{ flex: 1 }} label="Add & continue" onPress={() => next(basket)} busy={saving} />
+          </>
+        )}
+      </View>
+    </>
+  );
+
+  const leaveSheet = leave ? (
+    <Sheet title="Release these seats?" onClose={() => setLeave(false)}>
+      <Body>Going back cancels this unpaid booking so the seats are free for you, or anyone else, to pick again.</Body>
+      <Button label="Release and go back" variant="outline" busy={releasing} onPress={release} />
+      <Button label="Stay" onPress={() => setLeave(false)} />
+    </Sheet>
+  ) : null;
+
+  // ---------------- Tablet, laptop and desktop (website): menu beside your basket ----------------
+  if (screen.wide && req.data) {
+    const { content, gutter, inner, desktop } = screen;
+    const sideW = desktop ? 380 : 300;
+    const menuW = inner - sideW - 40;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.night }}>
+        <ScrollView contentContainerStyle={{ paddingTop: 24 }}>
+          <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter }}>
+            <View style={styles.wideHead}>
+              <IconButton label="Back to seats" onPress={() => setLeave(true)} style={{ borderWidth: 1.5, borderColor: colors.rule }}>
+                <BackIcon />
+              </IconButton>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Display size={44} black>
+                  Snacks
+                </Display>
+                <Label>STEP 2 OF 3 · OPTIONAL</Label>
+              </View>
+              {mmss ? (
+                <View style={styles.hold}>
+                  <Label color={left! < 120000 ? colors.laterite : colors.dust}>HELD {mmss}</Label>
+                </View>
+              ) : null}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 40, alignItems: 'flex-start' }}>
+              <View style={{ width: menuW }}>
+                <Body style={{ maxWidth: 640 }}>
+                  Order now and collect at the kiosk with your ticket. It goes on the same payment. Tap an item to upgrade the size or add extras.
+                </Body>
+                <Menu items={items} basket={basket} onChange={setEdited} columns={desktop ? 2 : 1} width={menuW} />
+              </View>
+              <View style={[styles.tray, styles.traySide, { width: sideW }]}>
+                <Display size={26} color={colors.ink}>
+                  Your basket
+                </Display>
+                {trayBody}
+              </View>
+            </View>
+          </View>
+          <SiteFooter />
+        </ScrollView>
+        {leaveSheet}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.night }}>
       <View style={[styles.head, { paddingTop: insets.top + 8 }]}>
@@ -130,33 +217,10 @@ export default function SnacksStep() {
           <ScrollView contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingBottom: 200 }}>
             <Body>Order now and collect at the kiosk with your ticket. It goes on the same payment. Tap an item to upgrade the size or add extras.</Body>
             <Menu items={items} basket={basket} onChange={setEdited} />
+            <SiteFooter />
           </ScrollView>
 
-          <View style={[styles.tray, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
-            {error ? (
-              <Mono size={12} color={colors.laterite}>
-                {error}
-              </Mono>
-            ) : null}
-            {count > 0 ? (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <Label color={colors.inkSoft}>{count} {count === 1 ? 'ITEM' : 'ITEMS'}</Label>
-                <Mono size={20} color={colors.ink}>
-                  + {money(total)}
-                </Mono>
-              </View>
-            ) : null}
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {count === 0 ? (
-                <Button style={{ flex: 1 }} label="No snacks, continue" onPress={() => next({})} busy={saving} />
-              ) : (
-                <>
-                  <Button style={{ width: 112 }} variant="outlineInk" label="Clear" onPress={() => setEdited({})} />
-                  <Button style={{ flex: 1 }} label="Add & continue" onPress={() => next(basket)} busy={saving} />
-                </>
-              )}
-            </View>
-          </View>
+          <View style={[styles.tray, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>{trayBody}</View>
         </>
       )}
 
@@ -186,4 +250,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
   },
+  // Website (tablet and up)
+  wideHead: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingBottom: 22 },
+  traySide: { position: 'relative', left: undefined, right: undefined, bottom: undefined, borderRadius: 4, paddingTop: 20, paddingBottom: 22, marginTop: 6 },
 });

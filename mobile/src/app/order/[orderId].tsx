@@ -14,6 +14,7 @@ import { useReducedMotion } from '@/lib/feel';
 import { clock, dot, money, shortDate } from '@/lib/format';
 import { useRequest } from '@/lib/use-request';
 import { colors, motion, radius, space } from '@/theme';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 
@@ -148,6 +149,7 @@ export default function SnackOrder() {
             </View>
           </Animated.View>
         )}
+        <SiteFooter />
       </ScrollView>
     </View>
   );

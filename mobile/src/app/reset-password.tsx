@@ -8,6 +8,7 @@ import { Body, Display, Label, Mono } from '@/components/type';
 import { friendlyAuthError, useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { colors, space } from '@/theme';
+import { SiteFooter } from '@/components/site-footer';
 
 /**
  * Opened from the "choose a new password" email (Supabase). The link
@@ -93,6 +94,7 @@ export default function ResetPassword() {
           <Button label="Save and sign in" busy={busy} onPress={save} />
         </>
       )}
+      <SiteFooter />
     </ScrollView>
   );
 }

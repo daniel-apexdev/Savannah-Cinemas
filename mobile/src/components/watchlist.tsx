@@ -14,6 +14,7 @@ import type { Movie, ShowtimeListItem, WatchlistItem } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
 import { colors, space } from '@/theme';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 
@@ -183,6 +184,7 @@ export function WatchlistBody({ embedded = false, onCount }: { embedded?: boolea
               </View>
             );
           })}
+          {embedded ? null : <SiteFooter />}
         </List>
       )}
     </View>

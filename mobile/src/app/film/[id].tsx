@@ -22,7 +22,8 @@ import { clock, dayFromKey, dayKey, dot, isToday, opens, rating, releaseDay, run
 import type { MovieShowtime } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
-import { usePageWidth } from '@/lib/layout';
+import { usePageWidth, useScreen } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
 import { colors, radius, space } from '@/theme';
 
 const MAX_W = 560;
@@ -31,8 +32,9 @@ export default function FilmDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const movieId = Number(id);
   const insets = useSafeAreaInsets();
-  // Wider on desktop web (lib/layout)
-  const width = usePageWidth(MAX_W, 820);
+  const width = usePageWidth(MAX_W);
+  // Website on tablet/desktop gets its own layout (below)
+  const screen = useScreen();
   const { user } = useAuth();
   const now = useNow();
   const [reminded, toggleReminder] = useFilmReminder(movieId);
@@ -148,6 +150,206 @@ export default function FilmDetail() {
   const genres = (m.genres ?? []).map((g) => g.name).slice(0, 3);
   const isUpcoming = m.status === 'UPCOMING' || m.status === 'COMING_SOON';
 
+  const showtimesBody = (g: number) => (
+    <>
+      {filmSpecial ? (
+        <View style={[styles.special, { marginHorizontal: g }]}>
+          <Label color={colors.ink}>{specialLabel(specials.programme(filmSpecial.programme)?.name, filmSpecial.discountPercent)}</Label>
+          <Body size={13.5} color={colors.ink}>
+            {specials.programme(filmSpecial.programme)?.tagline ?? 'Back on the big screen for one night.'}
+          </Body>
+        </View>
+      ) : null}
+      {days.length === 0 && elsewhere ? (
+        <Message
+          style={{ paddingTop: 12 }}
+          title={`Not at ${locationName(cinemas.find((c) => c.cinemaId === here))}`}
+          body={`${m.title} is playing at ${locationName(elsewhere)}.`}
+          action={<Button label={`See ${locationName(elsewhere)} times`} variant="outline" onPress={() => setLocation(elsewhere.cinemaId)} />}
+        />
+      ) : days.length === 0 ? (
+        <Message
+          style={{ paddingTop: 12 }}
+          title={isUpcoming ? 'Not on sale yet' : 'No upcoming shows'}
+          body={
+            isUpcoming && releaseDay(m.releaseDate)
+              ? `Opens ${titleCase(shortDate(releaseDay(m.releaseDate)!))}. Tickets go on sale once its first shows are programmed. Save it and it’ll be waiting in your watchlist.`
+              : 'Nothing is scheduled for this film right now. Save it to your watchlist to keep track.'
+          }
+        />
+      ) : null}
+      {days.length === 0 && isUpcoming ? (
+        <View style={{ paddingHorizontal: g, paddingTop: 14 }}>
+          <RemindBell movieId={movieId} title={m.title} variant="button" />
+        </View>
+      ) : null}
+      {days.length === 0 ? null : (
+        <>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: g, gap: 18 }}>
+            {days.map(([k]) => {
+              const d = dayFromKey(k);
+              const on = k === day;
+              return (
+                <Pressable
+                  key={k}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => setDayPick(k)}
+                  style={[styles.dayTab, on && { borderBottomColor: colors.laterite }]}>
+                  <Mono size={12} color={on ? colors.laterite : colors.dust}>
+                    {isToday(d) ? 'TODAY' : `${weekday(d)} ${d.getDate()}`}
+                  </Mono>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <View style={{ paddingHorizontal: g, paddingTop: 14, gap: 16 }}>
+            {screens.map((sc) => (
+              <View key={`${sc.cinema}-${sc.name}`} style={{ gap: 8 }}>
+                <Body size={13} color={colors.dust}>
+                  <Body size={13} weight="bold" color={colors.bone}>
+                    {sc.name}
+                  </Body>
+                  {(() => {
+                    const extra = dot(sc.type ? titleCase(sc.type) : null, multiCinema ? sc.cinema : null);
+                    return extra ? ` · ${extra}` : '';
+                  })()}
+                </Body>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {sc.shows.map((s) => (
+                    <TimeToken
+                      key={s.showtimeId}
+                      time={clock(s.startTime)}
+                      state={chosenShow?.showtimeId === s.showtimeId ? 'chosen' : 'open'}
+                      note={specials.byShowtime.get(s.showtimeId) ? `-${Math.round(specials.byShowtime.get(s.showtimeId)!.discountPercent)}%` : undefined}
+                      accessibilityLabel={`${clock(s.startTime)}, ${sc.name}`}
+                      onPress={() => setChosen({ day, id: s.showtimeId })}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+    </>
+  );
+
+  const chooseSeats = (id: number) => router.push({ pathname: '/seats/[showtimeId]', params: { showtimeId: String(id) } });
+  const chosenLabel = chosenShow
+    ? dot(
+        day ? (isToday(dayFromKey(day)) ? 'TODAY' : `${weekday(dayFromKey(day))} ${dayFromKey(day).getDate()}`) : null,
+        chosenShow.screen.name.toUpperCase().replace(/^SCREEN\s*/, 'SCR '),
+      )
+    : '';
+
+  // ---------------- Tablet, laptop and desktop (website) ----------------
+  if (screen.wide) {
+    const { content, gutter, inner, desktop, width: winW } = screen;
+    const artH = Math.round(Math.min(480, Math.max(280, winW * 0.32)));
+    const panelW = desktop ? 400 : inner;
+    const posterW = desktop ? 200 : 160;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.night }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 0 }}>
+          {/* The art runs edge to edge; nothing is printed on it */}
+          <View style={{ height: artH, backgroundColor: colors.booth }}>
+            <Backdrop url={m.backdropUrl} fallbackUrl={m.posterUrl} width={winW} height={artH} title={m.title} />
+          </View>
+
+          <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter }}>
+            <View style={{ flexDirection: desktop ? 'row' : 'column', gap: desktop ? 48 : 32, alignItems: 'flex-start' }}>
+              {/* Left: the film */}
+              <View style={{ flex: desktop ? 1 : undefined, width: desktop ? undefined : inner, minWidth: 0 }}>
+                <View style={[styles.wideTitle, { marginTop: -Math.round(posterW * 0.55) }]}>
+                  <Poster url={m.posterUrl} title={m.title} width={posterW} size="w500" border={colors.night} meta={year(m.releaseDate)} />
+                  <View style={{ flex: 1, minWidth: 0, justifyContent: 'flex-end', gap: 10, paddingTop: Math.round(posterW * 0.62) }}>
+                    <Display size={m.title.length > 26 ? 46 : 60} black numberOfLines={4}>
+                      {m.title}
+                    </Display>
+                    <Label>{dot(opens(m.releaseDate) ?? year(m.releaseDate), runtime(m.runtimeMinutes), m.ageRating, rating(m.rating))}</Label>
+                    {genres.length ? (
+                      <Body size={14} color={colors.dust}>
+                        {genres.join(' · ')}
+                      </Body>
+                    ) : null}
+                  </View>
+                </View>
+
+                <View style={styles.wideActions}>
+                  {m.trailerUrl ? (
+                    <Button
+                      height={46}
+                      style={{ paddingHorizontal: 18 }}
+                      variant="outline"
+                      label="Watch trailer"
+                      left={<PlayIcon color={colors.bone} />}
+                      onPress={() => setTrailerOpen(true)}
+                    />
+                  ) : null}
+                  <Button
+                    height={46}
+                    style={{ paddingHorizontal: 18 }}
+                    variant="outline"
+                    busy={savingWl}
+                    label={saved ? 'On your watchlist' : 'Add to watchlist'}
+                    left={<BookmarkIcon filled={saved} color={saved ? colors.laterite : colors.bone} />}
+                    onPress={toggleWatchlist}
+                  />
+                  {isUpcoming ? (
+                    <Button
+                      height={46}
+                      style={{ paddingHorizontal: 18 }}
+                      variant="outline"
+                      label={reminded ? 'Reminder on' : 'Remind me when it opens'}
+                      left={<BellIcon filled={reminded} color={reminded ? colors.laterite : colors.bone} />}
+                      onPress={toggleReminder}
+                    />
+                  ) : null}
+                </View>
+
+                {m.description ? (
+                  <View style={{ marginTop: 26, gap: 8, maxWidth: 720 }}>
+                    <Label color={colors.laterite}>THE STORY</Label>
+                    <Body size={17} style={{ lineHeight: 27 }}>
+                      {m.description}
+                    </Body>
+                  </View>
+                ) : null}
+                <CastRow cast={cast} director={director} gutter={0} />
+              </View>
+
+              {/* Right (desktop) / below (tablet): showtimes and booking */}
+              <View style={[styles.panel, { width: panelW, marginTop: desktop ? 28 : 0 }]}>
+                <View style={[styles.showHead, { marginHorizontal: 20, marginTop: 0, borderTopWidth: 0 }]}>
+                  <Display size={28}>Showtimes</Display>
+                  <LocationButton onChange={() => setDayPick(null)} />
+                </View>
+                {showtimesBody(20)}
+                {chosenShow ? (
+                  <View style={styles.panelCta}>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Label numberOfLines={1}>{chosenLabel}</Label>
+                      <Mono size={22}>{clock(chosenShow.startTime)}</Mono>
+                    </View>
+                    <Button style={{ flex: 1.4 }} label="Choose seats" onPress={() => chooseSeats(chosenShow.showtimeId)} />
+                  </View>
+                ) : (
+                  <View style={{ height: 20 }} />
+                )}
+              </View>
+            </View>
+          </View>
+          <SiteFooter />
+        </ScrollView>
+        <IconButton label="Back" onPress={() => goBack()} style={[styles.navBtn, { top: 16, left: Math.max(16, (winW - content) / 2 + gutter - 4) }]}>
+          <BackIcon />
+        </IconButton>
+        {m.trailerUrl ? <TrailerModal url={m.trailerUrl} title={m.title} visible={trailerOpen} onClose={() => setTrailerOpen(false)} /> : null}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.night }}>
       <ScrollView contentContainerStyle={{ width, alignSelf: 'center', paddingBottom: 140 }}>
@@ -198,86 +400,8 @@ export default function FilmDetail() {
           <Display size={24}>Showtimes</Display>
           <LocationButton onChange={() => setDayPick(null)} />
         </View>
-        {filmSpecial ? (
-          <View style={styles.special}>
-            <Label color={colors.ink}>{specialLabel(specials.programme(filmSpecial.programme)?.name, filmSpecial.discountPercent)}</Label>
-            <Body size={13.5} color={colors.ink}>
-              {specials.programme(filmSpecial.programme)?.tagline ?? 'Back on the big screen for one night.'}
-            </Body>
-          </View>
-        ) : null}
-        {days.length === 0 && elsewhere ? (
-          <Message
-            style={{ paddingTop: 12 }}
-            title={`Not at ${locationName(cinemas.find((c) => c.cinemaId === here))}`}
-            body={`${m.title} is playing at ${locationName(elsewhere)}.`}
-            action={<Button label={`See ${locationName(elsewhere)} times`} variant="outline" onPress={() => setLocation(elsewhere.cinemaId)} />}
-          />
-        ) : days.length === 0 ? (
-          <Message
-            style={{ paddingTop: 12 }}
-            title={isUpcoming ? 'Not on sale yet' : 'No upcoming shows'}
-            body={
-              isUpcoming && releaseDay(m.releaseDate)
-                ? `Opens ${titleCase(shortDate(releaseDay(m.releaseDate)!))}. Tickets go on sale once its first shows are programmed. Save it and it’ll be waiting in your watchlist.`
-                : 'Nothing is scheduled for this film right now. Save it to your watchlist to keep track.'
-            }
-          />
-        ) : null}
-        {days.length === 0 && isUpcoming ? (
-          <View style={{ paddingHorizontal: space.gutter, paddingTop: 14 }}>
-            <RemindBell movieId={movieId} title={m.title} variant="button" />
-          </View>
-        ) : null}
-        {days.length === 0 ? null : (
-          <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.gutter, gap: 18 }}>
-              {days.map(([k]) => {
-                const d = dayFromKey(k);
-                const on = k === day;
-                return (
-                  <Pressable
-                    key={k}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: on }}
-                    onPress={() => setDayPick(k)}
-                    style={[styles.dayTab, on && { borderBottomColor: colors.laterite }]}>
-                    <Mono size={12} color={on ? colors.laterite : colors.dust}>
-                      {isToday(d) ? 'TODAY' : `${weekday(d)} ${d.getDate()}`}
-                    </Mono>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <View style={{ paddingHorizontal: space.gutter, paddingTop: 14, gap: 16 }}>
-              {screens.map((sc) => (
-                <View key={`${sc.cinema}-${sc.name}`} style={{ gap: 8 }}>
-                  <Body size={13} color={colors.dust}>
-                    <Body size={13} weight="bold" color={colors.bone}>
-                      {sc.name}
-                    </Body>
-                    {(() => {
-                      const extra = dot(sc.type ? titleCase(sc.type) : null, multiCinema ? sc.cinema : null);
-                      return extra ? ` · ${extra}` : '';
-                    })()}
-                  </Body>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {sc.shows.map((s) => (
-                      <TimeToken
-                        key={s.showtimeId}
-                        time={clock(s.startTime)}
-                        state={chosenShow?.showtimeId === s.showtimeId ? 'chosen' : 'open'}
-                        note={specials.byShowtime.get(s.showtimeId) ? `-${Math.round(specials.byShowtime.get(s.showtimeId)!.discountPercent)}%` : undefined}
-                        accessibilityLabel={`${clock(s.startTime)}, ${sc.name}`}
-                        onPress={() => setChosen({ day, id: s.showtimeId })}
-                      />
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+        {showtimesBody(space.gutter)}
+        <SiteFooter />
       </ScrollView>
 
       {/* Solid nav tiles over the art */}
@@ -302,7 +426,12 @@ export default function FilmDetail() {
       {chosenShow ? (
         <View style={[styles.cta, { paddingBottom: Math.max(insets.bottom, 14) + 6 }]}>
           <View style={{ flex: 1, gap: 2 }}>
-            <Label numberOfLines={1}>{dot(day ? (isToday(dayFromKey(day)) ? 'TODAY' : `${weekday(dayFromKey(day))} ${dayFromKey(day).getDate()}`) : null, chosenShow.screen.name.toUpperCase().replace(/^SCREEN\s*/, 'SCR '))}</Label>
+            <Label numberOfLines={1}>
+              {dot(
+                day ? (isToday(dayFromKey(day)) ? 'TODAY' : `${weekday(dayFromKey(day))} ${dayFromKey(day).getDate()}`) : null,
+                chosenShow.screen.name.toUpperCase().replace(/^SCREEN\s*/, 'SCR '),
+              )}
+            </Label>
             <Mono size={20}>{clock(chosenShow.startTime)}</Mono>
           </View>
           <Button
@@ -355,6 +484,20 @@ const styles = StyleSheet.create({
     borderTopColor: colors.bone,
   },
   dayTab: { height: 44, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  // Website (tablet and up)
+  wideTitle: { flexDirection: 'row', gap: 28, alignItems: 'flex-end' },
+  wideActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 22 },
+  panel: { borderWidth: 1.5, borderColor: colors.bone, borderRadius: radius.paper, backgroundColor: colors.night, paddingTop: 18, overflow: 'hidden' },
+  panelCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 20,
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.rule,
+    backgroundColor: colors.booth,
+  },
   cta: {
     position: 'absolute',
     left: 0,

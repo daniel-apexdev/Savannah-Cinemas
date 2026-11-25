@@ -17,6 +17,7 @@ import { AVATARS } from '@/lib/avatars';
 import { success, tick } from '@/lib/feel';
 import { useRequest } from '@/lib/use-request';
 import { colors, fonts, radius, space } from '@/theme';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 const USERNAME_RE = /^[A-Za-z0-9_.]{3,20}$/;
@@ -300,6 +301,7 @@ export default function ProfileSetup() {
             {stillSearch ? `No film stills match “${stillSearch}”.` : 'Film stills appear here once films have artwork.'}
           </Body>
         ) : null}
+        <SiteFooter />
       </ScrollView>
 
       <View style={[styles.cta, { paddingBottom: Math.max(insets.bottom, 14) + 6 }]}>

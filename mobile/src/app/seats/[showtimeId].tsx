@@ -7,7 +7,7 @@ import { Button, Field } from '@/components/controls';
 import { StackHeader } from '@/components/header';
 import { SeatMap, seatKind } from '@/components/seat-map';
 import { ErrorState, Message, Shimmer } from '@/components/states';
-import { Body, Label, Mono } from '@/components/type';
+import { Body, Display, Label, Mono } from '@/components/type';
 import { ApiError, api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { HOLD_MINUTES } from '@/lib/config';
@@ -17,7 +17,8 @@ import { peekPendingPromo, takePendingPromo } from '@/lib/promo';
 import { clock, dot, money, shortDate, toNumber } from '@/lib/format';
 import type { Seat } from '@/lib/types';
 import { useRequest } from '@/lib/use-request';
-import { usePageWidth } from '@/lib/layout';
+import { usePageWidth, useScreen } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
 import { colors, radius, space } from '@/theme';
 
 const MAX_SEATS = 10;
@@ -62,8 +63,9 @@ export default function Seats() {
   const { showtimeId } = useLocalSearchParams<{ showtimeId: string }>();
   const id = Number(showtimeId);
   const insets = useSafeAreaInsets();
-  // Wider on desktop web (lib/layout)
-  const width = usePageWidth(MAX_W, 760);
+  const width = usePageWidth(MAX_W);
+  // Website on tablet/desktop: the hall and your order side by side (below)
+  const screen = useScreen();
   const { user } = useAuth();
 
   const req = useRequest(async () => {
@@ -185,6 +187,141 @@ export default function Seats() {
   const st = req.data?.seats.showtime;
   const subtitle = st ? dot(shortDate(new Date(st.startTime)), clock(st.startTime), st.screen.name.toUpperCase()) : null;
 
+  const mapBody = (mapW: number) => (
+    <>
+      {req.data?.pricing?.special ? (
+        <View
+          style={styles.special}
+          accessible
+          accessibilityLabel={`${req.data.pricing.special.name ?? 'Special night'}: ${Math.round(req.data.pricing.special.discountPercent)}% off every seat`}>
+          <Mono size={12.5} color={colors.ink}>
+            {`${(req.data.pricing.special.name ?? 'Special night').toUpperCase()} · ${Math.round(req.data.pricing.special.discountPercent)}% OFF EVERY SEAT`}
+          </Mono>
+        </View>
+      ) : null}
+      {/* The screen */}
+      <View style={styles.screenWrap} accessible accessibilityLabel="Screen this way">
+        <View style={styles.screenArc} />
+        <Label style={{ letterSpacing: 4 }}>SCREEN</Label>
+      </View>
+
+      <SeatMap
+        seats={seats}
+        selected={chosenIds}
+        onToggle={toggle}
+        width={mapW}
+        priceOf={(s) => money(priceFor(s), currency)}
+        onZoomChange={(z) => setZoomed(z > 1)}
+      />
+
+      <View style={styles.legend}>
+        {kinds.includes('STANDARD') ? <LegendItem kind="open" text={`Open · ${money(priceFor({ seatType: 'STANDARD' } as Seat), currency)}`} /> : null}
+        {kinds.includes('VIP') ? <LegendItem kind="vip" text={`VIP · ${money(priceFor({ seatType: 'VIP' } as Seat), currency)}`} /> : null}
+        {kinds.includes('WHEELCHAIR') ? <LegendItem kind="wheel" text="Wheelchair" /> : null}
+        <LegendItem kind="taken" text="Taken" />
+        <LegendItem kind="on" text="Yours" />
+      </View>
+      <Body size={12.5} color={colors.dust} style={{ textAlign: 'center', paddingHorizontal: 28, marginTop: 10 }}>
+        {req.data?.seats.summary.availableSeats ?? 0} of {req.data?.seats.summary.activeSeats ?? 0} seats free
+      </Body>
+
+      <View style={{ paddingHorizontal: space.gutter, marginTop: 20 }}>
+        {promoOpen ? (
+          <Field
+            label="Promo code"
+            value={promo}
+            onChangeText={(t) => setPromo(t.toUpperCase())}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            placeholder="e.g. WEEKEND10"
+          />
+        ) : (
+          <Pressable accessibilityRole="button" onPress={() => setPromoOpen(true)} style={{ height: 44, justifyContent: 'center' }}>
+            <Mono size={12.5} color={colors.lateriteSoft}>
+              HAVE A PROMO CODE?
+            </Mono>
+          </Pressable>
+        )}
+      </View>
+    </>
+  );
+  const trayBody = (
+    <>
+      {error ? (
+        <Mono size={12} color={colors.laterite} bold>
+          {error}
+        </Mono>
+      ) : null}
+      {!error && stranded.length ? (
+        <Body size={12.5} color={colors.inkSoft} accessibilityLiveRegion="polite">
+          {`This leaves ${stranded.map((x) => x.seatLabel).join(', ')} on ${stranded.length === 1 ? 'its' : 'their'} own. If you can, move along so no single seat is left empty.`}
+        </Body>
+      ) : null}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+          <Label color={colors.inkSoft}>{chosen.length === 0 ? 'NO SEATS YET' : breakdown.toUpperCase()}</Label>
+          {chosen.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {chosen.map((c) => (
+                <Pressable
+                  key={c.seatId}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove seat ${c.seatLabel}`}
+                  onPress={() => toggle(c)}
+                  hitSlop={4}
+                  style={({ pressed }) => [styles.chip, seatKind(c) === 'VIP' && styles.chipVip, pressed && { opacity: 0.6 }]}>
+                  <Mono size={13} color={colors.ink}>
+                    {c.seatLabel}
+                  </Mono>
+                  <Mono size={11} color={colors.inkSoft}>
+                    ✕
+                  </Mono>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : (
+            <Mono size={17} color={colors.ink}>
+              Tap a seat
+            </Mono>
+          )}
+        </View>
+        <Mono size={22} color={colors.ink} accessibilityLabel={`Total ${money(total, currency)}`}>
+          {money(total, currency)}
+        </Mono>
+      </View>
+      <Button label={user || GUESTS_ALLOWED ? 'Continue' : 'Sign in to continue'} disabled={chosen.length === 0} busy={busy} onPress={proceed} />
+      {chosen.length ? (
+        <Body size={12} color={colors.inkSoft} style={{ textAlign: 'center', marginTop: -4 }}>
+          {`Seats are held for ${HOLD_MINUTES} minutes while you pay.`}
+        </Body>
+      ) : null}
+    </>
+  );
+
+  // ---------------- Tablet, laptop and desktop (website): the hall beside your order ----------------
+  if (screen.wide && !req.loading && req.data && seats.length > 0) {
+    const { content, gutter, inner, desktop } = screen;
+    const sideW = desktop ? 380 : 320;
+    const mapW = Math.min(900, inner - sideW - 40);
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.night }}>
+        <StackHeader title={st?.movie.title ?? 'Choose seats'} subtitle={subtitle} />
+        <ScrollView scrollEnabled={!zoomed} contentContainerStyle={{ paddingTop: 8 }}>
+          <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter, flexDirection: 'row', gap: 40, alignItems: 'flex-start' }}>
+            <View style={{ width: mapW, flexGrow: 1 }}>{mapBody(mapW)}</View>
+            <View style={[styles.tray, styles.traySide, { width: sideW }]}>
+              <Display size={26} color={colors.ink}>
+                Your seats
+              </Display>
+              {trayBody}
+            </View>
+          </View>
+          <SiteFooter />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.night }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StackHeader title={st?.movie.title ?? 'Choose seats'} subtitle={subtitle} />
@@ -203,112 +340,11 @@ export default function Seats() {
       ) : (
         <>
           <ScrollView scrollEnabled={!zoomed} contentContainerStyle={{ width, alignSelf: 'center', paddingBottom: 220 }}>
-            {req.data?.pricing?.special ? (
-              <View
-                style={styles.special}
-                accessible
-                accessibilityLabel={`${req.data.pricing.special.name ?? 'Special night'}: ${Math.round(req.data.pricing.special.discountPercent)}% off every seat`}>
-                <Mono size={12.5} color={colors.ink}>
-                  {`${(req.data.pricing.special.name ?? 'Special night').toUpperCase()} · ${Math.round(req.data.pricing.special.discountPercent)}% OFF EVERY SEAT`}
-                </Mono>
-              </View>
-            ) : null}
-            {/* The screen */}
-            <View style={styles.screenWrap} accessible accessibilityLabel="Screen this way">
-              <View style={styles.screenArc} />
-              <Label style={{ letterSpacing: 4 }}>SCREEN</Label>
-            </View>
-
-            <SeatMap
-              seats={seats}
-              selected={chosenIds}
-              onToggle={toggle}
-              width={width}
-              priceOf={(s) => money(priceFor(s), currency)}
-              onZoomChange={(z) => setZoomed(z > 1)}
-            />
-
-            <View style={styles.legend}>
-              {kinds.includes('STANDARD') ? <LegendItem kind="open" text={`Open · ${money(priceFor({ seatType: 'STANDARD' } as Seat), currency)}`} /> : null}
-              {kinds.includes('VIP') ? <LegendItem kind="vip" text={`VIP · ${money(priceFor({ seatType: 'VIP' } as Seat), currency)}`} /> : null}
-              {kinds.includes('WHEELCHAIR') ? <LegendItem kind="wheel" text="Wheelchair" /> : null}
-              <LegendItem kind="taken" text="Taken" />
-              <LegendItem kind="on" text="Yours" />
-            </View>
-            <Body size={12.5} color={colors.dust} style={{ textAlign: 'center', paddingHorizontal: 28, marginTop: 10 }}>
-              {req.data?.seats.summary.availableSeats ?? 0} of {req.data?.seats.summary.activeSeats ?? 0} seats free
-            </Body>
-
-            <View style={{ paddingHorizontal: space.gutter, marginTop: 20 }}>
-              {promoOpen ? (
-                <Field
-                  label="Promo code"
-                  value={promo}
-                  onChangeText={(t) => setPromo(t.toUpperCase())}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  placeholder="e.g. WEEKEND10"
-                />
-              ) : (
-                <Pressable accessibilityRole="button" onPress={() => setPromoOpen(true)} style={{ height: 44, justifyContent: 'center' }}>
-                  <Mono size={12.5} color={colors.lateriteSoft}>
-                    HAVE A PROMO CODE?
-                  </Mono>
-                </Pressable>
-              )}
-            </View>
+            {mapBody(width)}
+            <SiteFooter />
           </ScrollView>
 
-          <View style={[styles.tray, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
-            {error ? (
-              <Mono size={12} color={colors.laterite} bold>
-                {error}
-              </Mono>
-            ) : null}
-            {!error && stranded.length ? (
-              <Body size={12.5} color={colors.inkSoft} accessibilityLiveRegion="polite">
-                {`This leaves ${stranded.map((x) => x.seatLabel).join(', ')} on ${stranded.length === 1 ? 'its' : 'their'} own. If you can, move along so no single seat is left empty.`}
-              </Body>
-            ) : null}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 }}>
-              <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-                <Label color={colors.inkSoft}>{chosen.length === 0 ? 'NO SEATS YET' : breakdown.toUpperCase()}</Label>
-                {chosen.length ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                    {chosen.map((c) => (
-                      <Pressable
-                        key={c.seatId}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove seat ${c.seatLabel}`}
-                        onPress={() => toggle(c)}
-                        hitSlop={4}
-                        style={({ pressed }) => [styles.chip, seatKind(c) === 'VIP' && styles.chipVip, pressed && { opacity: 0.6 }]}>
-                        <Mono size={13} color={colors.ink}>
-                          {c.seatLabel}
-                        </Mono>
-                        <Mono size={11} color={colors.inkSoft}>
-                          ✕
-                        </Mono>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <Mono size={17} color={colors.ink}>
-                    Tap a seat
-                  </Mono>
-                )}
-              </View>
-              <Mono size={22} color={colors.ink} accessibilityLabel={`Total ${money(total, currency)}`}>
-                {money(total, currency)}
-              </Mono>
-            </View>
-            <Button label={user || GUESTS_ALLOWED ? 'Continue' : 'Sign in to continue'} disabled={chosen.length === 0} busy={busy} onPress={proceed} />
-            {chosen.length ? (
-              <Body size={12} color={colors.inkSoft} style={{ textAlign: 'center', marginTop: -4 }}>
-                {`Seats are held for ${HOLD_MINUTES} minutes while you pay.`}
-              </Body>
-            ) : null}
-          </View>
+          <View style={[styles.tray, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>{trayBody}</View>
         </>
       )}
     </KeyboardAvoidingView>
@@ -379,5 +415,16 @@ const styles = StyleSheet.create({
     gap: 12,
     borderTopLeftRadius: radius.paper,
     borderTopRightRadius: radius.paper,
+  },
+  // Website: the order card beside the hall
+  traySide: {
+    position: 'relative',
+    left: undefined,
+    right: undefined,
+    bottom: undefined,
+    borderRadius: radius.paper,
+    paddingTop: 20,
+    paddingBottom: 22,
+    marginTop: 24,
   },
 });

@@ -1,18 +1,21 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState, type ComponentRef } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Field, IconButton } from '@/components/controls';
 import { goBack } from '@/components/header';
 import { CloseIcon } from '@/components/icons';
 import { GUESTS_ALLOWED } from '@/lib/guest';
+import { useScreen } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
+import { LogoMark } from '@/components/logo';
 import { Body, Display, Label, Mono } from '@/components/type';
 import { api } from '@/lib/api';
 import { ConfirmEmailError, SIGN_IN_WITH_SUPABASE, useAuth } from '@/lib/auth';
 import { storage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
-import { colors, space } from '@/theme';
+import { colors, radius, space } from '@/theme';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PENDING_REFERRAL = 'savannah.pendingReferral';
@@ -30,6 +33,7 @@ export default function SignIn() {
   const insets = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
   const width = Math.min(winW, MAX_W);
+  const screen = useScreen();
   const { signIn, register, user } = useAuth();
   const params = useLocalSearchParams<{ mode?: 'in' | 'up' }>();
   const [mode, setMode] = useState<'in' | 'up'>(params.mode === 'up' ? 'up' : 'in');
@@ -105,156 +109,240 @@ export default function SignIn() {
     }
   };
 
+  const form = (
+    <>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        {screen.wide ? (
+          <Label>{mode === 'in' ? 'SIGN IN' : 'CREATE AN ACCOUNT'}</Label>
+        ) : (
+          <Display size={26} black>
+            Savannah
+          </Display>
+        )}
+        {/* Phone app: there's nowhere to go back to until you're signed in */}
+        {GUESTS_ALLOWED || user ? (
+          <IconButton label="Close" onPress={() => goBack('/')} style={{ borderWidth: 1.5, borderColor: colors.rule }}>
+            <CloseIcon />
+          </IconButton>
+        ) : null}
+      </View>
+
+      <View style={{ gap: 8, marginTop: screen.wide ? 4 : 24 }}>
+        <Display size={46} black>
+          {mode === 'in' ? 'Welcome back' : 'Get a seat'}
+        </Display>
+        <Body>{mode === 'in' ? 'Sign in to book seats and keep your tickets in one place.' : 'One account for booking, tickets and your watchlist.'}</Body>
+      </View>
+
+      {mode === 'up' ? (
+        <View style={{ flexDirection: 'row', gap: 14 }}>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="First name"
+              value={forenames}
+              onChangeText={setForenames}
+              autoComplete="given-name"
+              textContentType="givenName"
+              error={!forenames.trim() ? nameErr : null}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="Surname"
+              value={surname}
+              onChangeText={setSurname}
+              autoComplete="family-name"
+              textContentType="familyName"
+              error={!surname.trim() ? nameErr : null}
+            />
+          </View>
+        </View>
+      ) : null}
+
+      <Field
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
+        textContentType="emailAddress"
+        returnKeyType="next"
+        onSubmitEditing={() => pwRef.current?.focus()}
+        error={emailErr}
+      />
+      <Field
+        ref={pwRef}
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
+        textContentType={mode === 'in' ? 'password' : 'newPassword'}
+        returnKeyType="go"
+        onSubmitEditing={submit}
+        error={pwErr}
+      />
+      {mode === 'up' ? (
+        <>
+          <Field
+            label="Phone (optional)"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            placeholder="+233"
+          />
+          <Field
+            label="Friend’s referral code (optional)"
+            value={referral}
+            onChangeText={(t) => setReferral(t.toUpperCase())}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            placeholder="e.g. EFUA7455"
+          />
+          <Body size={12.5} color={colors.dust} style={{ marginTop: -8 }}>
+            Joining with a friend’s code gives you 100 bonus points on top of your 100 welcome points.
+          </Body>
+        </>
+      ) : null}
+
+      {mode === 'in' && SIGN_IN_WITH_SUPABASE ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={async () => {
+            setError(null);
+            if (!EMAIL.test(email.trim())) {
+              setTouched(true);
+              setError('Enter your email above, then tap “Forgot password?” again.');
+              return;
+            }
+            const { error: e } = (await supabase?.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+              redirectTo: resetRedirect(),
+            })) ?? { error: null };
+            if (e) setError(e.message);
+            else setNotice(`If ${email.trim()} has an account, we’ve emailed a link to choose a new password.`);
+          }}
+          style={{ alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center', marginTop: -8 }}>
+          <Label color={colors.dust}>FORGOT PASSWORD?</Label>
+        </Pressable>
+      ) : null}
+
+      {notice ? (
+        <View style={{ borderLeftWidth: 4, borderLeftColor: colors.vip, paddingLeft: 12 }} accessibilityLiveRegion="polite">
+          <Body size={14} color={colors.bone}>
+            {notice}
+          </Body>
+        </View>
+      ) : null}
+
+      {error ? (
+        <View style={{ borderLeftWidth: 4, borderLeftColor: colors.laterite, paddingLeft: 12 }} accessibilityLiveRegion="assertive">
+          <Mono size={13} color={colors.lateriteSoft}>
+            {error}
+          </Mono>
+        </View>
+      ) : null}
+
+      <Button label={joined ? 'Continue' : mode === 'in' ? 'Sign in' : 'Create account'} busy={busy} onPress={submit} />
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          setMode(mode === 'in' ? 'up' : 'in');
+          setError(null);
+          setNotice(null);
+          setTouched(false);
+        }}
+        style={{ height: 44, justifyContent: 'center', alignItems: 'center' }}>
+        <Label color={colors.bone}>{mode === 'in' ? 'NEW HERE? CREATE AN ACCOUNT' : 'ALREADY HAVE AN ACCOUNT? SIGN IN'}</Label>
+      </Pressable>
+    </>
+  );
+
+  // Website, tablet and up: the form beside a panel about what an account gives you
+  if (screen.wide) {
+    const { content, gutter, desktop } = screen;
+    const perks = [
+      ['TICKETS', 'Every ticket and QR code on any device'],
+      ['REWARDS', 'Points on every film: 100 points = GHS 2 off'],
+      ['WATCHLIST', 'Save films and get a nudge when they open'],
+      ['REMINDERS', 'A heads-up before your showtime'],
+    ];
+    return (
+      <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.night }} contentContainerStyle={{ paddingTop: 36 }}>
+        <View
+          style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter, flexDirection: 'row', gap: desktop ? 64 : 32, alignItems: 'flex-start' }}>
+          {desktop ? (
+            <View style={styles.perksPanel}>
+              <LogoMark size={88} />
+              <Label color={colors.laterite}>{mode === 'in' ? 'WELCOME BACK' : 'A FREE ACCOUNT'}</Label>
+              <Display size={54} black>
+                Your seat is waiting
+              </Display>
+              <Body size={16} color={colors.boneSoft}>
+                You can book on the website without an account. Sign in when you want the extras:
+              </Body>
+              <View style={{ gap: 14, marginTop: 6 }}>
+                {perks.map(([k, v]) => (
+                  <View key={k} style={styles.perk}>
+                    <View style={styles.perkMark} />
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Mono size={11} color={colors.dust}>
+                        {k}
+                      </Mono>
+                      <Body size={15} color={colors.bone}>
+                        {v}
+                      </Body>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+          <View
+            style={[
+              styles.formCard,
+              {
+                width: desktop ? 480 : Math.min(560, content - gutter * 2),
+                alignSelf: desktop ? 'flex-start' : undefined,
+                marginHorizontal: desktop ? 0 : 'auto',
+              },
+            ]}>
+            {form}
+          </View>
+        </View>
+        <SiteFooter />
+      </ScrollView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.night }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingTop: insets.top + 12, paddingBottom: 40, gap: 18 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Display size={26} black>
-            Savannah
-          </Display>
-          {/* Phone app: there's nowhere to go back to until you're signed in */}
-          {GUESTS_ALLOWED || user ? (
-            <IconButton label="Close" onPress={() => goBack('/')} style={{ borderWidth: 1.5, borderColor: colors.rule }}>
-              <CloseIcon />
-            </IconButton>
-          ) : null}
-        </View>
-
-        <View style={{ gap: 8, marginTop: 24 }}>
-          <Display size={46} black>
-            {mode === 'in' ? 'Welcome back' : 'Get a seat'}
-          </Display>
-          <Body>{mode === 'in' ? 'Sign in to book seats and keep your tickets in one place.' : 'One account for booking, tickets and your watchlist.'}</Body>
-        </View>
-
-        {mode === 'up' ? (
-          <View style={{ flexDirection: 'row', gap: 14 }}>
-            <View style={{ flex: 1 }}>
-              <Field
-                label="First name"
-                value={forenames}
-                onChangeText={setForenames}
-                autoComplete="given-name"
-                textContentType="givenName"
-                error={!forenames.trim() ? nameErr : null}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Field
-                label="Surname"
-                value={surname}
-                onChangeText={setSurname}
-                autoComplete="family-name"
-                textContentType="familyName"
-                error={!surname.trim() ? nameErr : null}
-              />
-            </View>
-          </View>
-        ) : null}
-
-        <Field
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          textContentType="emailAddress"
-          returnKeyType="next"
-          onSubmitEditing={() => pwRef.current?.focus()}
-          error={emailErr}
-        />
-        <Field
-          ref={pwRef}
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
-          textContentType={mode === 'in' ? 'password' : 'newPassword'}
-          returnKeyType="go"
-          onSubmitEditing={submit}
-          error={pwErr}
-        />
-        {mode === 'up' ? (
-          <>
-            <Field
-              label="Phone (optional)"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              placeholder="+233"
-            />
-            <Field
-              label="Friend’s referral code (optional)"
-              value={referral}
-              onChangeText={(t) => setReferral(t.toUpperCase())}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              placeholder="e.g. EFUA7455"
-            />
-            <Body size={12.5} color={colors.dust} style={{ marginTop: -8 }}>
-              Joining with a friend’s code gives you 100 bonus points on top of your 100 welcome points.
-            </Body>
-          </>
-        ) : null}
-
-        {mode === 'in' && SIGN_IN_WITH_SUPABASE ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={async () => {
-              setError(null);
-              if (!EMAIL.test(email.trim())) {
-                setTouched(true);
-                setError('Enter your email above, then tap “Forgot password?” again.');
-                return;
-              }
-              const { error: e } = (await supabase?.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-                redirectTo: resetRedirect(),
-              })) ?? { error: null };
-              if (e) setError(e.message);
-              else setNotice(`If ${email.trim()} has an account, we’ve emailed a link to choose a new password.`);
-            }}
-            style={{ alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center', marginTop: -8 }}>
-            <Label color={colors.dust}>FORGOT PASSWORD?</Label>
-          </Pressable>
-        ) : null}
-
-        {notice ? (
-          <View style={{ borderLeftWidth: 4, borderLeftColor: colors.vip, paddingLeft: 12 }} accessibilityLiveRegion="polite">
-            <Body size={14} color={colors.bone}>
-              {notice}
-            </Body>
-          </View>
-        ) : null}
-
-        {error ? (
-          <View style={{ borderLeftWidth: 4, borderLeftColor: colors.laterite, paddingLeft: 12 }} accessibilityLiveRegion="assertive">
-            <Mono size={13} color={colors.lateriteSoft}>
-              {error}
-            </Mono>
-          </View>
-        ) : null}
-
-        <Button label={joined ? 'Continue' : mode === 'in' ? 'Sign in' : 'Create account'} busy={busy} onPress={submit} />
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setMode(mode === 'in' ? 'up' : 'in');
-            setError(null);
-            setNotice(null);
-            setTouched(false);
-          }}
-          style={{ height: 44, justifyContent: 'center', alignItems: 'center' }}>
-          <Label color={colors.bone}>{mode === 'in' ? 'NEW HERE? CREATE AN ACCOUNT' : 'ALREADY HAVE AN ACCOUNT? SIGN IN'}</Label>
-        </Pressable>
+        {form}
+        <SiteFooter />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  // Website, tablet and up
+  perksPanel: { flex: 1, gap: 16, paddingTop: 12 },
+  perk: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  perkMark: { width: 18, height: 3, backgroundColor: colors.laterite, marginTop: 9 },
+  formCard: {
+    borderWidth: 1.5,
+    borderColor: colors.bone,
+    borderRadius: radius.paper,
+    paddingHorizontal: 32,
+    paddingTop: 24,
+    paddingBottom: 28,
+    gap: 18,
+  },
+});

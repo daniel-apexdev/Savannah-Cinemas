@@ -19,6 +19,7 @@ import type { Booking } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
 import { colors, motion, radius, space } from '@/theme';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 
@@ -287,6 +288,7 @@ export default function Ticket() {
             </View>
           </>
         )}
+        <SiteFooter />
       </ScrollView>
 
       {confirmCancel && b ? (

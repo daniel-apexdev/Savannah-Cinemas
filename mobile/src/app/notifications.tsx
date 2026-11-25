@@ -14,6 +14,7 @@ import type { AppNotification } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { usePageWidth } from '@/lib/layout';
 import { colors, space } from '@/theme';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 
@@ -125,6 +126,7 @@ export default function Inbox() {
               })}
             </View>
           ))}
+          <SiteFooter />
         </ScrollView>
       )}
     </View>

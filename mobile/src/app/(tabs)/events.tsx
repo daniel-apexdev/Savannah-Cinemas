@@ -16,7 +16,8 @@ import { setPendingPromo } from '@/lib/promo';
 import { loadSpecials, useSpecials } from '@/lib/specials';
 import type { CinemaEvent, Movie, Promotion } from '@/lib/types';
 import { useRequest } from '@/lib/use-request';
-import { usePageWidth } from '@/lib/layout';
+import { usePageWidth, useScreen } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
 import { colors, radius, space } from '@/theme';
 
 const MAX_W = 560;
@@ -35,8 +36,9 @@ function localDate(v: string) {
 /** Events & offers: what's on at the cinema beyond the regular programme. */
 export default function Events() {
   const insets = useSafeAreaInsets();
-  // Wider on desktop web (lib/layout)
-  const width = usePageWidth(MAX_W, 820);
+  const width = usePageWidth(MAX_W);
+  // Website on tablet/desktop gets its own layout (below)
+  const screen = useScreen();
 
   const events = useRequest(() => api.events(), []);
   const offers = useRequest(() => api.promotions(), []);
@@ -51,15 +53,108 @@ export default function Events() {
   // Events for the chosen location (and any marked for every cinema)
   const { cinemaId: here } = useLocation();
   const specials = useSpecials();
-  const localEvents = useMemo(
-    () => (events.data ?? []).filter((e) => here == null || e.cinemaId == null || Number(e.cinemaId) === here),
-    [events.data, here],
-  );
+  const localEvents = useMemo(() => (events.data ?? []).filter((e) => here == null || e.cinemaId == null || Number(e.cinemaId) === here), [events.data, here]);
 
   const refreshing = events.refreshing || offers.refreshing || coming.refreshing;
   const refresh = async () => {
     await Promise.all([events.reload(), offers.reload(), coming.reload(), loadSpecials(true)]);
   };
+
+  // ---------------- Tablet, laptop and desktop (website) ----------------
+  if (screen.wide) {
+    const { content, gutter, inner, desktop } = screen;
+    const openings = coming.data ?? [];
+    const posterCols = desktop ? 6 : 4;
+    const posterW = Math.floor((inner - 20 * (posterCols - 1)) / posterCols);
+    const eventsBlock = events.loading ? (
+      <View style={{ gap: 12 }}>
+        <Shimmer style={{ height: 96 }} />
+        <Shimmer style={{ height: 96 }} />
+      </View>
+    ) : events.error && !events.data ? (
+      <ErrorState error={events.error} onRetry={events.reload} />
+    ) : localEvents.length === 0 ? (
+      <Body color={colors.dust}>No special events on the calendar right now. New films and offers are below.</Body>
+    ) : (
+      <View>
+        {localEvents.map((e, i) => (
+          <EventRow key={e.eventId} event={e} first={i === 0} />
+        ))}
+      </View>
+    );
+    const offersBlock = offers.loading ? (
+      <Shimmer style={{ height: 150 }} />
+    ) : offers.error && !offers.data ? (
+      <ErrorState error={offers.error} onRetry={offers.reload} />
+    ) : (offers.data ?? []).length === 0 ? (
+      <Body color={colors.dust}>No offers right now. Check back soon.</Body>
+    ) : (
+      <View style={{ flexDirection: desktop ? 'column' : 'row', flexWrap: 'wrap', gap: 16 }}>
+        {(offers.data ?? []).map((o) => (
+          <View key={o.promotionId} style={desktop ? null : { width: (inner - 16) / 2 }}>
+            <Offer offer={o} />
+          </View>
+        ))}
+      </View>
+    );
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.night }}>
+        <ScrollView contentContainerStyle={{ paddingTop: 28 }}>
+          <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter }}>
+            <View style={styles.wideHead}>
+              <View style={{ gap: 6 }}>
+                <Label color={colors.laterite}>EVENTS, OPENINGS & OFFERS</Label>
+                <Display size={desktop ? 64 : 52} black accessibilityRole="header">
+                  Events
+                </Display>
+              </View>
+              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                <Label>CINEMA</Label>
+                <LocationButton />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: desktop ? 'row' : 'column', gap: desktop ? 48 : 0, alignItems: 'flex-start' }}>
+              <View style={{ flex: desktop ? 1.35 : undefined, width: desktop ? undefined : inner, minWidth: 0 }}>
+                <Section title="Coming up" gutter={0} />
+                {eventsBlock}
+              </View>
+              <View style={{ flex: desktop ? 1 : undefined, width: desktop ? undefined : inner, minWidth: 0 }}>
+                {specials.programmes.length ? (
+                  <>
+                    <Section title="Special nights" gutter={0} />
+                    <SpecialNights gutter={0} />
+                  </>
+                ) : null}
+                <Section title="Offers" gutter={0} />
+                {offersBlock}
+              </View>
+            </View>
+
+            <Section title="Opening soon" gutter={0} />
+            {coming.loading ? (
+              <View style={{ flexDirection: 'row', gap: 20 }}>
+                {Array.from({ length: posterCols }, (_, i) => (
+                  <Shimmer key={i} style={{ width: posterW, height: posterW * 1.5 }} />
+                ))}
+              </View>
+            ) : coming.error && !coming.data ? (
+              <ErrorState error={coming.error} onRetry={coming.reload} />
+            ) : openings.length === 0 ? (
+              <Body color={colors.dust}>Nothing announced yet. New releases appear here as soon as they’re added.</Body>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 20, rowGap: 28 }}>
+                {openings.map((m) => (
+                  <Opening key={m.movieId} movie={m} width={posterW} />
+                ))}
+              </View>
+            )}
+          </View>
+          <SiteFooter />
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.night }}>
@@ -141,14 +236,15 @@ export default function Events() {
             ))}
           </View>
         )}
+        <SiteFooter />
       </ScrollView>
     </View>
   );
 }
 
-function Section({ title }: { title: string }) {
+function Section({ title, gutter = space.gutter }: { title: string; gutter?: number }) {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, { marginHorizontal: gutter }]}>
       <Display size={24}>{title}</Display>
     </View>
   );
@@ -211,22 +307,22 @@ function EventRow({ event: e, first }: { event: CinemaEvent; first: boolean }) {
   );
 }
 
-function Opening({ movie: m }: { movie: Movie }) {
+function Opening({ movie: m, width = 120 }: { movie: Movie; width?: number }) {
   const day = releaseDay(m.releaseDate);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={dot(m.title, opens(m.releaseDate)?.toLowerCase(), m.ageRating)}
       onPress={() => router.push({ pathname: '/film/[id]', params: { id: String(m.movieId) } })}
-      style={({ pressed }) => [{ width: 120, gap: 6 }, pressed && { opacity: 0.85 }]}>
+      style={({ pressed }) => [{ width, gap: 6 }, pressed && { opacity: 0.85 }]}>
       <View>
-        <Poster url={m.posterUrl} title={m.title} width={120} size="w342" meta={m.ageRating} />
+        <Poster url={m.posterUrl} title={m.title} width={width} size="w342" meta={m.ageRating} />
         <RemindBell movieId={m.movieId} title={m.title} variant="overlay" />
       </View>
       <Mono size={11} color={colors.laterite}>
         {day ? `OPENS ${shortDate(day)}` : 'COMING SOON'}
       </Mono>
-      <Body size={13} weight="semi" color={colors.bone} numberOfLines={2}>
+      <Body size={width > 150 ? 15 : 13} weight="semi" color={colors.bone} numberOfLines={2}>
         {m.title}
       </Body>
     </Pressable>
@@ -304,8 +400,8 @@ function Offer({ offer: o }: { offer: Promotion }) {
 }
 
 const styles = StyleSheet.create({
+  wideHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, paddingBottom: 8 },
   section: {
-    marginHorizontal: space.gutter,
     marginTop: 28,
     marginBottom: 12,
     paddingTop: 12,

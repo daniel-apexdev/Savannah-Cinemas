@@ -18,7 +18,8 @@ import { useLocation } from '@/lib/location';
 import { specialLabel, useSpecials } from '@/lib/specials';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
-import { usePageWidth, useWide } from '@/lib/layout';
+import { usePageWidth, useScreen, useWide } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
 import { colors, space, touch } from '@/theme';
 
 // Matches the showtime generator's fortnight
@@ -32,6 +33,7 @@ export default function Tonight() {
   // Wider on desktop web (lib/layout)
   const width = usePageWidth(MAX_W, 760);
   const wide = useWide();
+  const screen = useScreen();
   const { user } = useAuth();
 
   const req = useRequest(async () => {
@@ -116,6 +118,196 @@ export default function Tonight() {
       : `FIRST SHOW · ${weekday(selectedDate)} ${selectedDate.getDate()}`
     : '';
 
+  const seatsNote = seatsLeft != null ? (seatsLeft === 0 ? 'FULL' : `${seatsLeft} SEATS LEFT`) : null;
+  const heroSpecial = hero ? specials.byShowtime.get(hero.showtimeId) : undefined;
+  const heroMeta = hero
+    ? dot(
+        heroSpecial ? specialLabel(specials.programme(heroSpecial.programme)?.name, heroSpecial.discountPercent) : null,
+        clock(hero.startTime),
+        hero.screenName.toUpperCase(),
+        runtime(heroMovie?.runtimeMinutes),
+        heroMovie?.ageRating,
+        seatsNote,
+      )
+    : '';
+  const timeTokens = (r: FilmRow) =>
+    r.times.map((s) => (
+      <TimeToken
+        key={s.showtimeId}
+        time={clock(s.startTime)}
+        note={
+          specials.byShowtime.get(s.showtimeId)
+            ? `-${Math.round(specials.byShowtime.get(s.showtimeId)!.discountPercent)}%`
+            : new Set(r.times.map((t) => t.screenId)).size > 1
+              ? s.screenName.replace(/^screen\s*/i, 'S')
+              : undefined
+        }
+        accessibilityLabel={`${r.title} at ${clock(s.startTime)}, ${s.screenName}. Choose seats`}
+        onPress={() => openSeats(s.showtimeId)}
+      />
+    ));
+  // ---------------- Tablet, laptop and desktop (website) ----------------
+  if (screen.wide) {
+    const { content, gutter, inner, desktop } = screen;
+    const col = { width: content, alignSelf: 'center' as const, paddingHorizontal: gutter };
+    // Desktop: art and marquee side by side; tablet: stacked
+    const artW = desktop ? Math.round(inner * 0.62) : inner;
+    const artH = Math.round(artW * 0.5625);
+    const cols = desktop ? 3 : 2;
+    const cardW = Math.floor((inner - (cols - 1) * 28) / cols);
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.night }}>
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(e) => {
+            scrollY.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={64}
+          stickyHeaderIndices={[1]}
+          contentContainerStyle={{ paddingTop: 28 }}>
+          <View
+            style={[col, styles.wideMast]}
+            onLayout={(e) => {
+              headH.current = e.nativeEvent.layout.height + 28;
+            }}>
+            <View style={{ gap: 6 }}>
+              <Label color={colors.laterite}>WHAT’S ON</Label>
+              <Display size={desktop ? 64 : 52} black accessibilityRole="header">
+                {isToday(selectedDate) ? 'Tonight' : `${weekday(selectedDate)} ${selectedDate.getDate()}`}
+              </Display>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+              <Label>CINEMA</Label>
+              <LocationButton onChange={() => setPicked(null)} />
+            </View>
+          </View>
+
+          <View style={styles.dateBar}>
+            <View style={col}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.dateStrip}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}>
+                {days.map((k, i) => (
+                  <DayTab key={k} dayKey={k} index={i} on={k === selected} has={(byDay.get(k)?.length ?? 0) > 0} compact={false} onPress={() => pickDay(k)} />
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+
+          <View style={[col, { paddingTop: 28 }]}>
+            {req.loading ? (
+              <View style={{ flexDirection: desktop ? 'row' : 'column', gap: 0 }}>
+                <Shimmer style={{ width: artW, height: artH }} />
+                <Shimmer style={{ flex: 1, height: desktop ? artH : 180, backgroundColor: colors.booth }} />
+              </View>
+            ) : req.error && !req.data ? (
+              <ErrorState error={req.error} onRetry={req.reload} />
+            ) : !hero ? (
+              <Message
+                kicker={`${weekday(selectedDate)} ${selectedDate.getDate()}`}
+                title="Nothing on the board"
+                body={
+                  byDay.size === 0
+                    ? 'No showtimes are scheduled for the coming week yet. Browse the films and add them to your watchlist.'
+                    : 'No more shows that day. Pick another date above.'
+                }
+                action={<Button label="Browse films" variant="outline" onPress={() => router.push('/films')} />}
+              />
+            ) : (
+              <>
+                {/* Next up: the art beside a bone marquee panel */}
+                <View style={[styles.heroWide, { flexDirection: desktop ? 'row' : 'column' }]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${heroMovie?.title ?? hero.movieTitle}, details`}
+                    onPress={() => openFilm(hero.movieId)}
+                    style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [hovered && { opacity: 0.92 }]}>
+                    <Backdrop
+                      url={heroMovie?.backdropUrl}
+                      fallbackUrl={heroMovie?.posterUrl ?? hero.posterUrl}
+                      width={artW}
+                      height={artH}
+                      title={hero.movieTitle}
+                    />
+                  </Pressable>
+                  <View style={[styles.band, styles.bandWide, desktop && { width: inner - artW, minHeight: artH }]}>
+                    <Label color={colors.laterite}>{heroKicker}</Label>
+                    <Display size={desktop ? 52 : 46} black color={colors.ink} numberOfLines={3}>
+                      {heroMovie?.title ?? hero.movieTitle}
+                    </Display>
+                    <Mono size={12.5} color={colors.inkSoft}>
+                      {heroMeta}
+                    </Mono>
+                    {heroMovie?.description ? (
+                      <Body size={14.5} color={colors.inkSoft} numberOfLines={desktop ? 4 : 3}>
+                        {heroMovie.description}
+                      </Body>
+                    ) : null}
+                    <View style={{ flexGrow: 1 }} />
+                    <View style={{ gap: 10, marginTop: 8 }}>
+                      <Button
+                        label={seatsLeft === 0 ? 'Sold out' : `Book ${clock(hero.startTime)}`}
+                        disabled={seatsLeft === 0}
+                        onPress={() => openSeats(hero.showtimeId)}
+                      />
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        {heroMovie?.trailerUrl ? (
+                          <Button style={{ flex: 1 }} height={46} variant="outlineInk" label="Trailer" onPress={() => setTrailerOpen(true)} />
+                        ) : null}
+                        <Button style={{ flex: 1 }} height={46} variant="outlineInk" label="Film details" onPress={() => openFilm(hero.movieId)} />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {rows.length > 0 ? (
+                  <>
+                    <View style={[styles.secHead, { paddingHorizontal: 0, paddingTop: 44, paddingBottom: 18 }]}>
+                      <Display size={34}>{isToday(selectedDate) ? 'Later tonight' : 'Also showing'}</Display>
+                      <Label>
+                        {rows.length} {rows.length === 1 ? 'FILM' : 'FILMS'}
+                      </Label>
+                    </View>
+                    <View style={[styles.cardGrid, { gap: 28 }]}>
+                      {rows.map((r) => {
+                        const sp = r.times.map((t) => specials.byShowtime.get(t.showtimeId)).find(Boolean);
+                        return (
+                          <View key={r.movieId} style={[styles.card, { width: cardW }]}>
+                            <Pressable accessibilityRole="button" accessibilityLabel={`${r.title}, details`} onPress={() => openFilm(r.movieId)}>
+                              <Poster url={r.posterUrl} title={r.title} width={96} meta={r.movie?.ageRating ?? undefined} />
+                            </Pressable>
+                            <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+                              <Pressable onPress={() => openFilm(r.movieId)} accessibilityRole="link">
+                                <Display size={26} numberOfLines={2} accessibilityRole="text">
+                                  {r.title}
+                                </Display>
+                              </Pressable>
+                              <Body size={13} color={colors.dust}>
+                                {dot(r.movie?.runtimeMinutes ? `${r.movie.runtimeMinutes} min` : null, r.movie?.ageRating)}
+                              </Body>
+                              {sp ? <Label color={colors.vip}>{specialLabel(specials.programme(sp.programme)?.name, sp.discountPercent)}</Label> : null}
+                              <View style={styles.tokens}>{timeTokens(r)}</View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </>
+                ) : null}
+              </>
+            )}
+          </View>
+          <SiteFooter />
+        </ScrollView>
+        {heroMovie?.trailerUrl ? (
+          <TrailerModal url={heroMovie.trailerUrl} title={heroMovie.title} visible={trailerOpen} onClose={() => setTrailerOpen(false)} />
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.night, paddingTop: insets.top }}>
       <ScrollView
@@ -155,27 +347,9 @@ export default function Tonight() {
         <View style={styles.dateBar}>
           {/* Date strip: pinned under the status bar while the films scroll */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateStrip} contentContainerStyle={{ paddingHorizontal: space.gutter }}>
-            {days.map((k, i) => {
-              const d = dayFromKey(k);
-              const on = k === selected;
-              const has = (byDay.get(k)?.length ?? 0) > 0;
-              return (
-                <Pressable
-                  key={k}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: on }}
-                  accessibilityLabel={`${i === 0 ? 'Tonight' : weekday(d)} ${d.getDate()}${has ? '' : ', no shows'}`}
-                  onPress={() => pickDay(k)}
-                  style={[styles.day, on && styles.dayOn]}>
-                  <Mono size={11} color={on ? colors.laterite : colors.dust} bold={on}>
-                    {i === 0 ? 'TONIGHT' : weekday(d)}
-                  </Mono>
-                  <Display size={20} color={on ? colors.bone : has ? colors.dust : colors.disabled} accessibilityRole="text">
-                    {i === 0 ? `${weekday(d)} ${d.getDate()}` : String(d.getDate())}
-                  </Display>
-                </Pressable>
-              );
-            })}
+            {days.map((k, i) => (
+              <DayTab key={k} dayKey={k} index={i} on={k === selected} has={(byDay.get(k)?.length ?? 0) > 0} compact={true} onPress={() => pickDay(k)} />
+            ))}
           </ScrollView>
         </View>
 
@@ -307,11 +481,51 @@ export default function Tonight() {
             ) : null}
           </>
         )}
+        <SiteFooter />
       </ScrollView>
       {heroMovie?.trailerUrl ? (
         <TrailerModal url={heroMovie.trailerUrl} title={heroMovie.title} visible={trailerOpen} onClose={() => setTrailerOpen(false)} />
       ) : null}
     </View>
+  );
+}
+
+/** One date in the strip under the masthead. */
+function DayTab({
+  dayKey: k,
+  index,
+  on,
+  has,
+  compact,
+  onPress,
+}: {
+  dayKey: string;
+  index: number;
+  on: boolean;
+  has: boolean;
+  compact: boolean;
+  onPress: () => void;
+}) {
+  const d = dayFromKey(k);
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: on }}
+      accessibilityLabel={`${index === 0 ? 'Tonight' : weekday(d)} ${d.getDate()}${has ? '' : ', no shows'}`}
+      onPress={onPress}
+      style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+        styles.day,
+        !compact && styles.dayWide,
+        on && styles.dayOn,
+        hovered && !on && { borderBottomColor: colors.rule },
+      ]}>
+      <Mono size={11} color={on ? colors.laterite : colors.dust} bold={on}>
+        {index === 0 ? 'TONIGHT' : weekday(d)}
+      </Mono>
+      <Display size={20} color={on ? colors.bone : has ? colors.dust : colors.disabled} accessibilityRole="text">
+        {index === 0 ? `${weekday(d)} ${d.getDate()}` : String(d.getDate())}
+      </Display>
+    </Pressable>
   );
 }
 
@@ -351,4 +565,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 14, paddingHorizontal: space.gutter, paddingBottom: 16, marginBottom: 16 },
   rowRule: { borderBottomWidth: 1, borderBottomColor: colors.rule },
   tokens: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+  // Website (tablet and up)
+  wideMast: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: 18, gap: 24 },
+  dayWide: { width: undefined, minWidth: 64, paddingHorizontal: 4 },
+  heroWide: { borderWidth: 1.5, borderColor: colors.bone, borderRadius: 4, overflow: 'hidden' },
+  bandWide: { paddingHorizontal: 32, paddingTop: 28, paddingBottom: 28, gap: 12 },
+  cardGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  card: { flexDirection: 'row', gap: 18, paddingTop: 20, borderTopWidth: 1, borderTopColor: colors.rule },
 });

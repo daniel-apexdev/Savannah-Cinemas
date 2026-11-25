@@ -43,11 +43,11 @@ function Face({ person }: { person: CastMember }) {
 }
 
 /** Horizontal strip of cast portraits with names and roles. */
-export function CastRow({ cast, director }: { cast: CastMember[]; director?: string | null }) {
+export function CastRow({ cast, director, gutter = space.gutter }: { cast: CastMember[]; director?: string | null; gutter?: number }) {
   if (!cast.length && !director) return null;
   return (
     <View style={{ marginTop: 22 }}>
-      <View style={styles.head}>
+      <View style={[styles.head, { marginHorizontal: gutter }]}>
         <Display size={24}>Cast</Display>
         {director ? (
           <Body size={13} color={colors.dust} numberOfLines={1} style={{ flexShrink: 1 }}>
@@ -63,7 +63,7 @@ export function CastRow({ cast, director }: { cast: CastMember[]; director?: str
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
-            paddingHorizontal: space.gutter,
+            paddingHorizontal: gutter,
             gap: 14,
             paddingTop: 12,
           }}>

@@ -6,6 +6,7 @@ import { colors, space, touch } from '@/theme';
 
 import { StackHeader } from './header';
 import { Body, Label, Mono } from './type';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 
@@ -31,6 +32,7 @@ export function SettingsScreen({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingTop: 6, paddingBottom: 40, gap: 18 }}>
         {children}
+        <SiteFooter />
       </ScrollView>
       {footer ? (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) + 6 }]}>

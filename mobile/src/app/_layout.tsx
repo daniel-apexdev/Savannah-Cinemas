@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { Intro } from "@/components/intro";
+import { SiteHeader } from "@/components/site-header";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { GUESTS_ALLOWED } from "@/lib/guest";
 import { NotificationsProvider } from "@/lib/notify";
@@ -58,6 +59,8 @@ function Root() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.night }}>
+      {/* Website, tablet and up: the site bar on pages outside the tabs */}
+      <SiteHeader />
       <Stack
         screenOptions={{
           headerShown: false,

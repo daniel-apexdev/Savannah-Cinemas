@@ -16,7 +16,8 @@ import { setSetting, useSetting, type FilmsLayout } from '@/lib/settings';
 import type { Movie, ShowtimeListItem } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
-import { usePageWidth } from '@/lib/layout';
+import { usePageWidth, useScreen } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
 import { colors, fonts, isWeb, space } from '@/theme';
 
 type Shelf = 'now' | 'coming';
@@ -25,8 +26,12 @@ const GAP = 10;
 
 export default function Films() {
   const insets = useSafeAreaInsets();
-  // Wider on desktop web (lib/layout)
-  const width = usePageWidth(MAX_W, 1120);
+  // Website on tablet/desktop: full site column, more posters per row
+  const screen = useScreen();
+  const phoneW = usePageWidth(MAX_W);
+  const width = screen.wide ? screen.content : phoneW;
+  const gut = screen.wide ? screen.gutter : space.gutter;
+  const inner = width - gut * 2;
   const { user } = useAuth();
   const [shelf, setShelf] = useState<Shelf>('now');
   // Count for the Watchlist link (the list itself has its own screen)
@@ -88,7 +93,7 @@ export default function Films() {
 
   const active = shelf === 'now' ? nowShowing : coming;
   const isSearch = term.length >= 2;
-  const list = isSearch ? results ?? [] : active.data ?? [];
+  const list = isSearch ? (results ?? []) : (active.data ?? []);
   const remind = !isSearch && shelf === 'coming';
   const loading = isSearch ? searching : active.loading;
   const error = isSearch ? searchError : active.error;
@@ -106,32 +111,32 @@ export default function Films() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingTop: insets.top + 6, paddingBottom: 32, width, alignSelf: 'center' }}
-        refreshControl={
-          !isSearch ? <RefreshControl refreshing={active.refreshing} onRefresh={active.reload} tintColor={colors.bone} /> : undefined
-        }>
-        <View style={{ paddingHorizontal: space.gutter, gap: 14 }}>
-          <Display size={52} black>
-            {isSearch ? 'Search' : shelf === 'now' ? 'Now showing' : 'Coming soon'}
-          </Display>
+        refreshControl={!isSearch ? <RefreshControl refreshing={active.refreshing} onRefresh={active.reload} tintColor={colors.bone} /> : undefined}>
+        <View style={{ paddingHorizontal: gut, gap: 14, paddingTop: screen.wide ? 22 : 0 }}>
+          <View style={screen.wide ? styles.wideHead : null}>
+            <Display size={screen.desktop ? 64 : 52} black>
+              {isSearch ? 'Search' : shelf === 'now' ? 'Now showing' : 'Coming soon'}
+            </Display>
 
-          <View style={styles.search}>
-            <SearchIcon />
-            <TextInput
-              value={q}
-              onChangeText={setQ}
-              placeholder="Search films"
-              placeholderTextColor={colors.dust}
-              selectionColor={colors.laterite}
-              returnKeyType="search"
-              autoCorrect={false}
-              accessibilityLabel="Search films"
-              style={styles.searchInput}
-            />
-            {q ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQ('')} hitSlop={10} style={styles.clear}>
-                <CloseIcon size={16} color={colors.dust} />
-              </Pressable>
-            ) : null}
+            <View style={[styles.search, screen.wide && { width: screen.desktop ? 380 : 300 }]}>
+              <SearchIcon />
+              <TextInput
+                value={q}
+                onChangeText={setQ}
+                placeholder="Search films"
+                placeholderTextColor={colors.dust}
+                selectionColor={colors.laterite}
+                returnKeyType="search"
+                autoCorrect={false}
+                accessibilityLabel="Search films"
+                style={styles.searchInput}
+              />
+              {q ? (
+                <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQ('')} hitSlop={10} style={styles.clear}>
+                  <CloseIcon size={16} color={colors.dust} />
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           {!isSearch ? (
@@ -163,37 +168,57 @@ export default function Films() {
               </Pressable>
             </View>
           ) : (
-            <Label>{searching ? 'SEARCHING…' : `${results?.length ?? 0} ${(results?.length ?? 0) === 1 ? 'RESULT' : 'RESULTS'} FOR “${term.toUpperCase()}”`}</Label>
+            <Label>
+              {searching ? 'SEARCHING…' : `${results?.length ?? 0} ${(results?.length ?? 0) === 1 ? 'RESULT' : 'RESULTS'} FOR “${term.toUpperCase()}”`}
+            </Label>
           )}
         </View>
 
-        <View style={styles.viewBar}>
+        <View style={[styles.viewBar, { paddingHorizontal: gut }]}>
           <Label>{loading ? ' ' : `${list.length} ${list.length === 1 ? 'FILM' : 'FILMS'}`}</Label>
           <LayoutSwitch value={layout} onChange={(v) => setSetting('filmsLayout', v)} />
         </View>
 
         <View style={{ paddingTop: 12 }}>
           {loading ? (
-            <WallSkeleton width={width} />
+            screen.wide ? (
+              <View style={{ paddingHorizontal: gut, flexDirection: 'row', gap: 18 }}>
+                {Array.from({ length: screen.desktop ? 5 : 4 }, (_, i) => (
+                  <Shimmer key={i} style={{ flex: 1, aspectRatio: 2 / 3 }} />
+                ))}
+              </View>
+            ) : (
+              <WallSkeleton width={width} />
+            )
           ) : error && list.length === 0 ? (
             <ErrorState error={error} onRetry={isSearch ? () => setSearchNonce((n) => n + 1) : active.reload} />
           ) : list.length === 0 ? (
             <Message
               title={isSearch ? 'No films match' : 'Nothing here yet'}
-              body={
-                isSearch
-                  ? 'Try a shorter title or an actor’s name.'
-                  : 'Check back soon. New films are added as they’re programmed.'
-              }
+              body={isSearch ? 'Try a shorter title or an actor’s name.' : 'Check back soon. New films are added as they’re programmed.'}
             />
           ) : layout === 'grid' ? (
-            <Grid movies={list} width={width} onOpen={open} remind={remind} />
+            <Grid movies={list} inner={inner} gutter={gut} cols={screen.desktop ? 7 : screen.wide ? 5 : undefined} onOpen={open} remind={remind} />
           ) : layout === 'index' ? (
-            <Index movies={list} onOpen={open} nextShows={nextShows} showsLoaded={!!shows.data} now={now} remind={remind} />
+            <Index
+              movies={list}
+              onOpen={open}
+              nextShows={nextShows}
+              showsLoaded={!!shows.data}
+              now={now}
+              remind={remind}
+              gutter={gut}
+              columns={screen.desktop ? 2 : 1}
+              inner={inner}
+            />
+          ) : screen.wide ? (
+            // Website: the wall becomes a row of big posters with titles
+            <Grid movies={list} inner={inner} gutter={gut} cols={screen.desktop ? 5 : 4} big onOpen={open} remind={remind} />
           ) : (
             <Wall movies={list} width={width} onOpen={open} remind={remind} />
           )}
         </View>
+        <SiteFooter />
       </ScrollView>
     </View>
   );
@@ -307,13 +332,32 @@ function LayoutSwitch({ value, onChange }: { value: FilmsLayout; onChange: (v: F
   );
 }
 
-/** Three across, title underneath: about nine films per screen. */
-function Grid({ movies, width, onOpen, remind }: { movies: Movie[]; width: number; onOpen: (m: Movie) => void; remind?: boolean }) {
-  const inner = width - space.gutter * 2;
-  const cols = width >= 1000 ? 6 : width >= 760 ? 5 : width >= 520 ? 4 : 3;
-  const w = Math.floor((inner - GAP * (cols - 1)) / cols);
+/**
+ * Posters in columns, title underneath. Phone: three or four across.
+ * Website: `cols` across; `big` for the roomier poster wall.
+ */
+function Grid({
+  movies,
+  inner,
+  gutter,
+  cols: wanted,
+  big,
+  onOpen,
+  remind,
+}: {
+  movies: Movie[];
+  inner: number;
+  gutter: number;
+  cols?: number;
+  big?: boolean;
+  onOpen: (m: Movie) => void;
+  remind?: boolean;
+}) {
+  const cols = wanted ?? (inner >= 480 ? 4 : 3);
+  const gap = big ? 24 : wanted ? 16 : GAP;
+  const w = Math.floor((inner - gap * (cols - 1)) / cols);
   return (
-    <View style={{ paddingHorizontal: space.gutter, flexDirection: 'row', flexWrap: 'wrap', columnGap: GAP, rowGap: 18 }}>
+    <View style={{ paddingHorizontal: gutter, flexDirection: 'row', flexWrap: 'wrap', columnGap: gap, rowGap: big ? 32 : 18 }}>
       {movies.map((m) => {
         const tag = opens(m.releaseDate);
         return (
@@ -322,8 +366,12 @@ function Grid({ movies, width, onOpen, remind }: { movies: Movie[]; width: numbe
             accessibilityRole="button"
             accessibilityLabel={dot(m.title, tag ?? null, m.ageRating)}
             onPress={() => onOpen(m)}
-            style={({ pressed }) => [{ width: w, gap: 6 }, pressed && { opacity: 0.85 }]}>
-            <Poster url={m.posterUrl} title={m.title} meta={tag ? null : m.ageRating} width={w} size="w342" />
+            style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+              { width: w, gap: big ? 8 : 6 },
+              hovered && { transform: [{ translateY: -3 }] },
+              pressed && { opacity: 0.85 },
+            ]}>
+            <Poster url={m.posterUrl} title={m.title} meta={tag ? null : m.ageRating} width={w} size={big ? 'w500' : 'w342'} />
             {tag ? (
               <View style={styles.opensTag} pointerEvents="none">
                 <Mono size={9} color={colors.night}>
@@ -332,11 +380,17 @@ function Grid({ movies, width, onOpen, remind }: { movies: Movie[]; width: numbe
               </View>
             ) : null}
             {remind ? <RemindBell movieId={m.movieId} title={m.title} variant="overlay" /> : null}
-            <Body size={13} weight="semi" color={colors.bone} numberOfLines={2} style={{ lineHeight: 17 }}>
-              {m.title}
-            </Body>
-            <Mono size={10.5} color={colors.dust} bold={false} numberOfLines={1}>
-              {dot(m.ageRating, rating(m.rating))}
+            {big ? (
+              <Display size={22} numberOfLines={2} accessibilityRole="text">
+                {m.title}
+              </Display>
+            ) : (
+              <Body size={13} weight="semi" color={colors.bone} numberOfLines={2} style={{ lineHeight: 17 }}>
+                {m.title}
+              </Body>
+            )}
+            <Mono size={big ? 11.5 : 10.5} color={colors.dust} bold={false} numberOfLines={1}>
+              {big ? dot(tag, runtime(m.runtimeMinutes), m.ageRating, rating(m.rating)) : dot(m.ageRating, rating(m.rating))}
             </Mono>
           </Pressable>
         );
@@ -353,7 +407,13 @@ function Index({
   showsLoaded,
   now,
   remind,
+  gutter = space.gutter,
+  columns = 1,
+  inner = 0,
 }: {
+  gutter?: number;
+  columns?: number;
+  inner?: number;
   remind?: boolean;
   movies: Movie[];
   onOpen: (m: Movie) => void;
@@ -368,7 +428,7 @@ function Index({
     return `${tomorrow ? 'TMRW' : shortDate(d).split(' ').slice(0, 2).join(' ')} ${clock(d)}`;
   };
   return (
-    <View style={{ paddingHorizontal: space.gutter }}>
+    <View style={{ paddingHorizontal: gutter, flexDirection: columns > 1 ? 'row' : 'column', flexWrap: 'wrap', columnGap: 32 }}>
       {movies.map((m, i) => {
         const next = nextShows.get(m.movieId) ?? [];
         const tag = opens(m.releaseDate);
@@ -387,7 +447,12 @@ function Index({
             accessibilityRole="button"
             accessibilityLabel={dot(m.title, runtime(m.runtimeMinutes), m.ageRating, status.trim() || null)}
             onPress={() => onOpen(m)}
-            style={({ pressed }) => [styles.indexRow, i === 0 && { borderTopWidth: 1, borderTopColor: colors.rule }, pressed && { backgroundColor: colors.booth }]}>
+            style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+              styles.indexRow,
+              columns > 1 && { width: Math.floor((inner - 32) / 2) },
+              i < columns && { borderTopWidth: 1, borderTopColor: colors.rule },
+              (pressed || hovered) && { backgroundColor: colors.booth },
+            ]}>
             <Poster url={m.posterUrl} title={m.title} width={44} size="w185" />
             <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
               <Display size={20} numberOfLines={1} accessibilityRole="text">
@@ -441,11 +506,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.5,
     borderBottomColor: colors.bone,
   },
-  searchInput: { flex: 1, minWidth: 0, height: 46, color: colors.bone, fontFamily: fonts.body, fontSize: 16, ...(isWeb ? ({ outlineStyle: 'none' } as object) : null) },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 46,
+    color: colors.bone,
+    fontFamily: fonts.body,
+    fontSize: 16,
+    ...(isWeb ? ({ outlineStyle: 'none' } as object) : null),
+  },
   clear: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   shelf: { paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: 'transparent' },
   shelfOn: { borderBottomColor: colors.laterite },
-  viewBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 14 },
+  viewBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14 },
+  wideHead: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 },
   switch: { flexDirection: 'row', borderWidth: 1.5, borderColor: colors.rule, borderRadius: 3, overflow: 'hidden' },
   switchBtn: { height: 32, paddingHorizontal: 10, justifyContent: 'center' },
   indexRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.rule },

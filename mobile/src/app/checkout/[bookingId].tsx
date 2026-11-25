@@ -20,6 +20,8 @@ import type { ConcessionOrder, PaymentMethod } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
 import { colors, radius, space } from '@/theme';
+import { useScreen } from '@/lib/layout';
+import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,6 +33,8 @@ export default function Checkout() {
   const insets = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
   const width = Math.min(winW, MAX_W);
+  // Website on tablet/desktop: two columns (below)
+  const screen = useScreen();
   const now = useNow(1000);
 
   const req = useRequest(async () => {
@@ -60,7 +64,8 @@ export default function Checkout() {
   const expired = left != null && left <= 0;
 
   // Already paid? Go straight to the ticket.
-  const b = req.data?.booking;
+  const booking = req.data?.booking;
+  const b = booking;
   useEffect(() => {
     if (b && b.status === 'CONFIRMED') {
       router.replace({ pathname: '/ticket/[bookingId]', params: { bookingId: String(id) } });
@@ -108,6 +113,193 @@ export default function Checkout() {
   const mmss =
     left != null && left > 0 ? `${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}` : null;
 
+  const summary = (b: NonNullable<typeof booking>) => (
+    <>
+      {/* Order */}
+      <View style={{ flexDirection: 'row', gap: 14 }}>
+        <Poster url={b.movie.posterUrl} title={b.movie.title} width={72} size="w185" />
+        <View style={{ flex: 1, gap: 6, justifyContent: 'center' }}>
+          <Display size={26} black numberOfLines={2}>
+            {b.movie.title}
+          </Display>
+          <Label>{dot(shortDate(new Date(b.startTime)), clock(b.startTime), b.screen.name.toUpperCase())}</Label>
+          <Body size={13} color={colors.dust}>
+            {b.cinema.name}
+          </Body>
+        </View>
+      </View>
+
+      <View style={styles.box}>
+        {b.seats.map((s) => (
+          <View key={s.seatId} style={styles.line}>
+            <Body color={colors.bone}>
+              Seat <Mono size={14}>{s.seatLabel}</Mono>
+              <Body size={13} color={colors.dust}>
+                {'  '}
+                {titleCase(s.seatType ?? 'standard')}
+              </Body>
+            </Body>
+            <Mono size={14}>{money(s.ticketPrice ?? b.ticketPrice)}</Mono>
+          </View>
+        ))}
+        {toNumber(b.discountAmount) > 0 ? (
+          <View style={styles.line}>
+            <Body color={colors.bone}>Promo discount</Body>
+            <Mono size={14} color={colors.lateriteSoft}>
+              −{money(b.discountAmount)}
+            </Mono>
+          </View>
+        ) : null}
+        {snacks?.items.map((i) => (
+          <View key={`snack-${i.itemId}`} style={styles.line}>
+            <Body color={colors.bone}>
+              {i.name}
+              <Body size={13} color={colors.dust}>
+                {'  '}× {i.quantity}
+              </Body>
+            </Body>
+            <Mono size={14}>{money(i.lineTotal)}</Mono>
+          </View>
+        ))}
+        <Pressable accessibilityRole="button" onPress={editSnacks} style={[styles.line, { minHeight: 44 }]}>
+          <Mono size={12} color={colors.lateriteSoft}>
+            {snacks ? 'EDIT SNACKS' : '+ ADD SNACKS'}
+          </Mono>
+        </Pressable>
+        {quote.data && quote.data.points > 0 ? (
+          <Pressable
+            accessibilityRole="switch"
+            accessibilityState={{ checked: usePoints }}
+            accessibilityLabel={`Use ${quote.data.points} Savannah Rewards points for ${money(quote.data.discount)} off`}
+            onPress={() => setUsePoints((v) => !v)}
+            style={[styles.line, { minHeight: 60 }]}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Body color={colors.bone}>Use {quote.data.points} points</Body>
+              <Mono size={11} color={colors.dust} bold={false}>
+                {`YOU HAVE ${quote.data.balance.toLocaleString('en-GB')} · SAVANNAH REWARDS`}
+              </Mono>
+            </View>
+            <Mono size={14} color={usePoints ? colors.lateriteSoft : colors.dust}>
+              −{money(quote.data.discount)}
+            </Mono>
+            <Switch
+              value={usePoints}
+              onValueChange={setUsePoints}
+              trackColor={{ false: colors.rule, true: colors.laterite }}
+              thumbColor={colors.bone}
+              ios_backgroundColor={colors.rule}
+              {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bone } as object) : null)}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+          </Pressable>
+        ) : null}
+        <View style={[styles.line, { borderBottomWidth: 0 }]}>
+          <Body weight="bold" color={colors.bone}>
+            Total
+          </Body>
+          <View style={{ alignItems: 'flex-end' }}>
+            {pointsOff > 0 ? (
+              <Mono size={13} color={colors.dust} bold={false} style={{ textDecorationLine: 'line-through' }}>
+                {money(b.totalAmount)}
+              </Mono>
+            ) : null}
+            <Mono size={22}>{money(toNumber(b.totalAmount) - pointsOff)}</Mono>
+          </View>
+        </View>
+      </View>
+    </>
+  );
+  const form = () => (
+    <>
+      <View style={{ gap: 8 }}>
+        <Field
+          label={user ? 'Send tickets & receipt to' : 'Your email for the tickets'}
+          value={email ?? user?.email ?? ''}
+          onChangeText={(t) => {
+            setEmail(t);
+            setPayError(null);
+          }}
+          onBlur={() => setEmailTouched(true)}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          placeholder="you@example.com"
+          error={emailTouched && !emailOk ? 'Enter a valid email address' : null}
+        />
+        <Body size={12.5} color={colors.dust}>
+          {user
+            ? 'We’ll email your QR ticket and receipt here once you’ve paid. Your ticket is also saved in Account.'
+            : 'No account needed: we’ll email your QR ticket and receipt here once you’ve paid. Show the QR code at the door.'}
+        </Body>
+      </View>
+
+      <PaymentPicker value={method} onChange={setMethod} />
+
+      {!PAYMENTS_LIVE ? (
+        <View style={styles.test}>
+          <Label color={colors.vip}>TEST MODE</Label>
+          <Body size={13} color={colors.boneSoft}>
+            The Savannah server is simulating payments, so no money is taken. A real Mobile Money or card provider still needs to be connected before launch.
+          </Body>
+        </View>
+      ) : null}
+    </>
+  );
+  const payBlock = (b: NonNullable<typeof booking>) => (
+    <>
+      {payError ? (
+        <Mono size={12} color={colors.laterite}>
+          {payError}
+        </Mono>
+      ) : null}
+      <Button label={`Pay ${money(toNumber(b.totalAmount) - pointsOff)}`} busy={paying} onPress={pay} />
+    </>
+  );
+
+  // ---------------- Tablet, laptop and desktop (website): details left, your order right ----------------
+  if (screen.wide && b && !req.loading && !expired && b.status !== 'CANCELLED') {
+    const { content, gutter, desktop } = screen;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.night }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: 24 }}>
+          <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter }}>
+            <View style={styles.wideHead}>
+              <IconButton label="Back" onPress={() => goBack()} style={{ borderWidth: 1.5, borderColor: colors.rule }}>
+                <BackIcon />
+              </IconButton>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Display size={44} black>
+                  Checkout
+                </Display>
+                <Label>{from === 'snacks' ? 'STEP 3 OF 3 · SECURE PAYMENT' : 'SECURE PAYMENT'}</Label>
+              </View>
+              {mmss ? (
+                <View style={styles.hold} accessibilityLabel={`Seats held for ${mmss}`}>
+                  <Label color={left! < 120000 ? colors.laterite : colors.dust}>HELD {mmss}</Label>
+                </View>
+              ) : null}
+            </View>
+            <View style={{ flexDirection: desktop ? 'row' : 'column-reverse', gap: desktop ? 48 : 28, alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <View style={{ flex: desktop ? 1 : undefined, width: desktop ? undefined : '100%', gap: 18, maxWidth: 640 }}>
+                <Display size={26}>Your details</Display>
+                {form()}
+              </View>
+              <View style={[styles.orderCard, { width: desktop ? 420 : '100%' }]}>
+                <Label color={colors.laterite}>YOUR ORDER</Label>
+                {summary(b)}
+                <View style={{ gap: 10 }}>{payBlock(b)}</View>
+              </View>
+            </View>
+          </View>
+          <SiteFooter />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.night }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[styles.head, { paddingTop: insets.top + 8 }]}>
@@ -152,145 +344,12 @@ export default function Checkout() {
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingBottom: 200, gap: 18 }}>
-            {/* Order */}
-            <View style={{ flexDirection: 'row', gap: 14 }}>
-              <Poster url={b.movie.posterUrl} title={b.movie.title} width={72} size="w185" />
-              <View style={{ flex: 1, gap: 6, justifyContent: 'center' }}>
-                <Display size={26} black numberOfLines={2}>
-                  {b.movie.title}
-                </Display>
-                <Label>{dot(shortDate(new Date(b.startTime)), clock(b.startTime), b.screen.name.toUpperCase())}</Label>
-                <Body size={13} color={colors.dust}>
-                  {b.cinema.name}
-                </Body>
-              </View>
-            </View>
-
-            <View style={styles.box}>
-              {b.seats.map((s) => (
-                <View key={s.seatId} style={styles.line}>
-                  <Body color={colors.bone}>
-                    Seat <Mono size={14}>{s.seatLabel}</Mono>
-                    <Body size={13} color={colors.dust}>
-                      {'  '}
-                      {titleCase(s.seatType ?? 'standard')}
-                    </Body>
-                  </Body>
-                  <Mono size={14}>{money(s.ticketPrice ?? b.ticketPrice)}</Mono>
-                </View>
-              ))}
-              {toNumber(b.discountAmount) > 0 ? (
-                <View style={styles.line}>
-                  <Body color={colors.bone}>Promo discount</Body>
-                  <Mono size={14} color={colors.lateriteSoft}>
-                    −{money(b.discountAmount)}
-                  </Mono>
-                </View>
-              ) : null}
-              {snacks?.items.map((i) => (
-                <View key={`snack-${i.itemId}`} style={styles.line}>
-                  <Body color={colors.bone}>
-                    {i.name}
-                    <Body size={13} color={colors.dust}>
-                      {'  '}× {i.quantity}
-                    </Body>
-                  </Body>
-                  <Mono size={14}>{money(i.lineTotal)}</Mono>
-                </View>
-              ))}
-              <Pressable accessibilityRole="button" onPress={editSnacks} style={[styles.line, { minHeight: 44 }]}>
-                <Mono size={12} color={colors.lateriteSoft}>
-                  {snacks ? 'EDIT SNACKS' : '+ ADD SNACKS'}
-                </Mono>
-              </Pressable>
-              {quote.data && quote.data.points > 0 ? (
-                <Pressable
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: usePoints }}
-                  accessibilityLabel={`Use ${quote.data.points} Savannah Rewards points for ${money(quote.data.discount)} off`}
-                  onPress={() => setUsePoints((v) => !v)}
-                  style={[styles.line, { minHeight: 60 }]}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Body color={colors.bone}>Use {quote.data.points} points</Body>
-                    <Mono size={11} color={colors.dust} bold={false}>
-                      {`YOU HAVE ${quote.data.balance.toLocaleString('en-GB')} · SAVANNAH REWARDS`}
-                    </Mono>
-                  </View>
-                  <Mono size={14} color={usePoints ? colors.lateriteSoft : colors.dust}>
-                    −{money(quote.data.discount)}
-                  </Mono>
-                  <Switch
-                    value={usePoints}
-                    onValueChange={setUsePoints}
-                    trackColor={{ false: colors.rule, true: colors.laterite }}
-                    thumbColor={colors.bone}
-                    ios_backgroundColor={colors.rule}
-                    {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bone } as object) : null)}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no"
-                  />
-                </Pressable>
-              ) : null}
-              <View style={[styles.line, { borderBottomWidth: 0 }]}>
-                <Body weight="bold" color={colors.bone}>
-                  Total
-                </Body>
-                <View style={{ alignItems: 'flex-end' }}>
-                  {pointsOff > 0 ? (
-                    <Mono size={13} color={colors.dust} bold={false} style={{ textDecorationLine: 'line-through' }}>
-                      {money(b.totalAmount)}
-                    </Mono>
-                  ) : null}
-                  <Mono size={22}>{money(toNumber(b.totalAmount) - pointsOff)}</Mono>
-                </View>
-              </View>
-            </View>
-
-            <View style={{ gap: 8 }}>
-              <Field
-                label={user ? 'Send tickets & receipt to' : 'Your email for the tickets'}
-                value={email ?? user?.email ?? ''}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  setPayError(null);
-                }}
-                onBlur={() => setEmailTouched(true)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                textContentType="emailAddress"
-                placeholder="you@example.com"
-                error={emailTouched && !emailOk ? 'Enter a valid email address' : null}
-              />
-              <Body size={12.5} color={colors.dust}>
-                {user
-                  ? 'We’ll email your QR ticket and receipt here once you’ve paid. Your ticket is also saved in Account.'
-                  : 'No account needed: we’ll email your QR ticket and receipt here once you’ve paid. Show the QR code at the door.'}
-              </Body>
-            </View>
-
-            <PaymentPicker value={method} onChange={setMethod} />
-
-            {!PAYMENTS_LIVE ? (
-              <View style={styles.test}>
-                <Label color={colors.vip}>TEST MODE</Label>
-                <Body size={13} color={colors.boneSoft}>
-                  The Savannah server is simulating payments, so no money is taken. A real Mobile Money or card provider still needs to be connected before
-                  launch.
-                </Body>
-              </View>
-            ) : null}
+            {summary(b)}
+            {form()}
+            <SiteFooter />
           </ScrollView>
 
-          <View style={[styles.tray, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
-            {payError ? (
-              <Mono size={12} color={colors.laterite}>
-                {payError}
-              </Mono>
-            ) : null}
-            <Button label={`Pay ${money(toNumber(b.totalAmount) - pointsOff)}`} busy={paying} onPress={pay} />
-          </View>
+          <View style={[styles.tray, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>{payBlock(b)}</View>
         </>
       )}
     </KeyboardAvoidingView>
@@ -310,6 +369,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.rule,
     gap: 12,
   },
+  // Website (tablet and up)
+  wideHead: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingBottom: 26 },
+  orderCard: { borderWidth: 1.5, borderColor: colors.bone, borderRadius: radius.paper, padding: 24, gap: 16 },
   test: { borderWidth: 1, borderColor: colors.rule, borderStyle: 'dashed', padding: 14, gap: 6, borderRadius: radius.action },
   tray: {
     position: 'absolute',

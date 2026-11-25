@@ -18,7 +18,7 @@ const WEEKDAYS = ['', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'S
  * Tuesday and so on. Each shows its next film at the chosen location
  * with times to book, then the films after that.
  */
-export function SpecialNights() {
+export function SpecialNights({ gutter = space.gutter }: { gutter?: number } = {}) {
   const { programmes, screenings, loaded } = useSpecials();
   const { cinemaId } = useLocation();
   if (!loaded || !programmes.length) return null;
@@ -26,7 +26,7 @@ export function SpecialNights() {
   const here = screenings.filter((s) => cinemaId == null || s.cinemaId === cinemaId);
 
   return (
-    <View style={{ gap: 14, paddingHorizontal: space.gutter }}>
+    <View style={{ gap: 14, paddingHorizontal: gutter }}>
       {programmes.map((p) => (
         <ProgrammeCard key={p.code} programme={p} screenings={here.filter((s) => s.programme === p.code)} />
       ))}

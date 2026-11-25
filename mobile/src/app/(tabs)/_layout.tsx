@@ -1,13 +1,14 @@
 import { Redirect, router } from 'expo-router';
 import { TabList, TabSlot, TabTrigger, Tabs, type TabTriggerSlotProps } from 'expo-router/ui';
 import { forwardRef, type ComponentRef } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LogoMark } from '@/components/logo';
 import { useAuth } from '@/lib/auth';
 import { GUESTS_ALLOWED } from '@/lib/guest';
-import { useWide } from '@/lib/layout';
+import { SITE_MAX, useScreen, useWide } from '@/lib/layout';
+import { WelcomeTour } from '@/components/welcome-tour';
 import { useWelcomed } from '@/lib/welcome';
 import { colors, fonts, space } from '@/theme';
 
@@ -51,17 +52,17 @@ export default function TabsLayout() {
   const { user } = useAuth();
   const welcomed = useWelcomed();
   const wide = useWide();
-  const { width: winW } = useWindowDimensions();
+  const { width: winW, gutter } = useScreen();
   // Phone app: nothing to see until you sign in (welcome slides first time)
   if (!user && !GUESTS_ALLOWED) return <Redirect href={welcomed === 'no' ? '/welcome' : { pathname: '/sign-in', params: { mode: 'in' } }} />;
-  // Website, first visit: show the welcome slides (they can look around after)
-  if (!user && welcomed === 'no') return <Redirect href="/welcome" />;
+  // Website, first visit: the tour pops up over the home page
+  const tour = <WelcomeTour visible={!user && welcomed === 'no'} />;
 
   if (wide) {
     return (
       <Tabs>
         {/* Triggers must be direct children of TabList (expo-router/ui doesn't look inside Views) */}
-        <TabList style={[styles.header, { paddingHorizontal: Math.max(space.gutter, (winW - 1120) / 2 + space.gutter) }]}>
+        <TabList style={[styles.header, { paddingHorizontal: Math.max(gutter, (winW - SITE_MAX) / 2 + gutter) }]}>
           <Pressable accessibilityRole="link" accessibilityLabel="Savannah Cinemas, home" onPress={() => router.navigate('/')} style={styles.brand}>
             <LogoMark size={36} />
             <Text style={styles.brandText}>Savannah Cinemas</Text>
@@ -80,6 +81,7 @@ export default function TabsLayout() {
           </TabTrigger>
         </TabList>
         <TabSlot style={{ flex: 1 }} />
+        {tour}
       </Tabs>
     );
   }
@@ -101,6 +103,7 @@ export default function TabsLayout() {
           <WordTab label="Account" />
         </TabTrigger>
       </TabList>
+      {tour}
     </Tabs>
   );
 }

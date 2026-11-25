@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SITE_MAX, useScreen } from '@/lib/layout';
 import { colors, space } from '@/theme';
 
 import { IconButton } from './controls';
@@ -29,13 +30,20 @@ export function StackHeader({
   fallback?: string;
 }) {
   const insets = useSafeAreaInsets();
+  // Website, tablet and up: line up with the site column, bigger title
+  const { wide, width, gutter } = useScreen();
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
+    <View
+      style={[
+        styles.wrap,
+        { paddingTop: insets.top + 8 },
+        wide && { paddingTop: 24, paddingBottom: 18, paddingHorizontal: Math.max(gutter, (width - SITE_MAX) / 2 + gutter), gap: 18 },
+      ]}>
       <IconButton label={close ? 'Close' : 'Back'} onPress={() => goBack(fallback)} style={styles.back}>
         {close ? <CloseIcon /> : <BackIcon />}
       </IconButton>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Display size={26} numberOfLines={1}>
+        <Display size={wide ? 40 : 26} numberOfLines={1}>
           {title}
         </Display>
         {subtitle ? <Label numberOfLines={1}>{subtitle}</Label> : null}
