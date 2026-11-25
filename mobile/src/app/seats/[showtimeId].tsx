@@ -17,7 +17,7 @@ import { peekPendingPromo, takePendingPromo } from '@/lib/promo';
 import { clock, dot, money, shortDate, toNumber } from '@/lib/format';
 import type { Seat } from '@/lib/types';
 import { useRequest } from '@/lib/use-request';
-import { usePageWidth, useScreen } from '@/lib/layout';
+import { sticky, usePageWidth, useScreen } from '@/lib/layout';
 import { SiteFooter } from '@/components/site-footer';
 import { colors, radius, space } from '@/theme';
 
@@ -309,7 +309,7 @@ export default function Seats() {
         <ScrollView scrollEnabled={!zoomed} contentContainerStyle={{ paddingTop: 8 }}>
           <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter, flexDirection: 'row', gap: 40, alignItems: 'flex-start' }}>
             <View style={{ width: mapW, flexGrow: 1 }}>{mapBody(mapW)}</View>
-            <View style={[styles.tray, styles.traySide, { width: sideW }]}>
+            <View style={[styles.tray, styles.traySide, { width: sideW }, sticky]}>
               <Display size={26} color={colors.ink}>
                 Your seats
               </Display>

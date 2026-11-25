@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Backdrop, Poster } from '@/components/artwork';
 import { Avatar } from '@/components/avatar';
 import { Button, TimeToken } from '@/components/controls';
-import { LocationButton } from '@/components/location-picker';
+import { LocationButton, LocationTabs } from '@/components/location-picker';
 import { ErrorState, Message, Shimmer } from '@/components/states';
 import { TrailerModal } from '@/components/trailer';
 import { Body, Display, Label, Mono } from '@/components/type';
@@ -97,6 +97,8 @@ export default function Tonight() {
   }, [shows, hero, movieById]);
 
   const [trailerOpen, setTrailerOpen] = useState(false);
+  // Website: height of the marquee panel beside the art, so the art can match it
+  const [bandH, setBandH] = useState(0);
 
   // Picking a date while scrolled down: jump back to the top of that
   // day's list (the strip stays pinned), instead of landing mid-way.
@@ -176,10 +178,7 @@ export default function Tonight() {
                 {isToday(selectedDate) ? 'Tonight' : `${weekday(selectedDate)} ${selectedDate.getDate()}`}
               </Display>
             </View>
-            <View style={{ alignItems: 'flex-end', gap: 4 }}>
-              <Label>CINEMA</Label>
-              <LocationButton onChange={() => setPicked(null)} />
-            </View>
+            <LocationTabs onChange={() => setPicked(null)} />
           </View>
 
           <View style={styles.dateBar}>
@@ -224,15 +223,21 @@ export default function Tonight() {
                     accessibilityLabel={`${heroMovie?.title ?? hero.movieTitle}, details`}
                     onPress={() => openFilm(hero.movieId)}
                     style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [hovered && { opacity: 0.92 }]}>
+                    {/* Desktop: the art grows with the marquee panel, however much it holds */}
                     <Backdrop
                       url={heroMovie?.backdropUrl}
                       fallbackUrl={heroMovie?.posterUrl ?? hero.posterUrl}
                       width={artW}
-                      height={artH}
+                      height={desktop ? Math.max(artH, bandH) : artH}
                       title={hero.movieTitle}
                     />
                   </Pressable>
-                  <View style={[styles.band, styles.bandWide, desktop && { width: inner - artW, minHeight: artH }]}>
+                  <View
+                    onLayout={(e) => {
+                      const h = Math.round(e.nativeEvent.layout.height);
+                      if (desktop && h !== bandH) setBandH(h);
+                    }}
+                    style={[styles.band, styles.bandWide, desktop && { width: inner - artW, minHeight: artH }]}>
                     <Label color={colors.laterite}>{heroKicker}</Label>
                     <Display size={desktop ? 52 : 46} black color={colors.ink} numberOfLines={3}>
                       {heroMovie?.title ?? hero.movieTitle}

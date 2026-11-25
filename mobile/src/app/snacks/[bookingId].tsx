@@ -4,7 +4,7 @@ import { BackHandler, ScrollView, StyleSheet, View, useWindowDimensions } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, IconButton } from '@/components/controls';
-import { basketCount, basketFromOrders, basketTotal, Menu } from '@/components/concessions';
+import { basketCount, basketFromOrders, basketTotal, Menu, optionsText, unitPrice } from '@/components/concessions';
 import { BackIcon } from '@/components/icons';
 import { Sheet } from '@/components/sheet';
 import { ErrorState, Message, Shimmer } from '@/components/states';
@@ -15,7 +15,7 @@ import type { Basket as BasketType } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
 import { colors, space } from '@/theme';
-import { useScreen } from '@/lib/layout';
+import { sticky, useScreen } from '@/lib/layout';
 import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
@@ -164,10 +164,41 @@ export default function SnacksStep() {
                 </Body>
                 <Menu items={items} basket={basket} onChange={setEdited} columns={desktop ? 2 : 1} width={menuW} />
               </View>
-              <View style={[styles.tray, styles.traySide, { width: sideW }]}>
+              <View style={[styles.tray, styles.traySide, { width: sideW }, sticky]}>
                 <Display size={26} color={colors.ink}>
                   Your basket
                 </Display>
+                {/* What's in it, line by line */}
+                {count > 0 ? (
+                  <View>
+                    {Object.entries(basket).map(([key, l]) => {
+                      const it = items.find((i) => i.itemId === l.itemId);
+                      if (!it || l.quantity <= 0) return null;
+                      const extra = optionsText(it, l.options);
+                      return (
+                        <View key={key} style={styles.basketLine}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Body size={14} weight="semi" color={colors.ink} numberOfLines={1}>
+                              {`${l.quantity} × ${it.name}`}
+                            </Body>
+                            {extra ? (
+                              <Body size={12} color={colors.inkSoft} numberOfLines={2}>
+                                {extra}
+                              </Body>
+                            ) : null}
+                          </View>
+                          <Mono size={13} color={colors.ink}>
+                            {money(unitPrice(it, l.options) * l.quantity)}
+                          </Mono>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Body size={14} color={colors.inkSoft}>
+                    Nothing yet. Snacks are optional: carry on to pay for your tickets.
+                  </Body>
+                )}
                 {trayBody}
               </View>
             </View>
@@ -251,6 +282,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 4,
   },
   // Website (tablet and up)
+  basketLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#D8CDB6' },
   wideHead: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingBottom: 22 },
   traySide: { position: 'relative', left: undefined, right: undefined, bottom: undefined, borderRadius: 4, paddingTop: 20, paddingBottom: 22, marginTop: 6 },
 });

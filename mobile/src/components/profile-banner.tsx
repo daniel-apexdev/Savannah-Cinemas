@@ -12,8 +12,21 @@ import { sized } from './artwork';
  * the page at the bottom so the avatar and name sit cleanly on it.
  * With no still chosen it's a quiet booth-coloured band.
  */
-export function ProfileBanner({ url, width, height, children }: { url?: string | null; width: number; height: number; children?: ReactNode }) {
-  const src = sized(url, 'w780');
+export function ProfileBanner({
+  url,
+  width,
+  height,
+  children,
+  large,
+}: {
+  url?: string | null;
+  width: number;
+  height: number;
+  children?: ReactNode;
+  /** Website: a full-width banner needs a bigger still */
+  large?: boolean;
+}) {
+  const src = sized(url, large ? 'w1280' : 'w780');
   return (
     <View style={{ width, height, backgroundColor: colors.booth, overflow: 'hidden' }}>
       {src ? <Image source={{ uri: src }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} accessibilityIgnoresInvertColors /> : null}

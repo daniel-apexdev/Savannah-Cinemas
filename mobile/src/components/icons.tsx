@@ -41,3 +41,9 @@ export const BellIcon = ({ size = 20, color = colors.bone, filled }: P) => (
     <Path d="M10 20.5a2 2 0 004 0" fill="none" />
   </Svg>
 );
+
+export const NextIcon = ({ size = 20, color = colors.bone }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2}>
+    <Path d="M9 5l7 7-7 7" />
+  </Svg>
+);

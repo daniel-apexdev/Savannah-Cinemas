@@ -8,6 +8,7 @@ import { TrophyMedal } from '@/components/trophy';
 import { Body, Display, Label, Mono } from '@/components/type';
 import { money, shortDate } from '@/lib/format';
 import type { RewardsSummary, Trophy } from '@/lib/types';
+import { useWide } from '@/lib/layout';
 import { colors, radius, space } from '@/theme';
 
 const GROUPS = ['Milestones', 'Genres', 'Collections', 'Habits', 'Social', 'Challenges', 'Hidden'];
@@ -43,6 +44,9 @@ export function TrophiesBody({ data, width }: { data: RewardsSummary; width: num
   const fresh = data.trophies.filter((t) => t.isNew);
   const cols = width >= 500 ? 4 : 3;
   const cell = Math.floor((width - space.gutter * 2 - (cols - 1) * 12) / cols);
+
+  // Website (tablet and up): a trophy room rather than a phone list
+  if (width >= 760) return <TrophyRoom data={data} width={width} open={open} setOpen={setOpen} />;
 
   return (
     <View style={{ paddingHorizontal: space.gutter, gap: 22 }}>
@@ -89,7 +93,12 @@ export function TrophiesBody({ data, width }: { data: RewardsSummary; width: num
                   onPress={() => setOpen(t)}
                   style={({ pressed }) => [{ width: cell, alignItems: 'center', gap: 6 }, pressed && { opacity: 0.75 }]}>
                   <TrophyMedal trophy={t} size={Math.min(84, cell - 8)} />
-                  <Body size={12.5} weight="semi" color={t.earned ? colors.bone : colors.dust} numberOfLines={2} style={{ textAlign: 'center', lineHeight: 16 }}>
+                  <Body
+                    size={12.5}
+                    weight="semi"
+                    color={t.earned ? colors.bone : colors.dust}
+                    numberOfLines={2}
+                    style={{ textAlign: 'center', lineHeight: 16 }}>
                     {t.name}
                   </Body>
                   {!t.earned && t.progress && t.progress.target > 1 ? (
@@ -109,14 +118,165 @@ export function TrophiesBody({ data, width }: { data: RewardsSummary; width: num
   );
 }
 
+/** Tablet and desktop: progress, a shelf of the latest wins, then each group as a card. */
+function TrophyRoom({ data, width, open, setOpen }: { data: RewardsSummary; width: number; open: Trophy | null; setOpen: (t: Trophy | null) => void }) {
+  const inner = width - space.gutter * 2;
+  const earned = data.trophies.filter((t) => t.earned);
+  const total = data.trophies.length;
+  const pct = total ? Math.round((earned.length / total) * 100) : 0;
+  const fresh = data.trophies.filter((t) => t.isNew);
+  const latest = [...earned].sort((a, b) => String(b.earnedAt ?? '').localeCompare(String(a.earnedAt ?? ''))).slice(0, 5);
+  const twoUp = inner >= 960;
+  const cardW = twoUp ? Math.floor((inner - 24) / 2) : inner;
+  const cellTarget = 112;
+  const cardInner = cardW - 40 - 4; // padding and border
+  const cols = Math.max(3, Math.floor((cardInner + 12) / (cellTarget + 12)));
+  const cell = Math.floor((cardInner - (cols - 1) * 12) / cols);
+  const groups = GROUPS.map((g) => ({ g, list: data.trophies.filter((t) => t.group === g) })).filter((x) => x.list.length);
+
+  return (
+    <View style={{ paddingHorizontal: space.gutter, gap: 28 }}>
+      {/* Progress */}
+      <View style={styles.roomHead}>
+        <View style={{ gap: 4, flexShrink: 1 }}>
+          <Display size={40} black>
+            Savannah Trophies
+          </Display>
+          <Label>WATCH. EXPLORE. COLLECT.</Label>
+          <Body size={14} color={colors.dust} style={{ marginTop: 6 }}>
+            Click any medal to see how to win it.
+          </Body>
+        </View>
+        <View style={{ width: Math.min(360, inner * 0.4), gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+            <Display size={48} black>
+              {String(earned.length)}
+            </Display>
+            <Mono size={14} color={colors.dust}>{`/ ${total} COLLECTED`}</Mono>
+          </View>
+          <View style={styles.bar}>
+            <View style={[styles.barFill, { width: `${pct}%` }]} />
+          </View>
+        </View>
+      </View>
+
+      {fresh.length ? (
+        <View style={styles.banner} accessibilityLiveRegion="polite">
+          <Label color={colors.ink}>NEW</Label>
+          <Body weight="semi" color={colors.ink}>
+            {`You earned ${fresh.map((t) => t.name).join(', ')}.`}
+          </Body>
+        </View>
+      ) : null}
+
+      {/* The shelf: latest wins, big */}
+      <View style={styles.shelf}>
+        <Label color={colors.laterite}>LATEST WINS</Label>
+        {latest.length ? (
+          <View style={{ flexDirection: 'row', gap: 28, flexWrap: 'wrap' }}>
+            {latest.map((t) => (
+              <Pressable
+                key={t.code}
+                accessibilityRole="button"
+                accessibilityLabel={`${t.name}, earned`}
+                onPress={() => setOpen(t)}
+                style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                  { width: 132, alignItems: 'center', gap: 8 },
+                  hovered && { transform: [{ translateY: -3 }] },
+                  pressed && { opacity: 0.8 },
+                ]}>
+                <TrophyMedal trophy={t} size={112} />
+                <Body size={13.5} weight="semi" color={colors.bone} numberOfLines={2} style={{ textAlign: 'center' }}>
+                  {t.name}
+                </Body>
+                {t.earnedAt ? (
+                  <Mono size={10.5} color={colors.dust} bold={false}>
+                    {shortDate(new Date(t.earnedAt))}
+                  </Mono>
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <Body color={colors.dust}>Your first trophy is one film away. Book a film to win First Screening.</Body>
+        )}
+      </View>
+
+      {/* Every group as a card */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
+        {groups.map(({ g, list }) => {
+          const got = list.filter((t) => t.earned).length;
+          return (
+            <View key={g} style={[styles.groupCard, { width: cardW }]}>
+              <View style={[styles.groupHead, { marginTop: 0, borderTopWidth: 0, paddingTop: 0 }]}>
+                <Display size={24}>{g}</Display>
+                <Label>{`${got}/${list.length}`}</Label>
+              </View>
+              {GROUP_NOTE[g] ? (
+                <Body size={12.5} color={colors.dust}>
+                  {GROUP_NOTE[g]}
+                </Body>
+              ) : null}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 18 }}>
+                {list.map((t) => (
+                  <Pressable
+                    key={t.code}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t.name}, ${t.earned ? 'earned' : t.progress ? `${t.progress.current} of ${t.progress.target}` : 'locked'}`}
+                    onPress={() => setOpen(t)}
+                    style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                      { width: cell, alignItems: 'center', gap: 6 },
+                      hovered && { transform: [{ translateY: -2 }] },
+                      pressed && { opacity: 0.75 },
+                    ]}>
+                    <TrophyMedal trophy={t} size={Math.min(88, cell - 12)} />
+                    <Body
+                      size={12.5}
+                      weight="semi"
+                      color={t.earned ? colors.bone : colors.dust}
+                      numberOfLines={2}
+                      style={{ textAlign: 'center', lineHeight: 16 }}>
+                      {t.name}
+                    </Body>
+                    {!t.earned && t.progress && t.progress.target > 1 ? (
+                      <View style={{ width: '70%', gap: 3 }}>
+                        <View style={[styles.bar, { height: 4 }]}>
+                          <View style={[styles.barFill, { height: 4, width: `${Math.round((t.progress.current / Math.max(1, t.progress.target)) * 100)}%` }]} />
+                        </View>
+                        <Mono size={10} color={colors.dust} bold={false} style={{ textAlign: 'center' }}>
+                          {`${t.progress.current}/${t.progress.target}`}
+                        </Mono>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      <TrophySheet trophy={open} onClose={() => setOpen(null)} />
+    </View>
+  );
+}
+
 function TrophySheet({ trophy: t, onClose }: { trophy: Trophy | null; onClose: () => void }) {
   const insets = useSafeAreaInsets();
+  // Website, tablet and up: a centred card instead of a bottom sheet
+  const wide = useWide();
   return (
     <Modal visible={!!t} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.scrim}>
-        <Pressable style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} />
+      <View style={[styles.scrim, wide && { justifyContent: 'center', alignItems: 'center' }]}>
+        <Pressable style={wide ? StyleSheet.absoluteFill : { flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} />
         {t ? (
-          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]} accessibilityViewIsModal>
+          <View
+            style={[
+              styles.sheet,
+              { paddingBottom: Math.max(insets.bottom, 16) + 8 },
+              wide && { width: 460, borderWidth: 1.5, borderColor: colors.bone, borderRadius: radius.paper, padding: 28 },
+            ]}
+            accessibilityViewIsModal>
             <View style={{ alignItems: 'center', gap: 10 }}>
               <TrophyMedal trophy={{ ...t, isNew: false }} size={120} />
               <Label>{t.group.toUpperCase()}</Label>
@@ -213,8 +373,15 @@ export function RewardsBody({ data, onChanged }: { data: RewardsSummary; onChang
       <View style={styles.invite}>
         <Label color={colors.lateriteSoft}>BRING A FRIEND</Label>
         <Body>
-          They get <Body weight="bold" color={colors.bone}>100 points</Body> when they join with your code, and you get{' '}
-          <Body weight="bold" color={colors.bone}>250</Body> when they make their first booking.
+          They get{' '}
+          <Body weight="bold" color={colors.bone}>
+            100 points
+          </Body>{' '}
+          when they join with your code, and you get{' '}
+          <Body weight="bold" color={colors.bone}>
+            250
+          </Body>{' '}
+          when they make their first booking.
         </Body>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4 }}>
           <View style={{ gap: 2 }}>
@@ -230,7 +397,11 @@ export function RewardsBody({ data, onChanged }: { data: RewardsSummary; onChang
         <Mono size={11} color={colors.dust} bold={false}>
           {`${data.referral.invited} JOINED · ${data.referral.booked} BOOKED${data.referral.referredBy ? ` · INVITED BY ${data.referral.referredBy.toUpperCase()}` : ''}`}
         </Mono>
-        {shared ? <Body size={13} color={colors.dust}>{shared}</Body> : null}
+        {shared ? (
+          <Body size={13} color={colors.dust}>
+            {shared}
+          </Body>
+        ) : null}
       </View>
 
       {data.referral.canClaim ? (
@@ -247,11 +418,17 @@ export function RewardsBody({ data, onChanged }: { data: RewardsSummary; onChang
             placeholder="e.g. EFUA7455"
             error={claim.error}
           />
-          {claim.ok ? <Body size={13} color={colors.bone}>{claim.ok}</Body> : null}
+          {claim.ok ? (
+            <Body size={13} color={colors.bone}>
+              {claim.ok}
+            </Body>
+          ) : null}
           <Button label="Use code" variant="outline" height={46} busy={claim.busy} disabled={!code.trim()} onPress={useCode} />
         </View>
       ) : claim.ok ? (
-        <Body size={13} color={colors.bone}>{claim.ok}</Body>
+        <Body size={13} color={colors.bone}>
+          {claim.ok}
+        </Body>
       ) : null}
 
       {/* How to earn */}
@@ -323,6 +500,10 @@ const styles = StyleSheet.create({
   scrim: { flex: 1, backgroundColor: 'rgba(6,5,4,0.8)' },
   sheet: { backgroundColor: colors.booth, padding: space.gutter, gap: 18, borderTopWidth: 1.5, borderTopColor: colors.bone },
   bar: { height: 6, backgroundColor: colors.rule, borderRadius: 3, overflow: 'hidden' },
+  // Website trophy room
+  roomHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24 },
+  shelf: { backgroundColor: colors.booth, borderRadius: radius.paper, padding: 24, gap: 18, borderWidth: 1, borderColor: colors.rule },
+  groupCard: { borderWidth: 1.5, borderColor: colors.rule, borderRadius: radius.paper, padding: 20, gap: 14 },
   barFill: { height: 6, backgroundColor: colors.laterite },
   card: { backgroundColor: colors.bone, borderRadius: radius.paper },
   perf: { marginHorizontal: 14, borderTopWidth: 2, borderStyle: 'dashed', borderColor: '#B9AE97' },

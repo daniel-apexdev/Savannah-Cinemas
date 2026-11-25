@@ -89,6 +89,61 @@ function LocationSheet({ cinemaId, onPick, onClose }: { cinemaId: number | null;
   );
 }
 
+/**
+ * Website (tablet and up): both cinemas side by side as a switch, each
+ * with its area, instead of the small "ACCRA MALL ▾" line and a sheet.
+ * `compact` drops the address line (for narrow panels).
+ */
+export function LocationTabs({ onChange, compact }: { onChange?: (cinemaId: number) => void; compact?: boolean }) {
+  const { cinemas, cinemaId } = useLocation();
+  if (cinemas.length < 2) return <LocationButton onChange={onChange} />;
+  return (
+    <View style={styles.tabs} accessibilityRole="radiogroup" accessibilityLabel="Cinema">
+      {cinemas.map((c) => {
+        const on = c.cinemaId === cinemaId;
+        // The area: first part of the address after the mall's name that isn't a plot number
+        const area =
+          (c.address ?? '')
+            .split(',')
+            .map((x) => x.trim())
+            .filter((x) => x && x.toLowerCase() !== locationName(c).toLowerCase() && !/^(plot|no\.?\s|\d)/i.test(x))[0] ?? c.city;
+        return (
+          <Pressable
+            key={c.cinemaId}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on }}
+            accessibilityLabel={`${locationName(c)}${c.address ? `, ${c.address}` : ''}`}
+            onPress={() => {
+              if (on) return;
+              tick();
+              setLocation(c.cinemaId);
+              onChange?.(c.cinemaId);
+            }}
+            style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+              styles.tab,
+              compact && styles.tabCompact,
+              on && styles.tabOn,
+              !on && hovered && { borderColor: colors.dust },
+              pressed && { opacity: 0.85 },
+            ]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+              {on ? <PinIcon /> : null}
+              <Mono size={compact ? 11.5 : 12.5} color={on ? colors.ink : colors.bone}>
+                {locationName(c).toUpperCase()}
+              </Mono>
+            </View>
+            {!compact && area ? (
+              <Body size={12} color={on ? colors.inkSoft : colors.dust} numberOfLines={1}>
+                {area}
+              </Body>
+            ) : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 function PinIcon() {
   return (
     <View style={{ width: 12, height: 14, alignItems: 'center' }}>
@@ -128,4 +183,9 @@ const styles = StyleSheet.create({
   optionOn: { borderColor: colors.bone, backgroundColor: colors.night },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.dust, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.laterite },
+  // Website switch
+  tabs: { flexDirection: 'row', gap: 8 },
+  tab: { minWidth: 150, paddingHorizontal: 14, paddingVertical: 9, gap: 2, borderWidth: 1.5, borderColor: colors.rule, borderRadius: radius.action },
+  tabCompact: { minWidth: 0, paddingVertical: 7, paddingHorizontal: 10 },
+  tabOn: { backgroundColor: colors.bone, borderColor: colors.bone },
 });

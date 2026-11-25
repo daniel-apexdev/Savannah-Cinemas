@@ -39,3 +39,9 @@ export function usePageWidth(narrow = 560, wide = narrow) {
   const isWide = isWeb && width >= WIDE_AT;
   return Math.min(width, isWide ? wide : narrow);
 }
+
+/**
+ * Website: keep a side panel (basket, order, showtimes) in view while the
+ * page scrolls. Only meaningful on the web; ignored by native.
+ */
+export const sticky = (Platform.OS === 'web' ? { position: 'sticky', top: 24 } : {}) as object;

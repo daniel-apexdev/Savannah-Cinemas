@@ -20,7 +20,7 @@ import type { ConcessionOrder, PaymentMethod } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
 import { colors, radius, space } from '@/theme';
-import { useScreen } from '@/lib/layout';
+import { sticky, useScreen } from '@/lib/layout';
 import { SiteFooter } from '@/components/site-footer';
 
 const MAX_W = 560;
@@ -282,12 +282,13 @@ export default function Checkout() {
                 </View>
               ) : null}
             </View>
-            <View style={{ flexDirection: desktop ? 'row' : 'column-reverse', gap: desktop ? 48 : 28, alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <View
+              style={{ flexDirection: desktop ? 'row' : 'column-reverse', gap: desktop ? 48 : 28, alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <View style={{ flex: desktop ? 1 : undefined, width: desktop ? undefined : '100%', gap: 18, maxWidth: 640 }}>
                 <Display size={26}>Your details</Display>
                 {form()}
               </View>
-              <View style={[styles.orderCard, { width: desktop ? 420 : '100%' }]}>
+              <View style={[styles.orderCard, { width: desktop ? 420 : '100%' }, desktop && sticky]}>
                 <Label color={colors.laterite}>YOUR ORDER</Label>
                 {summary(b)}
                 <View style={{ gap: 10 }}>{payBlock(b)}</View>

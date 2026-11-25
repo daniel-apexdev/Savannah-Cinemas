@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Poster } from '@/components/artwork';
-import { LocationButton } from '@/components/location-picker';
+import { LocationButton, LocationTabs } from '@/components/location-picker';
 import { RemindBell } from '@/components/remind-bell';
 import { SpecialNights } from '@/components/special-nights';
 import { ErrorState, Message, Shimmer } from '@/components/states';
@@ -108,10 +108,7 @@ export default function Events() {
                   Events
                 </Display>
               </View>
-              <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                <Label>CINEMA</Label>
-                <LocationButton />
-              </View>
+              <LocationTabs />
             </View>
 
             <View style={{ flexDirection: desktop ? 'row' : 'column', gap: desktop ? 48 : 0, alignItems: 'flex-start' }}>

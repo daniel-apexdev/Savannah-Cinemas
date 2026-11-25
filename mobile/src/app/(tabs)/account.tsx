@@ -341,9 +341,12 @@ export default function Account() {
             <>
               {tab === 'upcoming' ? (
                 live.length > 0 ? (
-                  <View style={{ gap: 14, paddingHorizontal: space.gutter }}>
+                  <View style={{ gap: 14, paddingHorizontal: space.gutter, flexDirection: bodyW >= 760 ? 'row' : 'column', flexWrap: 'wrap' }}>
                     {live.map(({ b, s }) => (
-                      <LiveStub key={b.bookingId} b={b} label={s.label} snacks={!!codes.get(b.bookingId)} onOpen={open} />
+                      // Website: two tickets across
+                      <View key={b.bookingId} style={bodyW >= 760 ? { width: Math.floor((bodyW - space.gutter * 2 - 14) / 2) } : null}>
+                        <LiveStub b={b} label={s.label} snacks={!!codes.get(b.bookingId)} onOpen={open} />
+                      </View>
                     ))}
                   </View>
                 ) : (
@@ -420,44 +423,118 @@ export default function Account() {
     </>
   );
 
-  // ---------------- Laptop and desktop (website): profile beside the page ----------------
-  if (screen.desktop) {
-    const { content, gutter, inner } = screen;
-    const sideW = 340;
-    const mainW = inner - sideW - 40;
+  // ---------------- Tablet, laptop and desktop (website): a profile page like a film diary ----------------
+  // Your film still runs edge to edge; avatar, name and numbers sit on its lower edge; the sections below.
+  if (screen.wide) {
+    const { content, gutter, inner, desktop, width: winW } = screen;
+    const bannerH = desktop ? 420 : 320;
+    const avatarSize = desktop ? 152 : 120;
+    const st = rewards.data?.stats;
+    const statCells: [string, string][] = [
+      ['FILMS', st ? String(st.movies) : '–'],
+      ['TROPHIES', st ? String(st.trophies) : '–'],
+      ['POINTS', st ? st.points.toLocaleString('en-GB') : '–'],
+      ['WEEK STREAK', st ? String(st.streak) : '–'],
+    ];
     return (
       <View style={{ flex: 1, backgroundColor: colors.night }}>
-        <ScrollView contentContainerStyle={{ paddingTop: 28 }}>
-          <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter, flexDirection: 'row', gap: 40, alignItems: 'flex-start' }}>
-            <View style={styles.side}>
-              {profileHead(sideW - 3, 0)}
-              <View style={{ paddingVertical: 10 }} accessibilityRole="tablist">
-                {PAGES.map(({ key: k, label }) => (
-                  <Pressable
-                    key={k}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: page === k }}
-                    onPress={() => setPage(k)}
-                    style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
-                      styles.sideTab,
-                      page === k && styles.sideTabOn,
-                      hovered && page !== k && { backgroundColor: colors.booth },
-                    ]}>
-                    <Display size={22} color={page === k ? colors.bone : colors.dust}>
-                      {label}
-                    </Display>
-                  </Pressable>
+        <ScrollView>
+          <ProfileBanner url={user.backdrop?.url} width={winW} height={bannerH} large>
+            <View style={[styles.lbTools, { width: content, paddingHorizontal: gutter }]}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/profile-setup')}
+                style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                  styles.lbTool,
+                  (pressed || hovered) && { backgroundColor: colors.booth },
+                ]}>
+                <Mono size={11.5}>{user.backdrop ? 'CHANGE BACKDROP' : '+ ADD A BACKDROP'}</Mono>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={inboxUnread ? `Notifications, ${inboxUnread} new` : 'Notifications'}
+                onPress={() => router.push('/notifications')}
+                style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                  styles.lbTool,
+                  { width: 40, paddingHorizontal: 0 },
+                  (pressed || hovered) && { backgroundColor: colors.booth },
+                ]}>
+                <BellIcon size={20} color={inboxUnread ? colors.bone : colors.boneSoft} />
+                {inboxUnread ? (
+                  <View style={styles.badge}>
+                    <Mono size={10} color={colors.ink}>
+                      {inboxUnread > 9 ? '9+' : String(inboxUnread)}
+                    </Mono>
+                  </View>
+                ) : null}
+              </Pressable>
+            </View>
+          </ProfileBanner>
+
+          <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter, marginTop: -Math.round(avatarSize * 0.62) }}>
+            <View style={[styles.lbHead, { flexDirection: desktop ? 'row' : 'column', alignItems: desktop ? 'flex-end' : 'flex-start' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 24, flexShrink: 1 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Change avatar"
+                  onPress={() => router.push('/profile-setup')}
+                  style={{ borderRadius: avatarSize / 2 }}>
+                  <Avatar user={user} size={avatarSize} ring={colors.night} />
+                </Pressable>
+                <View style={{ gap: 6, paddingBottom: 8, flexShrink: 1 }}>
+                  <Display size={desktop ? 56 : 44} black numberOfLines={2}>
+                    {`${user.forenames} ${user.surname}`}
+                  </Display>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    {user.username ? (
+                      <Mono size={14} color={colors.lateriteSoft} numberOfLines={1}>
+                        @{user.username}
+                      </Mono>
+                    ) : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => router.push('/settings/profile')}
+                      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                        styles.editBtn,
+                        { marginTop: 0 },
+                        (pressed || hovered) && { opacity: 0.75 },
+                      ]}>
+                      <Mono size={11.5}>EDIT PROFILE</Mono>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.lbStats} accessible accessibilityLabel={statCells.map(([k, v]) => `${k.toLowerCase()} ${v}`).join(', ')}>
+                {statCells.map(([k, v], i) => (
+                  <View key={k} style={[styles.lbStat, i > 0 && styles.lbStatRule]}>
+                    <Display size={desktop ? 40 : 34}>{v}</Display>
+                    <Label>{k}</Label>
+                  </View>
                 ))}
               </View>
             </View>
-            <View style={{ width: mainW, minWidth: 0 }}>
-              <View style={{ paddingHorizontal: space.gutter, paddingBottom: 18 }}>
-                <Display size={52} black accessibilityRole="header">
-                  {PAGES.find((x) => x.key === page)?.label ?? 'Account'}
-                </Display>
-              </View>
-              {pageBody(mainW)}
+
+            <View style={styles.lbNav} accessibilityRole="tablist">
+              {PAGES.map(({ key: k, label }) => (
+                <Pressable
+                  key={k}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: page === k }}
+                  onPress={() => setPage(k)}
+                  style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+                    styles.lbTab,
+                    page === k && styles.lbTabOn,
+                    hovered && page !== k && { borderBottomColor: colors.rule },
+                  ]}>
+                  <Display size={22} color={page === k ? colors.bone : colors.dust}>
+                    {label}
+                  </Display>
+                </Pressable>
+              ))}
             </View>
+
+            {/* The page bodies carry their own phone gutter; line them up with the column */}
+            <View style={{ marginHorizontal: -space.gutter, paddingTop: 26 }}>{pageBody(inner + space.gutter * 2)}</View>
           </View>
           <SiteFooter />
         </ScrollView>
@@ -711,9 +788,26 @@ const styles = StyleSheet.create({
   pageTab: { paddingTop: 12, paddingBottom: 10, borderBottomWidth: 3, borderBottomColor: 'transparent', marginBottom: -1 },
   pageTabOn: { borderBottomColor: colors.laterite },
   // Website, laptop and desktop
-  side: { width: 340, borderWidth: 1.5, borderColor: colors.bone, borderRadius: 4, overflow: 'hidden', paddingBottom: 6 },
-  sideTab: { paddingHorizontal: space.gutter, paddingVertical: 10, borderLeftWidth: 3, borderLeftColor: 'transparent' },
-  sideTabOn: { borderLeftColor: colors.laterite, backgroundColor: colors.booth },
+  // Website profile
+  lbTools: { position: 'absolute', top: 20, alignSelf: 'center', flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  lbTool: {
+    height: 40,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(18,16,13,0.72)',
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: 3,
+  },
+  lbHead: { justifyContent: 'space-between', gap: 24 },
+  lbStats: { flexDirection: 'row', paddingBottom: 10 },
+  lbStat: { paddingHorizontal: 22, gap: 2, alignItems: 'center' },
+  lbStatRule: { borderLeftWidth: 1, borderLeftColor: colors.rule },
+  lbNav: { flexDirection: 'row', flexWrap: 'wrap', gap: 30, marginTop: 28, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.rule },
+  lbTab: { paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: 'transparent', marginBottom: -1 },
+  lbTabOn: { borderBottomColor: colors.laterite },
   wideOut: { gap: 40, alignItems: 'flex-start', borderTopWidth: 1.5, borderTopColor: colors.bone, paddingTop: 28 },
   wideCard: { borderWidth: 1.5, borderColor: colors.bone, borderRadius: 4, padding: 28, gap: 14 },
   tabs: { flexDirection: 'row', gap: 20, paddingHorizontal: space.gutter, marginTop: -6, marginBottom: 14 },

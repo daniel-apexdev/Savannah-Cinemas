@@ -8,7 +8,7 @@ import { CastRow } from '@/components/cast-row';
 import { Button, IconButton, TimeToken } from '@/components/controls';
 import { goBack } from '@/components/header';
 import { BackIcon, BellIcon, BookmarkIcon, PlayIcon } from '@/components/icons';
-import { LocationButton } from '@/components/location-picker';
+import { LocationButton, LocationTabs } from '@/components/location-picker';
 import { RemindBell } from '@/components/remind-bell';
 import { ErrorState, Message, Shimmer } from '@/components/states';
 import { TrailerModal } from '@/components/trailer';
@@ -22,7 +22,7 @@ import { clock, dayFromKey, dayKey, dot, isToday, opens, rating, releaseDay, run
 import type { MovieShowtime } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
 import { useRequest } from '@/lib/use-request';
-import { usePageWidth, useScreen } from '@/lib/layout';
+import { sticky, usePageWidth, useScreen } from '@/lib/layout';
 import { SiteFooter } from '@/components/site-footer';
 import { colors, radius, space } from '@/theme';
 
@@ -255,6 +255,10 @@ export default function FilmDetail() {
           {/* The art runs edge to edge; nothing is printed on it */}
           <View style={{ height: artH, backgroundColor: colors.booth }}>
             <Backdrop url={m.backdropUrl} fallbackUrl={m.posterUrl} width={winW} height={artH} title={m.title} />
+            {/* Back sits on the art and scrolls away with it */}
+            <IconButton label="Back" onPress={() => goBack()} style={[styles.navBtn, { top: 16, left: Math.max(16, (winW - content) / 2 + gutter - 4) }]}>
+              <BackIcon />
+            </IconButton>
           </View>
 
           <View style={{ width: content, alignSelf: 'center', paddingHorizontal: gutter }}>
@@ -320,10 +324,10 @@ export default function FilmDetail() {
               </View>
 
               {/* Right (desktop) / below (tablet): showtimes and booking */}
-              <View style={[styles.panel, { width: panelW, marginTop: desktop ? 28 : 0 }]}>
-                <View style={[styles.showHead, { marginHorizontal: 20, marginTop: 0, borderTopWidth: 0 }]}>
+              <View style={[styles.panel, { width: panelW, marginTop: desktop ? 28 : 0 }, desktop && sticky]}>
+                <View style={{ marginHorizontal: 20, gap: 12, paddingBottom: 6 }}>
                   <Display size={28}>Showtimes</Display>
-                  <LocationButton onChange={() => setDayPick(null)} />
+                  <LocationTabs compact onChange={() => setDayPick(null)} />
                 </View>
                 {showtimesBody(20)}
                 {chosenShow ? (
@@ -342,9 +346,6 @@ export default function FilmDetail() {
           </View>
           <SiteFooter />
         </ScrollView>
-        <IconButton label="Back" onPress={() => goBack()} style={[styles.navBtn, { top: 16, left: Math.max(16, (winW - content) / 2 + gutter - 4) }]}>
-          <BackIcon />
-        </IconButton>
         {m.trailerUrl ? <TrailerModal url={m.trailerUrl} title={m.title} visible={trailerOpen} onClose={() => setTrailerOpen(false)} /> : null}
       </View>
     );
