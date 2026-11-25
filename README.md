@@ -27,7 +27,7 @@ images/           shared pictures (snacks/...), published with the website
 
 ## Website vs app
 
-- **Website**: open to everyone. People can browse and **book without an account**: when they pick seats the browser gets a guest session (`POST /api/guest/session`), and at checkout they give an email address for their tickets. Their tickets also show under Account on that browser. Signing in is optional (points, watchlist, reminders, tickets on every device).
+- **Website**: open to everyone. People can browse and **book without an account**: when they pick seats the browser gets a guest session (`POST /api/guest/session`), and at checkout they give an email address for their tickets. Their tickets also show under Account on that browser. Signing in is optional (points, watchlist, reminders, tickets on every device). If they later sign in to an account with the same (confirmed) email, their guest tickets move into that account's history.
 - **Phone app**: sign in (or create an account) first. Signed-out users see the welcome slides, then the sign-in screen, and nothing else.
 
 To check the app's sign-in-first behaviour in a browser, start Expo with `EXPO_PUBLIC_REQUIRE_ACCOUNT=1`.

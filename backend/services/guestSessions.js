@@ -115,4 +115,72 @@ async function userForToken(token) {
     };
 }
 
-module.exports = { createSession, userForToken, isGuestToken };
+// ------------------------------------------------------------
+// Guest tickets -> account
+// ------------------------------------------------------------
+// Tickets bought as a guest are tied to the email given at checkout.
+// When someone signs in to an account with that (confirmed) email, those
+// bookings and their snack orders move into the account's history.
+// Checked at most every few minutes per account (sign-in checks run on
+// every request).
+
+const CLAIM_EVERY_MS = 5 * 60 * 1000;
+const lastClaim = new Map();
+
+async function claimForAccount(userId, email) {
+
+    const address = String(email || '').trim().toLowerCase();
+    if (!userId || !address) return 0;
+
+    const now = Date.now();
+    if (now - (lastClaim.get(userId) || 0) < CLAIM_EVERY_MS) return 0;
+    lastClaim.set(userId, now);
+    if (lastClaim.size > 5000) lastClaim.clear();
+
+    const client = await pool.connect();
+
+    try {
+
+        await client.query('BEGIN');
+
+        const moved = await client.query(
+            `UPDATE bookings b
+             SET user_id = $1
+             FROM users g
+             WHERE g.user_id = b.user_id
+               AND g.is_guest = 'Y'
+               AND LOWER(TRIM(b.receipt_email)) = $2
+             RETURNING b.booking_id`,
+            [userId, address]
+        );
+
+        if (moved.rows.length) {
+
+            const ids = moved.rows.map((r) => r.booking_id);
+
+            await client.query(`UPDATE concession_orders SET user_id = $1 WHERE booking_id = ANY($2::bigint[])`, [userId, ids]);
+            await client.query(`UPDATE promotion_usage SET user_id = $1 WHERE booking_id = ANY($2::bigint[])`, [userId, ids]);
+
+        }
+
+        await client.query('COMMIT');
+
+        if (moved.rows.length) console.log(`Moved ${moved.rows.length} guest booking(s) into account ${userId}`);
+
+        return moved.rows.length;
+
+    } catch (error) {
+
+        await client.query('ROLLBACK').catch(() => {});
+        lastClaim.delete(userId); // try again next time
+        console.error('Moving guest bookings failed:', error.message);
+        return 0;
+
+    } finally {
+
+        client.release();
+
+    }
+}
+
+module.exports = { createSession, userForToken, isGuestToken, claimForAccount };

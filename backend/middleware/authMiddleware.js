@@ -30,6 +30,13 @@ async function authenticateSupabase(req, res, next) {
 
         const local = await supabaseAuth.ensureLocalUser(authUser);
 
+        // Tickets bought on the website as a guest with this email join the
+        // account's history. Only for confirmed emails, so nobody can claim
+        // someone else's tickets by signing up with their address.
+        if (authUser.email_confirmed_at || authUser.confirmed_at) {
+            await guestSessions.claimForAccount(local.userId, authUser.email);
+        }
+
         const roles = await pool.query(
             `SELECT r.role_id, r.role_name
              FROM user_role_assignments ura
