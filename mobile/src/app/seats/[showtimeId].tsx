@@ -11,6 +11,7 @@ import { Body, Label, Mono } from '@/components/type';
 import { ApiError, api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { HOLD_MINUTES } from '@/lib/config';
+import { GUESTS_ALLOWED } from '@/lib/guest';
 import { tick } from '@/lib/feel';
 import { peekPendingPromo, takePendingPromo } from '@/lib/promo';
 import { clock, dot, money, shortDate, toNumber } from '@/lib/format';
@@ -109,14 +110,13 @@ export default function Seats() {
     return m;
   }, [req.data]);
   const fallback = toNumber(req.data?.seats.showtime.ticketPrice);
-  const priceFor = useCallback(
-    (s: Seat) => priceMap.get(seatKind(s)) ?? priceMap.get('ADULT') ?? fallback,
-    [priceMap, fallback],
-  );
+  const priceFor = useCallback((s: Seat) => priceMap.get(seatKind(s)) ?? priceMap.get('ADULT') ?? fallback, [priceMap, fallback]);
 
   const seats = useMemo(() => req.data?.seats.seats ?? [], [req.data]);
   // Only seats that are still free count, so a refresh quietly drops any that were taken.
-  const chosen = seats.filter((s) => selected.has(s.seatId) && s.status === 'AVAILABLE').sort((a, b) => a.seatLabel.localeCompare(b.seatLabel, undefined, { numeric: true }));
+  const chosen = seats
+    .filter((s) => selected.has(s.seatId) && s.status === 'AVAILABLE')
+    .sort((a, b) => a.seatLabel.localeCompare(b.seatLabel, undefined, { numeric: true }));
   const total = chosen.reduce((a, s) => a + priceFor(s), 0);
   // (React Compiler memoises these)
   const chosenIds = new Set(chosen.map((c) => c.seatId));
@@ -126,26 +126,23 @@ export default function Seats() {
   chosen.forEach((c) => kindCount.set(seatKind(c), (kindCount.get(seatKind(c)) ?? 0) + 1));
   const breakdown = [...kindCount.entries()].map(([k, n]) => `${n} × ${KIND_NAME[k] ?? k}`).join(' · ');
 
-  const toggle = useCallback(
-    (s: Seat) => {
-      if (s.status !== 'AVAILABLE') return;
-      setError(null);
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (next.has(s.seatId)) next.delete(s.seatId);
-        else {
-          if (next.size >= MAX_SEATS) {
-            setError(`You can book up to ${MAX_SEATS} seats at once.`);
-            return prev;
-          }
-          next.add(s.seatId);
+  const toggle = useCallback((s: Seat) => {
+    if (s.status !== 'AVAILABLE') return;
+    setError(null);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(s.seatId)) next.delete(s.seatId);
+      else {
+        if (next.size >= MAX_SEATS) {
+          setError(`You can book up to ${MAX_SEATS} seats at once.`);
+          return prev;
         }
-        tick();
-        return next;
-      });
-    },
-    [],
-  );
+        next.add(s.seatId);
+      }
+      tick();
+      return next;
+    });
+  }, []);
 
   const kinds = useMemo(() => {
     const present = new Set(seats.filter((s) => s.status !== 'INACTIVE').map(seatKind));
@@ -153,14 +150,20 @@ export default function Seats() {
   }, [seats]);
 
   const proceed = async () => {
-    if (!user) {
+    // The website lets people book without an account (tickets by email)
+    if (!user && !GUESTS_ALLOWED) {
       router.push('/sign-in');
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const booking = await api.createBooking(id, chosen.map((c) => c.seatId), promo);
+      if (!user) await api.ensureGuestSession();
+      const booking = await api.createBooking(
+        id,
+        chosen.map((c) => c.seatId),
+        promo,
+      );
       const holdUntil = holdDeadline();
       setSelected(new Set());
       router.push({
@@ -201,7 +204,10 @@ export default function Seats() {
         <>
           <ScrollView scrollEnabled={!zoomed} contentContainerStyle={{ width, alignSelf: 'center', paddingBottom: 220 }}>
             {req.data?.pricing?.special ? (
-              <View style={styles.special} accessible accessibilityLabel={`${req.data.pricing.special.name ?? 'Special night'}: ${Math.round(req.data.pricing.special.discountPercent)}% off every seat`}>
+              <View
+                style={styles.special}
+                accessible
+                accessibilityLabel={`${req.data.pricing.special.name ?? 'Special night'}: ${Math.round(req.data.pricing.special.discountPercent)}% off every seat`}>
                 <Mono size={12.5} color={colors.ink}>
                   {`${(req.data.pricing.special.name ?? 'Special night').toUpperCase()} · ${Math.round(req.data.pricing.special.discountPercent)}% OFF EVERY SEAT`}
                 </Mono>
@@ -296,12 +302,7 @@ export default function Seats() {
                 {money(total, currency)}
               </Mono>
             </View>
-            <Button
-              label={user ? 'Continue' : 'Sign in to continue'}
-              disabled={chosen.length === 0}
-              busy={busy}
-              onPress={proceed}
-            />
+            <Button label={user || GUESTS_ALLOWED ? 'Continue' : 'Sign in to continue'} disabled={chosen.length === 0} busy={busy} onPress={proceed} />
             {chosen.length ? (
               <Body size={12} color={colors.inkSoft} style={{ textAlign: 'center', marginTop: -4 }}>
                 {`Seats are held for ${HOLD_MINUTES} minutes while you pay.`}
@@ -336,7 +337,16 @@ function LegendItem({ kind, text }: { kind: 'open' | 'vip' | 'wheel' | 'taken' |
 }
 
 const styles = StyleSheet.create({
-  special: { marginHorizontal: space.gutter, marginTop: 4, marginBottom: 4, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.vip, borderRadius: 3, alignSelf: 'flex-start' },
+  special: {
+    marginHorizontal: space.gutter,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.vip,
+    borderRadius: 3,
+    alignSelf: 'flex-start',
+  },
   screenWrap: { alignItems: 'center', gap: 6, marginHorizontal: 34, marginTop: 18, marginBottom: 22 },
   screenArc: {
     alignSelf: 'stretch',

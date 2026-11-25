@@ -115,6 +115,7 @@ async function ensureLocalUser(authUser) {
         const existing = await pool.query(
             `UPDATE users SET auth_user_id = $2, updated_at = CURRENT_TIMESTAMP
              WHERE LOWER(email) = $1 AND auth_user_id IS NULL
+               AND COALESCE(to_jsonb(users) ->> 'is_guest', 'N') <> 'Y'
              RETURNING user_id, email`,
             [email, authUser.id]
         );

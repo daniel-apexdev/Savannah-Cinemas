@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Field, IconButton } from '@/components/controls';
 import { goBack } from '@/components/header';
 import { CloseIcon } from '@/components/icons';
+import { GUESTS_ALLOWED } from '@/lib/guest';
 import { Body, Display, Label, Mono } from '@/components/type';
 import { api } from '@/lib/api';
 import { ConfirmEmailError, SIGN_IN_WITH_SUPABASE, useAuth } from '@/lib/auth';
@@ -29,7 +30,7 @@ export default function SignIn() {
   const insets = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
   const width = Math.min(winW, MAX_W);
-  const { signIn, register } = useAuth();
+  const { signIn, register, user } = useAuth();
   const params = useLocalSearchParams<{ mode?: 'in' | 'up' }>();
   const [mode, setMode] = useState<'in' | 'up'>(params.mode === 'up' ? 'up' : 'in');
   const [email, setEmail] = useState('');
@@ -77,7 +78,9 @@ export default function SignIn() {
             await api.claimReferral(referral.trim());
           } catch (e: any) {
             setJoined(true);
-            setError(`Your account is ready, but the referral code didn’t work: ${e?.message ?? 'please check it'}. You can add it in Account › Rewards before your first booking.`);
+            setError(
+              `Your account is ready, but the referral code didn’t work: ${e?.message ?? 'please check it'}. You can add it in Account › Rewards before your first booking.`,
+            );
             return;
           }
         }
@@ -104,14 +107,19 @@ export default function SignIn() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.night }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingTop: insets.top + 12, paddingBottom: 40, gap: 18 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingTop: insets.top + 12, paddingBottom: 40, gap: 18 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Display size={26} black>
             Savannah
           </Display>
-          <IconButton label="Close" onPress={() => goBack('/')} style={{ borderWidth: 1.5, borderColor: colors.rule }}>
-            <CloseIcon />
-          </IconButton>
+          {/* Phone app: there's nowhere to go back to until you're signed in */}
+          {GUESTS_ALLOWED || user ? (
+            <IconButton label="Close" onPress={() => goBack('/')} style={{ borderWidth: 1.5, borderColor: colors.rule }}>
+              <CloseIcon />
+            </IconButton>
+          ) : null}
         </View>
 
         <View style={{ gap: 8, marginTop: 24 }}>
@@ -124,10 +132,24 @@ export default function SignIn() {
         {mode === 'up' ? (
           <View style={{ flexDirection: 'row', gap: 14 }}>
             <View style={{ flex: 1 }}>
-              <Field label="First name" value={forenames} onChangeText={setForenames} autoComplete="given-name" textContentType="givenName" error={!forenames.trim() ? nameErr : null} />
+              <Field
+                label="First name"
+                value={forenames}
+                onChangeText={setForenames}
+                autoComplete="given-name"
+                textContentType="givenName"
+                error={!forenames.trim() ? nameErr : null}
+              />
             </View>
             <View style={{ flex: 1 }}>
-              <Field label="Surname" value={surname} onChangeText={setSurname} autoComplete="family-name" textContentType="familyName" error={!surname.trim() ? nameErr : null} />
+              <Field
+                label="Surname"
+                value={surname}
+                onChangeText={setSurname}
+                autoComplete="family-name"
+                textContentType="familyName"
+                error={!surname.trim() ? nameErr : null}
+              />
             </View>
           </View>
         ) : null}
@@ -159,7 +181,15 @@ export default function SignIn() {
         />
         {mode === 'up' ? (
           <>
-            <Field label="Phone (optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" placeholder="+233" />
+            <Field
+              label="Phone (optional)"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              placeholder="+233"
+            />
             <Field
               label="Friend’s referral code (optional)"
               value={referral}

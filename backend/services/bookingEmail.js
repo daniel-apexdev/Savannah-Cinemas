@@ -32,6 +32,7 @@ async function loadBookingForEmail(bookingId, db = pool) {
             COALESCE((to_jsonb(b) ->> 'points_discount')::numeric, 0) AS points_discount,
             COALESCE((to_jsonb(b) ->> 'points_redeemed')::int, 0) AS points_redeemed,
             u.email, u.forenames, u.surname,
+            to_jsonb(u) ->> 'is_guest' AS is_guest,
             m.title, m.age_rating, m.runtime_minutes, m.poster_url, m.backdrop_url,
             st.showtime_id,
             c.cinema_name, c.address, c.city, c.phone_number, c.email AS cinema_email,
@@ -123,7 +124,8 @@ async function loadBookingForEmail(bookingId, db = pool) {
         status: row.status,
         accountEmail: row.email,
         receiptEmail: row.receipt_email,
-        customerName: `${row.forenames} ${row.surname}`.trim(),
+        // Guests booked without a name: the email says "Hi there"
+        customerName: row.is_guest === 'Y' ? '' : `${row.forenames} ${row.surname}`.trim(),
         booking: {
             bookingId: row.booking_id,
             bookingRef: row.booking_ref,

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const guestSessions = require('../services/guestSessions');
 const supabaseAuth = require('../services/supabaseAuth');
 
 
@@ -69,6 +70,22 @@ async function authenticateSupabase(req, res, next) {
 // ============================================================
 
 async function authenticateToken(req, res, next) {
+
+    // Website guests (booking without an account): "guest_..." tokens
+    const bearer = String(req.headers.authorization || '').trim().split(/\s+/);
+    if (bearer.length === 2 && bearer[0].toLowerCase() === 'bearer' && guestSessions.isGuestToken(bearer[1])) {
+        try {
+            const guest = await guestSessions.userForToken(bearer[1]);
+            if (!guest) {
+                return res.status(401).json({ success: false, guest: true, message: 'Your booking session has ended. Please start again' });
+            }
+            req.user = guest;
+            return next();
+        } catch (error) {
+            console.error('Guest session check failed:', error.message);
+            return res.status(503).json({ success: false, message: 'Booking is unavailable right now. Try again in a moment' });
+        }
+    }
 
     // Supabase sign-in (website and app on Supabase)
     if (supabaseAuth.enabled()) {

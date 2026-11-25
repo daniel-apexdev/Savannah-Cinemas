@@ -1,4 +1,5 @@
 import { API_BASE } from './config';
+import { guestToken, setGuestToken } from './guest';
 import { supabase } from './supabase';
 import type {
   Basket,
@@ -85,9 +86,11 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
 
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth || authToken) {
-    if (authToken) headers.Authorization = `Bearer ${authToken}`;
-  }
+  // Signed in: the account token. Website guests: their guest token,
+  // only on requests that need someone (bookings, payments...).
+  const usingGuest = !authToken && auth && !!guestToken();
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+  else if (usingGuest) headers.Authorization = `Bearer ${guestToken()}`;
 
   let res: Response;
   try {
@@ -101,13 +104,7 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
     clearTimeout(timer);
     const aborted = (e as Error)?.name === 'AbortError';
     if (opts.signal?.aborted) throw new ApiError('Cancelled', 0, false);
-    throw new ApiError(
-      aborted
-        ? 'The cinema server took too long to answer.'
-        : "Can't reach the Savannah Cinemas server. Check your connection.",
-      0,
-      true,
-    );
+    throw new ApiError(aborted ? 'The cinema server took too long to answer.' : "Can't reach the Savannah Cinemas server. Check your connection.", 0, true);
   }
   clearTimeout(timer);
 
@@ -122,10 +119,9 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
   }
 
   if (!res.ok || (data && data.success === false)) {
-    if (res.status === 401 && auth) onUnauthorized?.();
-    const message =
-      (data && (data.message || data.error)) ||
-      (res.status === 401 ? 'Please sign in to continue.' : `Something went wrong (${res.status}).`);
+    if (res.status === 401 && usingGuest) setGuestToken(null);
+    else if (res.status === 401 && auth) onUnauthorized?.();
+    const message = (data && (data.message || data.error)) || (res.status === 401 ? 'Please sign in to continue.' : `Something went wrong (${res.status}).`);
     throw new ApiError(String(message), res.status);
   }
   return data as T;
@@ -153,12 +149,9 @@ export const api = {
   movies: () => request<{ movies: Movie[] }>('/movies').then((r) => r.movies),
   nowShowing: () => request<{ movies: Movie[] }>('/movies/now-showing').then((r) => r.movies),
   upcoming: () => request<{ movies: Movie[] }>('/movies/upcoming').then((r) => r.movies),
-  search: (q: string, signal?: AbortSignal) =>
-    request<{ movies: Movie[] }>(`/movies/search?q=${encodeURIComponent(q)}`, { signal }).then((r) => r.movies),
-  movieDetails: (movieId: number) =>
-    request<{ movie: MovieDetails }>(`/movies/${movieId}/details`).then((r) => r.movie),
-  movieShowtimes: (movieId: number) =>
-    request<{ showtimes: MovieShowtime[] }>(`/movies/${movieId}/showtimes`).then((r) => r.showtimes),
+  search: (q: string, signal?: AbortSignal) => request<{ movies: Movie[] }>(`/movies/search?q=${encodeURIComponent(q)}`, { signal }).then((r) => r.movies),
+  movieDetails: (movieId: number) => request<{ movie: MovieDetails }>(`/movies/${movieId}/details`).then((r) => r.movie),
+  movieShowtimes: (movieId: number) => request<{ showtimes: MovieShowtime[] }>(`/movies/${movieId}/showtimes`).then((r) => r.showtimes),
 
   // ----------------------------------------------------------------
   // Showtimes, seats, pricing
@@ -166,6 +159,16 @@ export const api = {
   showtimes: () => request<{ showtimes: ShowtimeListItem[] }>('/showtimes').then((r) => r.showtimes),
   showtimeSeats: (showtimeId: number) => request<ShowtimeSeats>(`/showtimes/${showtimeId}/seats`),
   showtimePricing: (showtimeId: number) => request<ShowtimePricing>(`/pricing/showtime/${showtimeId}`),
+
+  // ----------------------------------------------------------------
+  // Website guests (book without an account)
+  // ----------------------------------------------------------------
+  /** Gives this browser a guest booking session, if it hasn't one yet. */
+  ensureGuestSession: async () => {
+    if (guestToken()) return;
+    const r = await request<{ token: string }>('/guest/session', { method: 'POST' });
+    setGuestToken(r.token);
+  },
 
   // ----------------------------------------------------------------
   // Bookings & payments (auth)
@@ -177,15 +180,13 @@ export const api = {
       body: { showtimeId, seatIds, promotionCode: promotionCode?.trim() || undefined },
     }).then((r) => r.booking),
   myBookings: () => request<{ bookings: Booking[] }>('/bookings', { auth: true }).then((r) => r.bookings),
-  booking: (bookingId: number) =>
-    request<{ booking: Booking }>(`/bookings/${bookingId}`, { auth: true }).then((r) => r.booking),
+  booking: (bookingId: number) => request<{ booking: Booking }>(`/bookings/${bookingId}`, { auth: true }).then((r) => r.booking),
   /** Send the booking confirmation (again), optionally to another address. */
   emailBooking: (bookingId: number, to?: string) =>
     request<{ email: EmailResult }>(`/bookings/${bookingId}/email`, { method: 'POST', auth: true, body: to ? { to } : {}, timeoutMs: 30000 }).then(
       (r) => r.email,
     ),
-  cancelBooking: (bookingId: number) =>
-    request<{ message: string }>(`/bookings/${bookingId}/cancel`, { method: 'PATCH', auth: true }),
+  cancelBooking: (bookingId: number) => request<{ message: string }>(`/bookings/${bookingId}/cancel`, { method: 'PATCH', auth: true }),
   pay: (bookingId: number, paymentMethod: PaymentMethod, receiptEmail?: string, redeemPoints?: boolean) =>
     request<PaymentResult>('/payments', {
       method: 'POST',
@@ -198,13 +199,13 @@ export const api = {
   // Concessions
   // ----------------------------------------------------------------
   concessions: () => request<{ items: ConcessionItem[] }>('/concessions').then((r) => r.items),
-  bookingConcessions: (bookingId: number) =>
-    request<{ orders: ConcessionOrder[] }>(`/concessions/bookings/${bookingId}`, { auth: true }).then((r) => r.orders),
+  bookingConcessions: (bookingId: number) => request<{ orders: ConcessionOrder[] }>(`/concessions/bookings/${bookingId}`, { auth: true }).then((r) => r.orders),
   setBookingConcessions: (bookingId: number, basket: Basket) =>
-    request<{ booking: { bookingId: number; ticketsAmount: string; concessionsAmount: string; totalAmount: string } }>(
-      `/concessions/bookings/${bookingId}`,
-      { method: 'PUT', auth: true, body: { items: basketToItems(basket) } },
-    ),
+    request<{ booking: { bookingId: number; ticketsAmount: string; concessionsAmount: string; totalAmount: string } }>(`/concessions/bookings/${bookingId}`, {
+      method: 'PUT',
+      auth: true,
+      body: { items: basketToItems(basket) },
+    }),
   preorder: (bookingId: number, basket: Basket, paymentMethod: PaymentMethod) =>
     request<{ order: ConcessionOrder }>('/concessions/orders', {
       method: 'POST',
@@ -217,8 +218,7 @@ export const api = {
   // ----------------------------------------------------------------
   // Auth & account
   // ----------------------------------------------------------------
-  login: (email: string, password: string) =>
-    request<{ token: string; user: User }>('/auth/login', { method: 'POST', body: { email, password } }),
+  login: (email: string, password: string) => request<{ token: string; user: User }>('/auth/login', { method: 'POST', body: { email, password } }),
   register: (p: { forenames: string; surname: string; email: string; password: string; phoneNumber?: string }) =>
     request<{ token: string; user: User }>('/auth/register', { method: 'POST', body: p }),
   me: () => request<{ user: User }>('/auth/me', { auth: true }).then((r) => r.user),
@@ -252,33 +252,26 @@ export const api = {
       screenings: screenings ?? [],
     })),
   // Username, avatar and profile backdrop
-  checkUsername: (u: string) =>
-    request<{ available: boolean; reason?: string | null }>(`/profile/username/check?u=${encodeURIComponent(u)}`),
+  checkUsername: (u: string) => request<{ available: boolean; reason?: string | null }>(`/profile/username/check?u=${encodeURIComponent(u)}`),
   suggestUsernames: (name?: string) =>
     request<{ usernames: string[] }>(`/profile/username/suggest${name ? `?name=${encodeURIComponent(name)}` : ''}`).then((r) => r.usernames),
-  backdrops: (q?: string) =>
-    request<{ backdrops: BackdropChoice[] }>(`/profile/backdrops${q ? `?q=${encodeURIComponent(q)}` : ''}`).then((r) => r.backdrops),
+  backdrops: (q?: string) => request<{ backdrops: BackdropChoice[] }>(`/profile/backdrops${q ? `?q=${encodeURIComponent(q)}` : ''}`).then((r) => r.backdrops),
   updateLook: (p: { username?: string; avatar?: string | null; backdropMovieId?: number | null }) =>
     request<ProfileLook>('/profile/me', { method: 'PATCH', auth: true, body: p }).then(({ username, avatar, backdrop }) => ({ username, avatar, backdrop })),
   // In-app notifications and film reminders
   notifications: () => request<{ unread: number; notifications: AppNotification[] }>('/notifications', { auth: true }),
-  markNotificationsRead: (ids?: number[]) =>
-    request('/notifications/read', { method: 'POST', auth: true, body: ids ? { ids } : {} }),
+  markNotificationsRead: (ids?: number[]) => request('/notifications/read', { method: 'POST', auth: true, body: ids ? { ids } : {} }),
   filmReminders: () => request<{ movieIds: number[] }>('/notifications/reminders', { auth: true }).then((r) => r.movieIds),
-  setFilmReminder: (movieId: number, on: boolean) =>
-    request(`/notifications/reminders/${movieId}`, { method: on ? 'PUT' : 'DELETE', auth: true }),
+  setFilmReminder: (movieId: number, on: boolean) => request(`/notifications/reminders/${movieId}`, { method: on ? 'PUT' : 'DELETE', auth: true }),
   // Savannah Rewards & Trophies
   rewards: () => request<RewardsSummary & { success: boolean }>('/rewards/me', { auth: true }),
   rewardsQuote: (bookingId: number) => request<RewardsQuote>(`/rewards/quote?bookingId=${bookingId}`, { auth: true }),
-  claimReferral: (code: string) =>
-    request<{ referrer: string; bonus: number }>('/rewards/referral', { method: 'POST', auth: true, body: { code } }),
+  claimReferral: (code: string) => request<{ referrer: string; bonus: number }>('/rewards/referral', { method: 'POST', auth: true, body: { code } }),
   rewardsSeen: () => request('/rewards/seen', { method: 'POST', auth: true }),
   events: () => request<{ events: CinemaEvent[] }>('/events').then((r) => r.events),
   promotions: () => request<{ promotions: Promotion[] }>('/promotions').then((r) => r.promotions),
-  notificationPrefs: () =>
-    request<{ notifications: NotificationPrefs | null }>('/users/me/preferences', { auth: true }).then((r) => r.notifications),
-  setNotificationPrefs: (p: Partial<NotificationPrefs>) =>
-    request('/users/me/preferences/notifications', { method: 'PATCH', auth: true, body: p }),
+  notificationPrefs: () => request<{ notifications: NotificationPrefs | null }>('/users/me/preferences', { auth: true }).then((r) => r.notifications),
+  setNotificationPrefs: (p: Partial<NotificationPrefs>) => request('/users/me/preferences/notifications', { method: 'PATCH', auth: true, body: p }),
 
   // ----------------------------------------------------------------
   // Watchlist (auth). filmId = movies.movie_id
@@ -296,6 +289,5 @@ export const api = {
         rating: m.rating != null ? Number(m.rating) : null,
       },
     }),
-  removeFromWatchlist: (movieId: number) =>
-    request(`/watchlist/${movieId}`, { method: 'DELETE', auth: true }),
+  removeFromWatchlist: (movieId: number) => request(`/watchlist/${movieId}`, { method: 'DELETE', auth: true }),
 };

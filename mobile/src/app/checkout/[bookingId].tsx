@@ -34,10 +34,7 @@ export default function Checkout() {
   const now = useNow(1000);
 
   const req = useRequest(async () => {
-    const [booking, orders] = await Promise.all([
-      api.booking(id),
-      api.bookingConcessions(id).catch(() => [] as ConcessionOrder[]),
-    ]);
+    const [booking, orders] = await Promise.all([api.booking(id), api.bookingConcessions(id).catch(() => [] as ConcessionOrder[])]);
     return { booking, snacks: orders.find((o) => o.source === 'BOOKING') ?? null };
   }, [id]);
 
@@ -109,9 +106,7 @@ export default function Checkout() {
 
   const snacks = req.data?.snacks;
   const mmss =
-    left != null && left > 0
-      ? `${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`
-      : null;
+    left != null && left > 0 ? `${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}` : null;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.night }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -154,7 +149,9 @@ export default function Checkout() {
         />
       ) : (
         <>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingBottom: 200, gap: 18 }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ width, alignSelf: 'center', paddingHorizontal: space.gutter, paddingBottom: 200, gap: 18 }}>
             {/* Order */}
             <View style={{ flexDirection: 'row', gap: 14 }}>
               <Poster url={b.movie.posterUrl} title={b.movie.title} width={72} size="w185" />
@@ -214,9 +211,7 @@ export default function Checkout() {
                   onPress={() => setUsePoints((v) => !v)}
                   style={[styles.line, { minHeight: 60 }]}>
                   <View style={{ flex: 1, gap: 2 }}>
-                    <Body color={colors.bone}>
-                      Use {quote.data.points} points
-                    </Body>
+                    <Body color={colors.bone}>Use {quote.data.points} points</Body>
                     <Mono size={11} color={colors.dust} bold={false}>
                       {`YOU HAVE ${quote.data.balance.toLocaleString('en-GB')} · SAVANNAH REWARDS`}
                     </Mono>
@@ -253,7 +248,7 @@ export default function Checkout() {
 
             <View style={{ gap: 8 }}>
               <Field
-                label="Send tickets & receipt to"
+                label={user ? 'Send tickets & receipt to' : 'Your email for the tickets'}
                 value={email ?? user?.email ?? ''}
                 onChangeText={(t) => {
                   setEmail(t);
@@ -269,7 +264,9 @@ export default function Checkout() {
                 error={emailTouched && !emailOk ? 'Enter a valid email address' : null}
               />
               <Body size={12.5} color={colors.dust}>
-                We’ll email your QR ticket and receipt here once you’ve paid. Your ticket is also saved in Account.
+                {user
+                  ? 'We’ll email your QR ticket and receipt here once you’ve paid. Your ticket is also saved in Account.'
+                  : 'No account needed: we’ll email your QR ticket and receipt here once you’ve paid. Show the QR code at the door.'}
               </Body>
             </View>
 
@@ -279,7 +276,8 @@ export default function Checkout() {
               <View style={styles.test}>
                 <Label color={colors.vip}>TEST MODE</Label>
                 <Body size={13} color={colors.boneSoft}>
-                  The Savannah server is simulating payments, so no money is taken. A real Mobile Money or card provider still needs to be connected before launch.
+                  The Savannah server is simulating payments, so no money is taken. A real Mobile Money or card provider still needs to be connected before
+                  launch.
                 </Body>
               </View>
             ) : null}

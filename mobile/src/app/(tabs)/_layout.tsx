@@ -6,15 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LogoMark } from '@/components/logo';
 import { useAuth } from '@/lib/auth';
+import { GUESTS_ALLOWED } from '@/lib/guest';
 import { useWide } from '@/lib/layout';
 import { useWelcomed } from '@/lib/welcome';
 import { colors, fonts, space } from '@/theme';
 
 /** Word-tabs. No icon row: the words are the marquee. */
-const WordTab = forwardRef<ComponentRef<typeof View>, TabTriggerSlotProps & { label: string }>(function WordTab(
-  { isFocused, label, ...props },
-  ref,
-) {
+const WordTab = forwardRef<ComponentRef<typeof View>, TabTriggerSlotProps & { label: string }>(function WordTab({ isFocused, label, ...props }, ref) {
   return (
     <Pressable
       ref={ref}
@@ -33,10 +31,7 @@ const WordTab = forwardRef<ComponentRef<typeof View>, TabTriggerSlotProps & { la
 });
 
 /** Desktop web: the same tabs as a site header (logo left, words right). */
-const NavLink = forwardRef<ComponentRef<typeof View>, TabTriggerSlotProps & { label: string }>(function NavLink(
-  { isFocused, label, ...props },
-  ref,
-) {
+const NavLink = forwardRef<ComponentRef<typeof View>, TabTriggerSlotProps & { label: string }>(function NavLink({ isFocused, label, ...props }, ref) {
   return (
     <Pressable
       ref={ref}
@@ -57,7 +52,9 @@ export default function TabsLayout() {
   const welcomed = useWelcomed();
   const wide = useWide();
   const { width: winW } = useWindowDimensions();
-  // First open on this device, signed out: show the welcome slides
+  // Phone app: nothing to see until you sign in (welcome slides first time)
+  if (!user && !GUESTS_ALLOWED) return <Redirect href={welcomed === 'no' ? '/welcome' : { pathname: '/sign-in', params: { mode: 'in' } }} />;
+  // Website, first visit: show the welcome slides (they can look around after)
   if (!user && welcomed === 'no') return <Redirect href="/welcome" />;
 
   if (wide) {
@@ -109,7 +106,16 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  header: { height: 68, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 34, backgroundColor: colors.night, borderBottomWidth: 1.5, borderBottomColor: colors.bone },
+  header: {
+    height: 68,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 34,
+    backgroundColor: colors.night,
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.bone,
+  },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 12, marginRight: 'auto' },
   brandText: { fontFamily: fonts.displayBlack, fontSize: 26, color: colors.bone, textTransform: 'uppercase', letterSpacing: 0.5 },
   navLink: { height: 68, justifyContent: 'center', gap: 6, paddingTop: 9 },

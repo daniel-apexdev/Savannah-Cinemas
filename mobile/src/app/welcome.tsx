@@ -14,6 +14,7 @@ import { tick } from '@/lib/feel';
 import type { Trophy } from '@/lib/types';
 import { markWelcomed } from '@/lib/welcome';
 import { colors, radius, space } from '@/theme';
+import { GUESTS_ALLOWED } from '@/lib/guest';
 
 const MAX_W = 560;
 
@@ -58,8 +59,9 @@ const SLIDES: Slide[] = [
 ];
 
 /**
- * First-open welcome: what the app does, then create an account, sign
- * in, or look around first. Shown once per device to signed-out users.
+ * First-open welcome: what the app does, then create an account or sign
+ * in. Shown once per device to signed-out users. On the website they
+ * can also look around first; the phone app needs an account.
  */
 export default function Welcome() {
   const insets = useSafeAreaInsets();
@@ -78,6 +80,11 @@ export default function Welcome() {
 
   const leave = (then?: 'up' | 'in') => {
     markWelcomed();
+    if (!GUESTS_ALLOWED) {
+      // Phone app: straight to the account screen, no browsing first
+      router.replace({ pathname: '/sign-in', params: { mode: then ?? 'in' } });
+      return;
+    }
     router.replace('/');
     if (then) setTimeout(() => router.push({ pathname: '/sign-in', params: { mode: then } }), 0);
   };
@@ -88,11 +95,24 @@ export default function Welcome() {
         <Mono size={11.5} color={colors.dust}>
           {`${index + 1} / ${SLIDES.length}`}
         </Mono>
-        <Pressable accessibilityRole="button" onPress={() => leave()} hitSlop={10} style={({ pressed }) => [styles.skip, pressed && { opacity: 0.7 }]}>
-          <Mono size={12} color={colors.bone}>
-            LOOK AROUND FIRST
-          </Mono>
-        </Pressable>
+        {GUESTS_ALLOWED ? (
+          <Pressable accessibilityRole="button" onPress={() => leave()} hitSlop={10} style={({ pressed }) => [styles.skip, pressed && { opacity: 0.7 }]}>
+            <Mono size={12} color={colors.bone}>
+              LOOK AROUND FIRST
+            </Mono>
+          </Pressable>
+        ) : !last ? (
+          // Phone app: skip the tour, not the account
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => go(SLIDES.length - 1)}
+            hitSlop={10}
+            style={({ pressed }) => [styles.skip, pressed && { opacity: 0.7 }]}>
+            <Mono size={12} color={colors.bone}>
+              SKIP
+            </Mono>
+          </Pressable>
+        ) : null}
       </View>
 
       <ScrollView
@@ -109,7 +129,11 @@ export default function Welcome() {
         }}
         scrollEventThrottle={64}>
         {SLIDES.map((s) => (
-          <View key={s.key} style={{ width, paddingHorizontal: space.gutter + 4, justifyContent: 'center' }} accessible accessibilityLabel={`${s.title}. ${s.body}`}>
+          <View
+            key={s.key}
+            style={{ width, paddingHorizontal: space.gutter + 4, justifyContent: 'center' }}
+            accessible
+            accessibilityLabel={`${s.title}. ${s.body}`}>
             <View style={{ height: artH, alignItems: 'center', justifyContent: 'center' }}>{s.art(width)}</View>
             <View style={{ gap: 10, marginTop: 18 }}>
               <Label color={colors.laterite}>{s.kicker}</Label>

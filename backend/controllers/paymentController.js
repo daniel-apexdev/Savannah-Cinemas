@@ -61,6 +61,18 @@ async function createPayment(req, res) {
 
         }
 
+        // Website guests: the tickets can only reach them by email
+        const isGuest = !!req.user.guest;
+
+        if (isGuest && !(receiptEmail && isValidEmail(receiptEmail))) {
+
+            return res.status(400).json({
+                success: false,
+                message: 'Enter your email so we can send your tickets'
+            });
+
+        }
+
         const parsedBookingId =
             Number(bookingId);
 
@@ -318,7 +330,7 @@ async function createPayment(req, res) {
         let pointsRedeemed = 0;
         let pointsDiscount = 0;
 
-        if (redeemPoints === true || Number(redeemPoints) > 0) {
+        if (!isGuest && (redeemPoints === true || Number(redeemPoints) > 0)) {
 
             await client.query(
                 `SELECT pg_advisory_xact_lock(hashtext('rewards:' || $1::text))`,
@@ -633,7 +645,8 @@ async function createPayment(req, res) {
 
         let rewardResult = null;
 
-        try {
+        // Guests don't collect points or trophies (no account to keep them)
+        if (!isGuest) try {
 
             const r = await rewards.summary(userId, { bookingId: parsedBookingId });
 

@@ -12,6 +12,7 @@ const nodemailer = require('nodemailer');
 // ============================================================
 
 const authRoutes = require('./routes/authRoutes');
+const guestRoutes = require('./routes/guestRoutes');
 const watchlistRoutes = require('./routes/watchlistRoutes');
 const movieRoutes = require('./routes/movieRoutes');
 const tmdbRoutes = require('./routes/tmdbRoutes');
@@ -200,6 +201,12 @@ if (!EDGE) {
 // ============================================================
 // API ROUTES
 // ============================================================
+
+// Website guests (book without an account)
+app.use(
+    '/api/guest',
+    guestRoutes
+);
 
 // Authentication
 app.use(

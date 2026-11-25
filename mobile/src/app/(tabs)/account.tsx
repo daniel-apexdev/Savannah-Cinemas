@@ -16,6 +16,7 @@ import { useNotifications } from '@/lib/notify';
 import { ErrorState, Message, Shimmer } from '@/components/states';
 import { Body, Display, Label, Mono } from '@/components/type';
 import { api } from '@/lib/api';
+import { GUESTS_ALLOWED, useHasGuest } from '@/lib/guest';
 import { birthDate, useAuth } from '@/lib/auth';
 import { API_BASE, PAYMENTS_LIVE } from '@/lib/config';
 import { clock, dot, money, shortDate, toNumber } from '@/lib/format';
@@ -81,8 +82,11 @@ export default function Account() {
   const { unread: inboxUnread } = useNotifications();
   const haptics = useSetting('haptics');
 
-  const bookings = useRequest(() => api.myBookings(), [user?.userId], { enabled: !!user });
-  const orders = useRequest(() => api.myOrders().catch(() => []), [user?.userId], { enabled: !!user });
+  // Website guests: tickets booked on this browser without an account
+  const hasGuest = useHasGuest();
+  const asGuest = !user && hasGuest;
+  const bookings = useRequest(() => api.myBookings(), [user?.userId, asGuest], { enabled: !!user || asGuest });
+  const orders = useRequest(() => api.myOrders().catch(() => []), [user?.userId, asGuest], { enabled: !!user || asGuest });
 
   const { live, past } = useMemo(() => {
     const all = (bookings.data ?? []).map((b) => ({ b, s: statusOf(b, now) }));
@@ -115,10 +119,32 @@ export default function Account() {
               Account
             </Display>
           </View>
+          {asGuest && (live.length > 0 || past.length > 0) ? (
+            <View style={{ gap: 14, marginTop: 18 }}>
+              <View style={{ paddingHorizontal: space.gutter, gap: 4 }}>
+                <Label color={colors.laterite}>BOOKED ON THIS BROWSER</Label>
+                <Body size={14} color={colors.dust}>
+                  Your tickets were also emailed to you.
+                </Body>
+              </View>
+              {live.length > 0 ? (
+                <View style={{ gap: 14, paddingHorizontal: space.gutter }}>
+                  {live.map(({ b, s }) => (
+                    <LiveStub key={b.bookingId} b={b} label={s.label} snacks={!!codes.get(b.bookingId)} onOpen={open} />
+                  ))}
+                </View>
+              ) : null}
+              {past.length > 0 ? <History rows={past} codes={codes} onOpen={open} /> : null}
+            </View>
+          ) : null}
           <Message
             kicker="NOT SIGNED IN"
-            title="Your tickets, in one place"
-            body="Sign in to book seats, keep your tickets with their QR codes, pre-order snacks and save films to your watchlist."
+            title={GUESTS_ALLOWED ? 'Keep your tickets with you' : 'Your tickets, in one place'}
+            body={
+              GUESTS_ALLOWED
+                ? 'You can book without an account. Create one to keep every ticket on any device, collect Savannah Rewards points, save films to your watchlist and get reminders.'
+                : 'Sign in to book seats, keep your tickets with their QR codes, pre-order snacks and save films to your watchlist.'
+            }
             action={
               <View style={{ gap: 10 }}>
                 <Button label="Sign in" onPress={() => router.push('/sign-in')} />
@@ -154,7 +180,11 @@ export default function Account() {
             ) : null}
           </Pressable>
           {!user.backdrop ? (
-            <Pressable accessibilityRole="button" onPress={() => router.push('/profile-setup')} hitSlop={6} style={({ pressed }) => [styles.addBackdrop, { top: insets.top + 14 }, pressed && { opacity: 0.7 }]}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/profile-setup')}
+              hitSlop={6}
+              style={({ pressed }) => [styles.addBackdrop, { top: insets.top + 14 }, pressed && { opacity: 0.7 }]}>
               <Mono size={11} color={colors.dust}>
                 + ADD A BACKDROP
               </Mono>
@@ -205,87 +235,59 @@ export default function Account() {
         </View>
 
         {page === 'tickets' ? (
-        <>
-        {/* Tickets: coming up / history */}
-        <View style={styles.tabs} accessibilityRole="tablist">
-          {(
-            [
-              ['upcoming', `COMING UP${live.length ? ` · ${live.length}` : ''}`],
-              ['history', `HISTORY${past.length ? ` · ${past.length}` : ''}`],
-            ] as const
-          ).map(([k, label]) => (
-            <Pressable
-              key={k}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: tab === k }}
-              onPress={() => setTab(k)}
-              style={[styles.tab, tab === k && styles.tabOn]}>
-              <Mono size={12} color={tab === k ? colors.bone : colors.dust}>
-                {label}
-              </Mono>
-            </Pressable>
-          ))}
-        </View>
-
-        {bookings.loading ? (
-          <View style={{ paddingHorizontal: space.gutter, gap: 14 }}>
-            <Shimmer style={{ height: 150 }} />
-          </View>
-        ) : bookings.error && !bookings.data ? (
-          <ErrorState error={bookings.error} onRetry={bookings.reload} />
-        ) : (bookings.data?.length ?? 0) === 0 ? (
-          <View style={{ paddingHorizontal: space.gutter, gap: 12 }}>
-            <Body>No bookings yet. Your tickets will live here with a QR code for the door.</Body>
-            <Button label="See what’s on" variant="outline" onPress={() => router.navigate('/')} />
-          </View>
-        ) : (
           <>
-            {tab === 'upcoming' ? (
-              live.length > 0 ? (
-              <View style={{ gap: 14, paddingHorizontal: space.gutter }}>
-                {live.map(({ b, s }) => (
-                  <Pressable
-                    key={b.bookingId}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${b.movie.title}, ${shortDate(new Date(b.startTime))} at ${clock(b.startTime)}, ${s.label.toLowerCase()}. Open ticket`}
-                    onPress={() => open(b)}
-                    style={({ pressed }) => [styles.stub, pressed && { opacity: 0.9 }]}>
-                    <View style={{ flexDirection: 'row', gap: 14 }}>
-                      <Poster url={b.movie.posterUrl} title={b.movie.title} width={56} size="w185" />
-                      <View style={{ flex: 1, gap: 6, justifyContent: 'center' }}>
-                        <Display size={26} black color={colors.ink} numberOfLines={2} accessibilityRole="text">
-                          {b.movie.title}
-                        </Display>
-                        <Mono size={12.5} color={colors.inkSoft}>
-                          {dot(shortDate(new Date(b.startTime)), clock(b.startTime), b.screen.name.toUpperCase())}
-                        </Mono>
-                      </View>
-                    </View>
-                    <View style={styles.perf} />
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                      <Mono size={13} color={colors.ink} style={{ flexShrink: 1 }} numberOfLines={1}>
-                        {b.seats.map((x) => x.seatLabel).join(' ')}
-                        {codes.get(b.bookingId) ? '  ·  + SNACKS' : ''}
-                      </Mono>
-                      <Mono size={11.5} numberOfLines={1} style={{ flexShrink: 0 }} color={s.label === 'CONFIRMED' ? colors.ink : colors.laterite}>
-                        {s.label === 'CONFIRMED' ? 'SHOW QR →' : 'PAY NOW →'}
-                      </Mono>
-                    </View>
-                  </Pressable>
-                ))}
+            {/* Tickets: coming up / history */}
+            <View style={styles.tabs} accessibilityRole="tablist">
+              {(
+                [
+                  ['upcoming', `COMING UP${live.length ? ` · ${live.length}` : ''}`],
+                  ['history', `HISTORY${past.length ? ` · ${past.length}` : ''}`],
+                ] as const
+              ).map(([k, label]) => (
+                <Pressable
+                  key={k}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: tab === k }}
+                  onPress={() => setTab(k)}
+                  style={[styles.tab, tab === k && styles.tabOn]}>
+                  <Mono size={12} color={tab === k ? colors.bone : colors.dust}>
+                    {label}
+                  </Mono>
+                </Pressable>
+              ))}
+            </View>
+
+            {bookings.loading ? (
+              <View style={{ paddingHorizontal: space.gutter, gap: 14 }}>
+                <Shimmer style={{ height: 150 }} />
+              </View>
+            ) : bookings.error && !bookings.data ? (
+              <ErrorState error={bookings.error} onRetry={bookings.reload} />
+            ) : (bookings.data?.length ?? 0) === 0 ? (
+              <View style={{ paddingHorizontal: space.gutter, gap: 12 }}>
+                <Body>No bookings yet. Your tickets will live here with a QR code for the door.</Body>
+                <Button label="See what’s on" variant="outline" onPress={() => router.navigate('/')} />
               </View>
             ) : (
-              <View style={{ paddingHorizontal: space.gutter }}>
-                <Body>Nothing coming up.</Body>
-              </View>
-            )
-            ) : (
-              <History rows={past} codes={codes} onOpen={open} />
+              <>
+                {tab === 'upcoming' ? (
+                  live.length > 0 ? (
+                    <View style={{ gap: 14, paddingHorizontal: space.gutter }}>
+                      {live.map(({ b, s }) => (
+                        <LiveStub key={b.bookingId} b={b} label={s.label} snacks={!!codes.get(b.bookingId)} onOpen={open} />
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={{ paddingHorizontal: space.gutter }}>
+                      <Body>Nothing coming up.</Body>
+                    </View>
+                  )
+                ) : (
+                  <History rows={past} codes={codes} onOpen={open} />
+                )}
+              </>
             )}
           </>
-        )}
-
-        </>
         ) : page === 'watchlist' ? (
           <WatchlistBody embedded />
         ) : page === 'trophies' || page === 'rewards' ? (
@@ -297,61 +299,97 @@ export default function Account() {
           ) : rewards.error && !rewards.data ? (
             <ErrorState error={rewards.error} onRetry={rewards.reload} />
           ) : rewards.data ? (
-            page === 'trophies' ? <TrophiesBody data={rewards.data} width={width} /> : <RewardsBody data={rewards.data} onChanged={rewards.reload} />
+            page === 'trophies' ? (
+              <TrophiesBody data={rewards.data} width={width} />
+            ) : (
+              <RewardsBody data={rewards.data} onChanged={rewards.reload} />
+            )
           ) : null
         ) : (
-        /* Settings */
-        <View style={{ paddingHorizontal: space.gutter, gap: 22 }}>
-          <Group title="Account">
-            <NavRow label="Sign-in email" detail={user.email} onPress={() => router.push('/settings/profile')} />
-            <NavRow
-              label="Personal details"
-              detail={dot(user.phoneNumber || 'No phone added', birthDate(user) ? `Born ${birthDate(user)!.split('-').reverse().join('/')}` : null)}
-              onPress={() => router.push('/settings/profile')}
-            />
-            <NavRow label="Password" onPress={() => router.push('/settings/password')} />
-            <NavRow label="Notifications" detail="Booking reminders, new films, offers" onPress={() => router.push('/settings/notifications')} />
-          </Group>
-
-          {Platform.OS !== 'web' ? (
-            <Group title="On this phone">
-              <ToggleRow label="Haptics" detail="A light tap when you pick seats and snacks." value={haptics} onChange={(v) => setSetting('haptics', v)} />
+          /* Settings */
+          <View style={{ paddingHorizontal: space.gutter, gap: 22 }}>
+            <Group title="Account">
+              <NavRow label="Sign-in email" detail={user.email} onPress={() => router.push('/settings/profile')} />
+              <NavRow
+                label="Personal details"
+                detail={dot(user.phoneNumber || 'No phone added', birthDate(user) ? `Born ${birthDate(user)!.split('-').reverse().join('/')}` : null)}
+                onPress={() => router.push('/settings/profile')}
+              />
+              <NavRow label="Password" onPress={() => router.push('/settings/password')} />
+              <NavRow label="Notifications" detail="Booking reminders, new films, offers" onPress={() => router.push('/settings/notifications')} />
             </Group>
-          ) : null}
 
-          <Group title="Support">
-            <NavRow label="Help & contact" detail="Common questions, call or email the cinema" onPress={() => router.push('/settings/help')} />
-          </Group>
+            {Platform.OS !== 'web' ? (
+              <Group title="On this phone">
+                <ToggleRow label="Haptics" detail="A light tap when you pick seats and snacks." value={haptics} onChange={(v) => setSetting('haptics', v)} />
+              </Group>
+            ) : null}
 
-          <Group title="About">
-            <InfoRow label="Version" value={Constants.expoConfig?.version ?? '1.0.0'} />
-            <InfoRow label="Payments" value={PAYMENTS_LIVE ? 'Live' : 'Test mode'} />
-            {__DEV__ ? <InfoRow label="Server" value={API_BASE} selectable /> : null}
-          </Group>
+            <Group title="Support">
+              <NavRow label="Help & contact" detail="Common questions, call or email the cinema" onPress={() => router.push('/settings/help')} />
+            </Group>
 
-          <Group>
-            <NavRow
-              label="Sign out"
-              tone="danger"
-              onPress={async () => {
-                await signOut();
-                router.navigate('/');
-              }}
-            />
-            <NavRow label="Delete account" tone="danger" onPress={() => router.push('/settings/delete')} />
-          </Group>
-        </View>
+            <Group title="About">
+              <InfoRow label="Version" value={Constants.expoConfig?.version ?? '1.0.0'} />
+              <InfoRow label="Payments" value={PAYMENTS_LIVE ? 'Live' : 'Test mode'} />
+              {__DEV__ ? <InfoRow label="Server" value={API_BASE} selectable /> : null}
+            </Group>
+
+            <Group>
+              <NavRow
+                label="Sign out"
+                tone="danger"
+                onPress={async () => {
+                  await signOut();
+                  router.navigate('/');
+                }}
+              />
+              <NavRow label="Delete account" tone="danger" onPress={() => router.push('/settings/delete')} />
+            </Group>
+          </View>
         )}
       </ScrollView>
     </View>
   );
 }
 
-
 const METHOD: Record<string, string> = { MOBILE_MONEY: 'Mobile Money', CARD: 'Card', BANK_TRANSFER: 'Bank transfer', CASH: 'Cash' };
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 type Row = { b: Booking; s: { label: string; live: boolean } };
 type HistoryFilter = 'all' | 'paid' | 'cancelled' | 'unpaid';
+
+/** An upcoming ticket: the cream stub that opens the QR ticket. */
+function LiveStub({ b, label, snacks, onOpen }: { b: Booking; label: string; snacks: boolean; onOpen: (b: Booking) => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${b.movie.title}, ${shortDate(new Date(b.startTime))} at ${clock(b.startTime)}, ${label.toLowerCase()}. Open ticket`}
+      onPress={() => onOpen(b)}
+      style={({ pressed }) => [styles.stub, pressed && { opacity: 0.9 }]}>
+      <View style={{ flexDirection: 'row', gap: 14 }}>
+        <Poster url={b.movie.posterUrl} title={b.movie.title} width={56} size="w185" />
+        <View style={{ flex: 1, gap: 6, justifyContent: 'center' }}>
+          <Display size={26} black color={colors.ink} numberOfLines={2} accessibilityRole="text">
+            {b.movie.title}
+          </Display>
+          <Mono size={12.5} color={colors.inkSoft}>
+            {dot(shortDate(new Date(b.startTime)), clock(b.startTime), b.screen.name.toUpperCase())}
+          </Mono>
+        </View>
+      </View>
+      <View style={styles.perf} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+        <Mono size={13} color={colors.ink} style={{ flexShrink: 1 }} numberOfLines={1}>
+          {b.seats.map((x) => x.seatLabel).join(' ')}
+          {snacks ? '  ·  + SNACKS' : ''}
+        </Mono>
+        <Mono size={11.5} numberOfLines={1} style={{ flexShrink: 0 }} color={label === 'CONFIRMED' ? colors.ink : colors.laterite}>
+          {label === 'CONFIRMED' ? 'SHOW QR →' : 'PAY NOW →'}
+        </Mono>
+      </View>
+    </Pressable>
+  );
+}
 
 const isPaid = (b: Booking) => b.status === 'CONFIRMED' || b.status === 'COMPLETED' || !!b.payment;
 
@@ -441,7 +479,7 @@ function History({ rows, codes, onOpen }: { rows: Row[]; codes: Map<number, stri
             const d = new Date(b.startTime);
             const paid = b.status !== 'CANCELLED' && isPaid(b);
             const state = b.status === 'CANCELLED' ? 'CANCELLED' : b.status === 'PENDING' ? 'NOT PAID' : paid ? 'PAID' : s.label;
-            const how = b.payment ? METHOD[String(b.payment.method)] ?? String(b.payment.method) : null;
+            const how = b.payment ? (METHOD[String(b.payment.method)] ?? String(b.payment.method)) : null;
             return (
               <Pressable
                 key={b.bookingId}
@@ -467,7 +505,10 @@ function History({ rows, codes, onOpen }: { rows: Row[]; codes: Map<number, stri
                   </Mono>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                  <Mono size={13} color={b.status === 'CANCELLED' ? colors.dust : colors.bone} style={b.status === 'CANCELLED' ? { textDecorationLine: 'line-through' } : null}>
+                  <Mono
+                    size={13}
+                    color={b.status === 'CANCELLED' ? colors.dust : colors.bone}
+                    style={b.status === 'CANCELLED' ? { textDecorationLine: 'line-through' } : null}>
                     {money(b.totalAmount)}
                   </Mono>
                   <Mono size={10} color={state === 'PAID' ? colors.dust : colors.lateriteSoft}>
@@ -532,7 +573,16 @@ const styles = StyleSheet.create({
   chip: { height: 32, paddingHorizontal: 12, justifyContent: 'center', borderWidth: 1.5, borderColor: colors.rule, borderRadius: 3 },
   histRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.rule },
   dateBlock: { width: 40, alignItems: 'center' },
-  editBtn: { alignSelf: 'flex-start', marginTop: 6, height: 32, paddingHorizontal: 10, justifyContent: 'center', borderWidth: 1.5, borderColor: colors.rule, borderRadius: 3 },
+  editBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    height: 32,
+    paddingHorizontal: 10,
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.rule,
+    borderRadius: 3,
+  },
   secHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
