@@ -37,6 +37,11 @@ const { refreshMovieStatuses } = require('./movieStatus');
 //     (VIP rate on VIP screens, else the ADULT weekday/weekend rate).
 //     Seat-type pricing at booking time is unchanged.
 //
+// Every run also takes generated shows off sale (if unbooked) when
+// they fall outside their film's run, e.g. an old film whose run was
+// put right (prune_showtimes_outside_run, 2026-11-26 migration).
+// Special screenings and hand-made shows are never pruned.
+//
 // Safe to run repeatedly: existing showtimes are never changed. New
 // shows are only fitted into the free time around them (manual
 // programming wins), and every insert re-checks for overlaps inside
@@ -368,6 +373,22 @@ async function generateForCinema(options = {}) {
             removed = del.rowCount;
         }
 
+        // Generated shows outside their film's run (an old film whose
+        // run was cut, an upcoming film before its release date) come
+        // off sale unless booked. Specials and hand-made shows stay.
+        await client.query('SAVEPOINT prune');
+        try {
+            const pruned = await client.query(
+                `SELECT prune_showtimes_outside_run($1::bigint, $2::int) AS n`,
+                [opts.cinemaId || null, opts.leadTimeToday]
+            );
+            removed += Number(pruned.rows[0].n) || 0;
+            await client.query('RELEASE SAVEPOINT prune');
+        } catch (error) {
+            await client.query('ROLLBACK TO SAVEPOINT prune');
+            if (error.code !== '42883') throw error;   // migration not run yet
+        }
+
         // Screens to programme
         const screensResult = await client.query(
             `
@@ -675,10 +696,10 @@ async function generateForCinema(options = {}) {
                             INSERT INTO showtimes (
                                 movie_id, cinema_id, screen_id, show_date,
                                 start_time, end_time, ticket_price,
-                                status, is_active, created_at, updated_at
+                                status, is_active, auto_generated, created_at, updated_at
                             )
                             VALUES ($1, $2, $3, $4::date, $5::timestamp, $6::timestamp, $7,
-                                    'SCHEDULED', 'Y', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                    'SCHEDULED', 'Y', 'Y', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                             `,
                             [slot.film.movie_id, screen.cinema_id, screen.screen_id, date, start, end, price]
                         );

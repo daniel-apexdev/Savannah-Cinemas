@@ -12,10 +12,14 @@
 //
 // Status still comes from the run-length rule
 // (migrations/2026-11-17_movie_run_status.sql): UPCOMING before
-// release, NOW_SHOWING for the run, ENDED after. A film TMDB lists
-// as now playing whose standard run would already be over (common
-// when a film reaches Ghana after its US release) gets its run
-// extended to MIN_RUN_DAYS from today, so it shows up. Runs are
+// release, NOW_SHOWING for the run, ENDED after. A recent film
+// (released in the last FRESH_RELEASE_DAYS) that TMDB lists as now
+// playing, whose standard run would already be over (common when a
+// film reaches Ghana after its US release), gets its run extended to
+// MIN_RUN_DAYS from today, so it shows up. Older films TMDB lists as
+// now playing are anniversary re-releases elsewhere: they stay in the
+// catalogue as ENDED and only come back as special screenings, or if
+// a manager sets their run (PATCH /api/movies/:id/run). Runs are
 // only ever extended, never cut short. ARCHIVED films are left
 // alone, so archiving a film keeps it out of future syncs.
 //
@@ -44,6 +48,7 @@ const {
 const { refreshMovieStatuses } = require('./movieStatus');
 
 const MIN_RUN_DAYS = 28;
+const FRESH_RELEASE_DAYS = 120;   // older "now playing" films are re-releases, not new runs
 const MAX_PAGES = 5;
 
 let running = null;
@@ -210,9 +215,11 @@ async function upsertFilm(client, d, source, today, runColumns, region) {
     await client.query(`DELETE FROM movie_genres WHERE movie_id = $1`, [movieId]);
     await linkMovieGenres(client, movieId, genreIds);
 
-    // A film that's playing now should be on the shelf for a while
+    // A new film that's playing now should be on the shelf for a while.
+    // Old films (re-releases) are left to the run-length rule: ENDED.
     let extendedTo = null;
-    if (source === 'now_playing' && runColumns && releaseDate <= today) {
+    const fresh = releaseDate && Date.parse(today + 'T00:00:00Z') - Date.parse(releaseDate + 'T00:00:00Z') <= FRESH_RELEASE_DAYS * 86400000;
+    if (source === 'now_playing' && runColumns && releaseDate <= today && fresh) {
         const r = await client.query(
             `
             UPDATE movies
